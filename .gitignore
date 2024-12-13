@@ -1,0 +1,8 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/SabiMarket.API/.vs/SabiMarket.API/FileContentIndex
+/SabiMarket.API/obj
+/SabiMarket.API/.vs/SabiMarket.API/v17
