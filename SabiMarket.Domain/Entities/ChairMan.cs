@@ -1,12 +1,27 @@
-﻿namespace SabiMarket.Domain.Entities
+﻿using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
+using SabiMarket.Domain.Entities.UserManagement;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
+
+namespace SabiMarket.Domain.Entities
 {
-    public class ChairMan : Entity, IAuditable
+    public class Chairman : BaseEntity
     {
-        public string UserId { get; set; }
-        public string LGAId { get; set; }
-        public LGA LGA { get; set; }
-        public User User { get; set; }
-        public DateTimeOffset CreatedAt { get; set; }
-        public DateTimeOffset UpdatedAt { get; set; }
+        public Guid UserId { get; set; }
+        public Guid LocalGovernmentId { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string Title { get; set; }
+
+        public string Office { get; set; }
+        public DateTime TermStart { get; set; }
+        public DateTime? TermEnd { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+
+        public virtual ApplicationUser User { get; set; }
+        public virtual LocalGovernment LocalGovernment { get; set; }
+       // public virtual ICollection<LGEmployee> SubordinateEmployees { get; set; }
     }
+
 }

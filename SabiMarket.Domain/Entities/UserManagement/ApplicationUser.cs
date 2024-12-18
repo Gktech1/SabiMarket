@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
+using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
+using SabiMarket.Domain.Entities.MarketParticipants;
+using SabiMarket.Domain.Entities.WaiveMarketModule;
 
-namespace SabiMarket.Domain.Entities
+namespace SabiMarket.Domain.Entities.UserManagement
 {
-    public class ApplicationUser : IdentityUser, IAuditable
+    public class ApplicationUser : IdentityUser<Guid>
     {
         [PersonalData]
         [StringLength(100)]
@@ -22,9 +19,11 @@ namespace SabiMarket.Domain.Entities
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? LastLoginAt { get; set; }
-        public int? LocalGovernmentId { get; set; }
+        public Guid? LocalGovernmentId { get; set; }
 
         public virtual LocalGovernment LocalGovernment { get; set; }
+        public virtual Chairman Chairman { get; set; }
+       // public virtual LGEmployee LGEmployee { get; set; }
         public virtual Trader Trader { get; set; }
         public virtual Vendor Vendor { get; set; }
         public virtual Customer Customer { get; set; }
