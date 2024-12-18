@@ -21,7 +21,6 @@ namespace SabiMarket.Domain.Entities
 
         public virtual ApplicationUser User { get; set; }
         public virtual LocalGovernment LocalGovernment { get; set; }
-       // public virtual ICollection<LGEmployee> SubordinateEmployees { get; set; }
     }
 
 }
