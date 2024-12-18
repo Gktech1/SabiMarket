@@ -1,23 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
 
 namespace SabiMarket.Domain.Entities
 {
-    public class User : IdentityUser, IAuditable
+    public class ApplicationUser : IdentityUser, IAuditable
     {
+        [PersonalData]
+        [StringLength(100)]
         public string FirstName { get; set; }
-        public string? MiddleName { get; set; }
+
+        [PersonalData]
+        [StringLength(100)]
         public string LastName { get; set; }
-        public string PhoneNumber { get; set; }
-        public string? ImageUrl { get; set; }
-        public string? PublicId { get; set; }
-        public string? AddressId { get; set; }
-        public DateTimeOffset CreatedAt { get; set; }
-        public DateTimeOffset UpdatedAt { get; set; }
-        public Address? Address { get; set; }
+
+        public string ProfileImageUrl { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+        public int? LocalGovernmentId { get; set; }
+
+        public virtual LocalGovernment LocalGovernment { get; set; }
+        public virtual Trader Trader { get; set; }
+        public virtual Vendor Vendor { get; set; }
+        public virtual Customer Customer { get; set; }
+        public virtual Caretaker Caretaker { get; set; }
+        public virtual GoodBoy GoodBoy { get; set; }
+        public virtual AssistCenterOfficer AssistCenterOfficer { get; set; }
     }
 }
