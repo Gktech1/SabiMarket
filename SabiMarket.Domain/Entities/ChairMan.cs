@@ -7,7 +7,7 @@ namespace SabiMarket.Domain.Entities
 {
     public class Chairman : BaseEntity
     {
-        public Guid UserId { get; set; }
+        public string UserId { get; set; }
         public Guid LocalGovernmentId { get; set; }
 
         [Required]

@@ -8,9 +8,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 public class GoodBoy : BaseEntity
 {
     public string UserId { get; set; }
-    public int CaretakerId { get; set; }
+    public Guid CaretakerId { get; set; }
     public virtual ApplicationUser User { get; set; }
     public virtual Caretaker Caretaker { get; set; }
-    public virtual ICollection<LevyCollections> Collections { get; set; }
+    public virtual ICollection<LevyCollection> Collections { get; set; }
 }
 

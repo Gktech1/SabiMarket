@@ -9,8 +9,6 @@ using SabiMarket.Domain.Entities.OrdersAndFeedback;
 using SabiMarket.Domain.Entities.Supporting;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
-using System.Collections.Generic;
-using System.Reflection.Emit;
 
 namespace SabiMarket.Infrastructure.Data
 {
@@ -39,6 +37,7 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<Advertisement> Advertisements { get; set; }
         public DbSet<AdvertisementView> AdvertisementViews { get; set; }
         public DbSet<ProductCategory> ProductCategories { get; set; }
+        public DbSet<Chairman> Chairmen { get; set; }
         #endregion
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -55,6 +54,11 @@ namespace SabiMarket.Infrastructure.Data
                 entity.Property(e => e.FirstName).HasMaxLength(100);
                 entity.Property(e => e.LastName).HasMaxLength(100);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+
+                entity.HasOne(u => u.LocalGovernment)
+                      .WithMany(lg => lg.Users)
+                      .HasForeignKey(u => u.LocalGovernmentId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<ApplicationRole>(entity =>
@@ -92,6 +96,19 @@ namespace SabiMarket.Infrastructure.Data
             #endregion
 
             #region Market Participants Configuration
+            builder.Entity<Chairman>(entity =>
+            {
+                entity.HasOne(c => c.User)
+                      .WithOne(u => u.Chairman)
+                      .HasForeignKey<Chairman>(c => c.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(c => c.LocalGovernment)
+                      .WithMany()
+                      .HasForeignKey(c => c.LocalGovernmentId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
             builder.Entity<Trader>(entity =>
             {
                 entity.HasOne(t => t.User)
@@ -107,6 +124,11 @@ namespace SabiMarket.Infrastructure.Data
                 entity.HasOne(t => t.Section)
                       .WithMany(s => s.Traders)
                       .HasForeignKey(t => t.SectionId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(t => t.Caretaker)
+                      .WithMany(c => c.AssignedTraders)
+                      .HasForeignKey(t => t.CaretakerId)
                       .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(e => e.TIN).IsUnique();
@@ -125,6 +147,32 @@ namespace SabiMarket.Infrastructure.Data
                       .HasForeignKey(c => c.MarketId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
+
+            builder.Entity<GoodBoy>(entity =>
+            {
+                entity.HasOne(g => g.User)
+                      .WithOne(u => u.GoodBoy)
+                      .HasForeignKey<GoodBoy>(g => g.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(g => g.Caretaker)
+                      .WithMany(c => c.GoodBoys)
+                      .HasForeignKey(g => g.CaretakerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<AssistCenterOfficer>(entity =>
+            {
+                entity.HasOne(a => a.User)
+                      .WithOne(u => u.AssistCenterOfficer)
+                      .HasForeignKey<AssistCenterOfficer>(a => a.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(a => a.LocalGovernment)
+                      .WithMany()
+                      .HasForeignKey(a => a.LocalGovernmentId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
             #endregion
 
             #region Levy Management Configuration
@@ -140,10 +188,20 @@ namespace SabiMarket.Infrastructure.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
-            builder.Entity<LevyCollections>(entity =>
+            builder.Entity<LevyCollection>(entity =>
             {
                 entity.Property(e => e.Amount).HasPrecision(18, 2);
                 entity.Property(e => e.CollectionDate).HasDefaultValueSql("GETDATE()");
+
+                entity.HasOne(c => c.GoodBoy)
+                      .WithMany(g => g.Collections)
+                      .HasForeignKey(c => c.GoodBoyId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(c => c.Trader)
+                      .WithMany()
+                      .HasForeignKey(c => c.TraderId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
             #endregion
 
@@ -155,6 +213,11 @@ namespace SabiMarket.Infrastructure.Data
                       .HasForeignKey<Vendor>(v => v.UserId)
                       .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(v => v.LocalGovernment)
+                      .WithMany(lg => lg.Vendors)
+                      .HasForeignKey(v => v.LocalGovernmentId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(e => e.VendorCode).IsUnique();
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
             });
@@ -164,6 +227,11 @@ namespace SabiMarket.Infrastructure.Data
                 entity.Property(e => e.OriginalPrice).HasPrecision(18, 2);
                 entity.Property(e => e.WaivedPrice).HasPrecision(18, 2);
                 entity.HasIndex(e => e.ProductCode).IsUnique();
+
+                entity.HasOne(p => p.Vendor)
+                      .WithMany(v => v.Products)
+                      .HasForeignKey(p => p.VendorId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasMany(p => p.Categories)
                       .WithMany(c => c.Products)
@@ -179,7 +247,10 @@ namespace SabiMarket.Infrastructure.Data
                       .HasForeignKey<Customer>(c => c.UserId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+                entity.HasOne(c => c.LocalGovernment)
+                      .WithMany(lg => lg.Customers)
+                      .HasForeignKey(c => c.LocalGovernmentId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<CustomerOrder>(entity =>
@@ -191,12 +262,40 @@ namespace SabiMarket.Infrastructure.Data
                       .WithMany(c => c.Orders)
                       .HasForeignKey(o => o.CustomerId)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(o => o.Vendor)
+                      .WithMany(v => v.Orders)
+                      .HasForeignKey(o => o.VendorId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<CustomerOrderItem>(entity =>
             {
                 entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
                 entity.Property(e => e.TotalPrice).HasPrecision(18, 2);
+
+                entity.HasOne(i => i.Order)
+                      .WithMany(o => o.OrderItems)
+                      .HasForeignKey(i => i.OrderId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(i => i.Product)
+                      .WithMany(p => p.OrderItems)
+                      .HasForeignKey(i => i.ProductId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<CustomerFeedback>(entity =>
+            {
+                entity.HasOne(f => f.Customer)
+                      .WithMany(c => c.Feedbacks)
+                      .HasForeignKey(f => f.CustomerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(f => f.Vendor)
+                      .WithMany(v => v.Feedbacks)
+                      .HasForeignKey(f => f.VendorId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
             #endregion
 
@@ -217,6 +316,11 @@ namespace SabiMarket.Infrastructure.Data
                       .WithMany(a => a.Views)
                       .HasForeignKey(v => v.AdvertisementId)
                       .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(v => v.User)
+                      .WithMany()
+                      .HasForeignKey(v => v.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
             #endregion
         }

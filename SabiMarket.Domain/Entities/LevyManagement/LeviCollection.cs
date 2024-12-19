@@ -4,7 +4,7 @@ using SabiMarket.Domain.Entities.MarketParticipants;
 namespace SabiMarket.Domain.Entities.LevyManagement
 {
     [Table("LevyCollections")]
-    public class LevyCollections : BaseEntity
+    public class LevyCollection : BaseEntity
     {
         public Guid GoodBoyId { get; set; }
         public Guid TraderId { get; set; }
