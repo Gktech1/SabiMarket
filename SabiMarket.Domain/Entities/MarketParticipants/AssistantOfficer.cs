@@ -8,7 +8,7 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
     public class AssistCenterOfficer : BaseEntity
     {
         public string UserId { get; set; }
-        public int LocalGovernmentId { get; set; }
+        public Guid LocalGovernmentId { get; set; }
         public virtual ApplicationUser User { get; set; }
         public virtual LocalGovernment LocalGovernment { get; set; }
     }

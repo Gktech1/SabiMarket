@@ -6,10 +6,9 @@ using SabiMarket.Domain.Entities.Supporting;
 namespace SabiMarket.Domain.Entities.WaiveMarketModule
 {
     [Table("WaivedProducts")]
-    public class WaivedProduct
+    public class WaivedProduct : BaseEntity
     {
-        public int Id { get; set; }
-        public int VendorId { get; set; }
+        public Guid VendorId { get; set; }
 
         [Required]
         [StringLength(100)]
@@ -26,10 +25,6 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         public decimal WaivedPrice { get; set; }
 
         public int StockQuantity { get; set; }
-        public bool IsActive { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
-
         public virtual Vendor Vendor { get; set; }
         public virtual ICollection<ProductCategory> Categories { get; set; }
         public virtual ICollection<CustomerOrderItem> OrderItems { get; set; }

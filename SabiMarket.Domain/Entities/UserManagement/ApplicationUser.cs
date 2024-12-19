@@ -1,11 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Identity;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
 
 namespace SabiMarket.Domain.Entities.UserManagement
 {
-    public class ApplicationUser : IdentityUser<Guid>
+    public class ApplicationUser : IdentityUser<string>
     {
         [PersonalData]
         [StringLength(100)]
@@ -23,7 +24,6 @@ namespace SabiMarket.Domain.Entities.UserManagement
 
         public virtual LocalGovernment LocalGovernment { get; set; }
         public virtual Chairman Chairman { get; set; }
-       // public virtual LGEmployee LGEmployee { get; set; }
         public virtual Trader Trader { get; set; }
         public virtual Vendor Vendor { get; set; }
         public virtual Customer Customer { get; set; }
