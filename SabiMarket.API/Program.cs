@@ -54,16 +54,17 @@ namespace SabiMarket.API
                 options.User.RequireUniqueEmail = true;
             });
 
+            // Add custom error handling
+            builder.Services.AddCustomErrorHandling(); // Add this BEFORE var app = builder.Build()
+
+
             builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+            builder.Services.AddScoped<RequestTimeLoggingMiddleware>();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
-            
-            builder.Services.AddCustomErrorHandling();
-
-            app.UseCustomErrorHandling();
 
             //MONITORING 
             app.UseMiddleware<RequestTimeLoggingMiddleware>();
@@ -76,6 +77,8 @@ namespace SabiMarket.API
             }
 
             app.UseHttpsRedirection();
+           
+            app.UseCustomErrorHandling();
 
             app.UseAuthorization();
 
