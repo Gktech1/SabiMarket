@@ -1,8 +1,14 @@
 
+using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using SabiMarket.API.Extensions;
+using SabiMarket.API.Middlewares;
+using SabiMarket.Application.Interfaces;
+using SabiMarket.Application.Validators;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Infrastructure.Data;
+using SabiMarket.Infrastructure.Services;
 
 namespace SabiMarket.API
 {
@@ -26,6 +32,9 @@ namespace SabiMarket.API
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
+            // Add FluentValidation
+            builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
+
             // Configure Identity options (optional)
             builder.Services.Configure<IdentityOptions>(options =>
             {
@@ -45,10 +54,19 @@ namespace SabiMarket.API
                 options.User.RequireUniqueEmail = true;
             });
 
+            builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
+            
+            builder.Services.AddCustomErrorHandling();
+
+            app.UseCustomErrorHandling();
+
+            //MONITORING 
+            app.UseMiddleware<RequestTimeLoggingMiddleware>();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
