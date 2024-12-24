@@ -27,7 +27,7 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<GoodBoy> GoodBoys { get; set; }
         public DbSet<AssistCenterOfficer> AssistCenterOfficers { get; set; }
         public DbSet<LevyPayment> LevyPayments { get; set; }
-        public DbSet<LevyCollection> LevyCollections { get; set; }
+        //public DbSet<LevyCollection> LevyCollections { get; set; }
         public DbSet<Vendor> Vendors { get; set; }
         public DbSet<Customer> Customers { get; set; }
         public DbSet<WaivedProduct> WaivedProducts { get; set; }
@@ -182,13 +182,18 @@ namespace SabiMarket.Infrastructure.Data
                 entity.Property(e => e.IncentiveAmount).HasPrecision(18, 2);
                 entity.Property(e => e.PaymentDate).HasDefaultValueSql("GETDATE()");
 
+                entity.HasOne(c => c.GoodBoy)
+                     .WithMany(g => g.LevyPayments)
+                     .HasForeignKey(c => c.GoodBoyId)
+                     .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasOne(p => p.Trader)
                       .WithMany(t => t.LevyPayments)
                       .HasForeignKey(p => p.TraderId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
-            builder.Entity<LevyCollection>(entity =>
+         /*   builder.Entity<LevyCollection>(entity =>
             {
                 entity.Property(e => e.Amount).HasPrecision(18, 2);
                 entity.Property(e => e.CollectionDate).HasDefaultValueSql("GETDATE()");
@@ -202,7 +207,7 @@ namespace SabiMarket.Infrastructure.Data
                       .WithMany()
                       .HasForeignKey(c => c.TraderId)
                       .OnDelete(DeleteBehavior.Restrict);
-            });
+            });*/
             #endregion
 
             #region Waived Market Configuration

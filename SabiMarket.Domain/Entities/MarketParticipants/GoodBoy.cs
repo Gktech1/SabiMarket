@@ -11,6 +11,6 @@ public class GoodBoy : BaseEntity
     public Guid CaretakerId { get; set; }
     public virtual ApplicationUser User { get; set; }
     public virtual Caretaker Caretaker { get; set; }
-    public virtual ICollection<LevyCollection> Collections { get; set; }
+    public virtual ICollection<LevyPayment> LevyPayments { get; set; }
 }
 

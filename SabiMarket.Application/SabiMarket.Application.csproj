@@ -33,4 +33,8 @@
     <PackageReference Include="Microsoft.SqlServer.Server" Version="1.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SabiMarket.Domain\SabiMarket.Domain.csproj" />
+  </ItemGroup>
+
 </Project>
