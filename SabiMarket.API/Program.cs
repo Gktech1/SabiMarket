@@ -86,9 +86,9 @@ namespace SabiMarket.API
             }
 
             app.UseHttpsRedirection();
-           
-            app.UseCustomErrorHandling();
 
+            app.UseCustomErrorHandling();
+            app.UseAuthentication();
             app.UseAuthorization();
 
             // Seed the database
