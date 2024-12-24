@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿/*using System.ComponentModel.DataAnnotations.Schema;
 using SabiMarket.Domain.Entities.MarketParticipants;
 
 namespace SabiMarket.Domain.Entities.LevyManagement
@@ -21,3 +21,4 @@ namespace SabiMarket.Domain.Entities.LevyManagement
     }
 
 }
+*/

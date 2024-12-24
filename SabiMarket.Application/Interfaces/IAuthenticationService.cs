@@ -6,5 +6,6 @@ namespace SabiMarket.Application.Interfaces
     public interface IAuthenticationService
     {
         Task<BaseResponse<LoginResponseDto>> LoginAsync(LoginRequestDto loginRequest);
+        Task<BaseResponse<RegistrationResponseDto>> RegisterAsync(RegistrationRequestDto request);
     }
 }

@@ -1,6 +1,6 @@
-﻿using SabiMarket.Domain.Exceptions;
+﻿using SabiMarket.Application.DTOs.Responses;
+using SabiMarket.Domain.Exceptions;
 using SabiMarket.Domain.Models;
-using SabiMarket.Infrastructure.Utilities;
 using System.Net.Mime;
 using System.Text.Json;
 
@@ -35,14 +35,18 @@ namespace SabiMarket.API.Middlewares
         private async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
             var (statusCode, errorDetails) = GetErrorDetails(exception);
-
             context.Response.ContentType = MediaTypeNames.Application.Json;
             context.Response.StatusCode = statusCode;
 
             var response = ResponseFactory.Fail<object>(
-                errorDetails.Message,
-                _environment.IsDevelopment() ? errorDetails : null
+                exception, // Pass the exception instead of string
+                errorDetails.Message // Use the message as the second parameter
             );
+
+            if (_environment.IsDevelopment())
+            {
+                response.Error = errorDetails;
+            }
 
             var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
             {
@@ -53,13 +57,13 @@ namespace SabiMarket.API.Middlewares
             await context.Response.WriteAsync(json);
         }
 
-        private (int StatusCode, ErrorDetails ErrorDetails) GetErrorDetails(Exception exception)
+        private (int StatusCode, ErrorResponse ErrorDetails) GetErrorDetails(Exception exception)
         {
             return exception switch
             {
                 ApiException apiException => (
                     apiException.StatusCode,
-                    new ErrorDetails
+                    new ErrorResponse
                     {
                         Type = exception.GetType().Name,
                         Message = apiException.Message,
@@ -68,10 +72,9 @@ namespace SabiMarket.API.Middlewares
                     }
                 ),
 
-                // Handle specific framework exceptions
                 InvalidOperationException => (
                     StatusCodes.Status400BadRequest,
-                    new ErrorDetails
+                    new ErrorResponse
                     {
                         Type = "InvalidOperation",
                         Message = "Invalid operation performed",
@@ -79,10 +82,9 @@ namespace SabiMarket.API.Middlewares
                     }
                 ),
 
-                // Default case for unhandled exceptions
                 _ => (
                     StatusCodes.Status500InternalServerError,
-                    new ErrorDetails
+                    new ErrorResponse
                     {
                         Type = "UnhandledException",
                         Message = _environment.IsDevelopment()

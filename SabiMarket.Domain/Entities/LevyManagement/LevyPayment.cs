@@ -7,8 +7,8 @@ namespace SabiMarket.Domain.Entities.LevyManagement
     [Table("LevyPayments")]
     public class LevyPayment : BaseEntity
     {
-        public Guid Id { get; set; }
         public Guid TraderId { get; set; }
+        public Guid GoodBoyId { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
@@ -20,10 +20,11 @@ namespace SabiMarket.Domain.Entities.LevyManagement
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal? IncentiveAmount { get; set; }
+        public string QRCodeScanned { get; set; }
+        public string Notes { get; set; }
+        public virtual GoodBoy GoodBoy { get; set; }
+        public virtual Trader Trader { get; set; }
 
         public DateTime PaymentDate { get; set; }
-        public string Notes { get; set; }
-
-        public virtual Trader Trader { get; set; }
     }
 }

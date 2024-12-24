@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -7,7 +8,6 @@ using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Exceptions;
-using SabiMarket.Infrastructure.Utilities;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -20,44 +20,73 @@ namespace SabiMarket.Infrastructure.Services
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthenticationService> _logger;  // Added logger
+        private readonly IValidator<RegistrationRequestDto> _registrationValidator;
+        private readonly IValidator<LoginRequestDto> _loginValidator;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
         public AuthenticationService(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IConfiguration configuration,
-            ILogger<AuthenticationService> logger)
+            ILogger<AuthenticationService> logger,
+            IValidator<RegistrationRequestDto> registrationValidator,
+            RoleManager<IdentityRole> roleManager,
+            IValidator<LoginRequestDto> loginValidator)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _logger = logger;
+            _registrationValidator = registrationValidator;
+            _roleManager = roleManager;
+            _loginValidator = loginValidator;
         }
 
         public async Task<BaseResponse<LoginResponseDto>> LoginAsync(LoginRequestDto loginRequest)
         {
             try
             {
+                // Validate request using FluentValidation
+                var validationResult = await _loginValidator.ValidateAsync(loginRequest);
+                if (!validationResult.IsValid)
+                {
+                    return ResponseFactory.Fail<LoginResponseDto>(
+                        new FluentValidation.ValidationException(validationResult.Errors),
+                        "Validation failed");
+                }
+
                 // Find user by email
-                var user = await _userManager.FindByEmailAsync(loginRequest.Email)
-                    ?? throw new NotFoundException("Invalid email or password");
+                var user = await _userManager.FindByEmailAsync(loginRequest.Email);
+                if (user == null)
+                {
+                    return ResponseFactory.Fail<LoginResponseDto>(
+                        new NotFoundException("Invalid email or password"),
+                        "User not found");
+                }
 
                 if (!user.IsActive)
                 {
-                    throw new ForbidException("Account is deactivated");
+                    return ResponseFactory.Fail<LoginResponseDto>(
+                        new ForbidException("Account is deactivated"),
+                        "Account inactive");
                 }
 
                 // Verify password and sign in
                 var result = await _signInManager.PasswordSignInAsync(user, loginRequest.Password, false, true);
                 if (!result.Succeeded)
                 {
-                    throw new BadRequestException("Invalid email or password");
+                    return ResponseFactory.Fail<LoginResponseDto>(
+                        new BadRequestException("Invalid email or password"),
+                        "Login failed");
                 }
 
                 // Get user roles
                 var roles = await _userManager.GetRolesAsync(user);
                 if (!roles.Any())
                 {
-                    throw new UnauthorizedException("No roles assigned to this user");
+                    return ResponseFactory.Fail<LoginResponseDto>(
+                        new UnauthorizedException("No roles assigned to this user"),
+                        "No roles assigned");
                 }
 
                 // Get associated entity based on role
@@ -90,17 +119,128 @@ namespace SabiMarket.Infrastructure.Services
 
                 return ResponseFactory.Success(response, "Login successful");
             }
-            catch (ApiException ex)
-            {
-                _logger.LogWarning(ex, "Login failed for email: {Email}", loginRequest.Email);
-                throw;
-            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An unexpected error occurred during login for email: {Email}", loginRequest.Email);
-                throw new BadRequestException("An unexpected error occurred during login");
+                return ResponseFactory.Fail<LoginResponseDto>(
+                    new BadRequestException("An unexpected error occurred during login"),
+                    "Login failed");
             }
         }
+
+        public async Task<BaseResponse<RegistrationResponseDto>> RegisterAsync(RegistrationRequestDto request)
+        {
+            try
+            {
+                // Validate request using FluentValidation
+                var validationResult = await _registrationValidator.ValidateAsync(request);
+                if (!validationResult.IsValid)
+                {
+                    return ResponseFactory.Fail<RegistrationResponseDto>(
+                        new FluentValidation.ValidationException(validationResult.Errors),
+                        "Validation failed");
+                }
+
+                // Check if email already exists
+                var existingUser = await _userManager.FindByEmailAsync(request.Email);
+                if (existingUser != null)
+                {
+                    return ResponseFactory.Fail<RegistrationResponseDto>(
+                        new BadRequestException("Email already registered"),
+                        "Email exists");
+                }
+
+                // Validate role
+                if (!await _roleManager.RoleExistsAsync(request.Role.ToUpper()))
+                {
+                    return ResponseFactory.Fail<RegistrationResponseDto>(
+                        new BadRequestException("Invalid role specified"),
+                        "Invalid role");
+                }
+
+                // Create base user
+                var user = new ApplicationUser
+                {
+                    UserName = request.Email,
+                    Email = request.Email,
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    PhoneNumber = request.PhoneNumber,
+                    Address = request.Address,
+                    IsActive = true,
+                    EmailConfirmed = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                // Create user
+                var result = await _userManager.CreateAsync(user, request.Password);
+                if (!result.Succeeded)
+                {
+                    return ResponseFactory.Fail<RegistrationResponseDto>(
+                        new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description))),
+                        "User creation failed");
+                }
+
+                // Assign role
+                var roleResult = await _userManager.AddToRoleAsync(user, request.Role.ToUpper());
+                if (!roleResult.Succeeded)
+                {
+                    await _userManager.DeleteAsync(user);
+                    return ResponseFactory.Fail<RegistrationResponseDto>(
+                        new BadRequestException("Failed to assign role"),
+                        "Role assignment failed");
+                }
+
+                var response = new RegistrationResponseDto
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    Role = request.Role,
+                    Message = "Registration successful. You can now log in",
+                    RequiresApproval = RequiresApproval(request.Role)
+                };
+
+                return ResponseFactory.Success(response, "Registration successful");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Registration failed for email: {Email}", request.Email);
+                return ResponseFactory.Fail<RegistrationResponseDto>(
+                    new BadRequestException("An unexpected error occurred during registration"),
+                    "Registration failed");
+            }
+        }
+
+
+        private bool RequiresApproval(string role)
+        {
+            return role.ToUpper() switch
+            {
+                DefaultRoles.Vendor => true,
+                DefaultRoles.Trader => true,
+                DefaultRoles.Chairman => true,
+                DefaultRoles.Caretaker => true,
+                DefaultRoles.Goodboy => true,
+                DefaultRoles.Customer => true, 
+                _ => false
+            };
+        }
+
+       /* private string GetRegistrationMessage(string role)
+        {
+           // var requiresVerification = RequiresEmailVerification(role);
+            var requiresApproval = RequiresApproval(role);
+
+            return (requiresApproval) switch
+            {
+                (true) => "Registration successful. Please verify your email and wait for admin approval.",
+                (true, false) => "Registration successful. Please verify your email to activate your account.",
+                (false, true) => "Registration successful. Your account is pending admin approval.",
+                _ => "Registration successful. You can now log in."
+            };
+        }*/
+
+    
 
         private async Task<IDictionary<string, object>> GetUserDetailsByRole(ApplicationUser user, string role)
         {
