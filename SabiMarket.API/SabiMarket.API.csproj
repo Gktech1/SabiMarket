@@ -29,4 +29,8 @@
     <ProjectReference Include="..\SabiMarket.Infrastructure\SabiMarket.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Controllers\UserManagement\" />
+  </ItemGroup>
+
 </Project>
