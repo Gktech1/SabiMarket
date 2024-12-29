@@ -1,4 +1,7 @@
-﻿using FluentValidation;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -8,9 +11,6 @@ using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Exceptions;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace SabiMarket.Infrastructure.Services
 {

@@ -22,17 +22,13 @@ namespace SabiMarket.API
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
-
-
             var app = builder.Build();
 
-        *//*    // Seed database
             using (var scope = app.Services.CreateScope())
             {
                 var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
                 await seeder.SeedAsync();
-            }*//*
-
+            };
             //MONITORING 
             app.UseMiddleware<RequestTimeLoggingMiddleware>();
 
@@ -58,4 +54,3 @@ namespace SabiMarket.API
         }
     }
 }
-*/

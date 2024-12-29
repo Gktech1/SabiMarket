@@ -49,7 +49,7 @@ namespace SabiMarket.API.ServiceExtensions
 
             // Add custom error handling
             // builder.Services.AddCustomErrorHandling(); // Add this BEFORE var app = builder.Build()
-            services.AddScoped<IAuthenticationService, AuthenticationService>();
+            services.AddScoped<Microsoft.AspNetCore.Authentication.IAuthenticationService, Microsoft.AspNetCore.Authentication.AuthenticationService>();
             services.AddScoped<RequestTimeLoggingMiddleware>();
             services.AddScoped<IRepositoryManager, RepositoryManager>();
             services.AddScoped<IServiceManager, ServiceManager>();
