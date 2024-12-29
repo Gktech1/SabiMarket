@@ -323,11 +323,14 @@ namespace SabiMarket.Infrastructure.Services
                     break;
             }
 
-            if (user.LocalGovernmentId.HasValue)
+            //if (user.LocalGovernmentId.HasValue)
+            //{
+            //    details.Add("localGovernmentId", user.LocalGovernmentId.Value);
+            //}
+            if (user.LocalGovernmentId != null)
             {
-                details.Add("localGovernmentId", user.LocalGovernmentId.Value);
+                details.Add("localGovernmentId", user.LocalGovernmentId);
             }
-
             return details;
         }
 
