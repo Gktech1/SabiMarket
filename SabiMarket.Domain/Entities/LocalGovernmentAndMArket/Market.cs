@@ -1,5 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using SabiMarket.Domain.Entities.MarketParticipants;
 
 namespace SabiMarket.Domain.Entities.LocalGovernmentAndMArket
@@ -7,7 +7,7 @@ namespace SabiMarket.Domain.Entities.LocalGovernmentAndMArket
     [Table("Markets")]
     public class Market : BaseEntity
     {
-        public Guid LocalGovernmentId { get; set; }
+        public string LocalGovernmentId { get; set; }
 
         [Required]
         [StringLength(100)]

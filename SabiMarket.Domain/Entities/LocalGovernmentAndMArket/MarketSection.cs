@@ -1,8 +1,8 @@
-﻿using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
-using SabiMarket.Domain.Entities.MarketParticipants;
-using SabiMarket.Domain.Entities;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+using SabiMarket.Domain.Entities;
+using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
+using SabiMarket.Domain.Entities.MarketParticipants;
 
 [Table("MarketSections")]
 public class MarketSection : BaseEntity
@@ -15,7 +15,7 @@ public class MarketSection : BaseEntity
     public bool IsActive { get; set; }
 
     // Add this property
-    public Guid MarketId { get; set; }  // Foreign key for Market
+    public string MarketId { get; set; }  // Foreign key for Market
 
     public virtual Market Market { get; set; }
     public virtual ICollection<Trader> Traders { get; set; }

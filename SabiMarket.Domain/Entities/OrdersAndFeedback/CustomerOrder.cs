@@ -8,8 +8,8 @@ namespace SabiMarket.Domain.Entities.OrdersAndFeedback
     [Table("CustomerOrders")]
     public class CustomerOrder : BaseEntity
     {
-        public Guid CustomerId { get; set; }
-        public Guid VendorId { get; set; }
+        public string CustomerId { get; set; }
+        public string VendorId { get; set; }
         public DateTime OrderDate { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]

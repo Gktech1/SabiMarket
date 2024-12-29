@@ -22,7 +22,7 @@ namespace SabiMarket.Domain.Entities.UserManagement
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? LastLoginAt { get; set; }
-        public Guid? LocalGovernmentId { get; set; }
+        public string? LocalGovernmentId { get; set; }
 
         public virtual LocalGovernment LocalGovernment { get; set; }
         public virtual Chairman Chairman { get; set; }

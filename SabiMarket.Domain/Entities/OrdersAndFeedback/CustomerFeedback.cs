@@ -7,8 +7,8 @@ namespace SabiMarket.Domain.Entities.OrdersAndFeedback
     [Table("CustomerFeedbacks")]
     public class CustomerFeedback : BaseEntity
     {
-        public Guid CustomerId { get; set; }
-        public Guid VendorId { get; set; }
+        public string CustomerId { get; set; }
+        public string VendorId { get; set; }
         public string VendorCode { get; set; }
         public string Comment { get; set; }
         public int Rating { get; set; }

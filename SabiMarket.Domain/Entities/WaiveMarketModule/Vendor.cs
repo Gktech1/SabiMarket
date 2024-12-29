@@ -1,10 +1,10 @@
-﻿using SabiMarket.Domain.Entities.AdvertisementModule;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
-using SabiMarket.Domain.Enum;
+using SabiMarket.Domain.Entities.AdvertisementModule;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.OrdersAndFeedback;
 using SabiMarket.Domain.Entities.UserManagement;
+using SabiMarket.Domain.Enum;
 
 namespace SabiMarket.Domain.Entities.WaiveMarketModule
 {
@@ -12,7 +12,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
     public class Vendor : BaseEntity
     {
         public string UserId { get; set; }
-        public Guid LocalGovernmentId { get; set; }
+        public string LocalGovernmentId { get; set; }
 
         [Required]
         [StringLength(100)]

@@ -1,14 +1,14 @@
-﻿using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
-using SabiMarket.Domain.Entities.UserManagement;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
+using SabiMarket.Domain.Entities.UserManagement;
 
 namespace SabiMarket.Domain.Entities
 {
     public class Chairman : BaseEntity
     {
         public string UserId { get; set; }
-        public Guid LocalGovernmentId { get; set; }
+        public string LocalGovernmentId { get; set; }
 
         [Required]
         [StringLength(100)]

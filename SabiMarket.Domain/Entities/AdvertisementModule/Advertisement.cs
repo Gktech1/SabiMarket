@@ -1,14 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
-using SabiMarket.Domain.Enum;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
+using SabiMarket.Domain.Enum;
 
 namespace SabiMarket.Domain.Entities.AdvertisementModule
 {
     [Table("Advertisements")]
     public class Advertisement : BaseEntity
     {
-        public Guid VendorId { get; set; }
+        public string VendorId { get; set; }
 
         [Required]
         public string Title { get; set; }

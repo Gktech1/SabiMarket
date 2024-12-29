@@ -1,5 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using SabiMarket.Domain.Entities.OrdersAndFeedback;
 using SabiMarket.Domain.Entities.Supporting;
 
@@ -8,7 +8,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
     [Table("WaivedProducts")]
     public class WaivedProduct : BaseEntity
     {
-        public Guid VendorId { get; set; }
+        public string VendorId { get; set; }
 
         [Required]
         [StringLength(100)]

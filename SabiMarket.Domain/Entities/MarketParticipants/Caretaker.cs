@@ -9,7 +9,7 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
     public class Caretaker : BaseEntity
     {
         public string UserId { get; set; }
-        public Guid MarketId { get; set; }
+        public string MarketId { get; set; }
         public virtual ApplicationUser User { get; set; }
         public virtual Market Market { get; set; }
         public virtual ICollection<GoodBoy> GoodBoys { get; set; }
