@@ -54,7 +54,7 @@ namespace SabiMarket.Infrastructure.Data
                 entity.Property(e => e.FirstName).HasMaxLength(100);
                 entity.Property(e => e.LastName).HasMaxLength(100);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
-
+                entity.Property(e => e.Address).IsRequired(false);  // Make nullable in database
                 entity.HasOne(u => u.LocalGovernment)
                       .WithMany(lg => lg.Users)
                       .HasForeignKey(u => u.LocalGovernmentId)
@@ -192,22 +192,6 @@ namespace SabiMarket.Infrastructure.Data
                       .HasForeignKey(p => p.TraderId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
-
-         /*   builder.Entity<LevyCollection>(entity =>
-            {
-                entity.Property(e => e.Amount).HasPrecision(18, 2);
-                entity.Property(e => e.CollectionDate).HasDefaultValueSql("GETDATE()");
-
-                entity.HasOne(c => c.GoodBoy)
-                      .WithMany(g => g.Collections)
-                      .HasForeignKey(c => c.GoodBoyId)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(c => c.Trader)
-                      .WithMany()
-                      .HasForeignKey(c => c.TraderId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });*/
             #endregion
 
             #region Waived Market Configuration
