@@ -9,5 +9,7 @@ namespace SabiMarket.Application.IRepositories
     public interface IRepositoryManager
     {
         public ILevyPaymentRepository LevyPaymentRepository { get; }
+        public IMarketRepository MarketRepository { get; }
+        Task SaveChangesAsync();
     }
 }
