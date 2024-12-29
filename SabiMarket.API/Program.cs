@@ -55,7 +55,7 @@ namespace SabiMarket.API
             });
 
             // Add custom error handling
-            builder.Services.AddCustomErrorHandling(); // Add this BEFORE var app = builder.Build()
+            // builder.Services.AddCustomErrorHandling(); // Add this BEFORE var app = builder.Build()
 
 
             builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
@@ -76,9 +76,12 @@ namespace SabiMarket.API
                 app.UseSwaggerUI();
             }
 
+            app.UseStaticFiles();
+
             app.UseHttpsRedirection();
 
-            app.UseCustomErrorHandling();
+            //app.UseCustomErrorHandling();
+            app.UseMiddleware<ExceptionMiddleware>();
             app.UseAuthentication();
             app.UseAuthorization();
 

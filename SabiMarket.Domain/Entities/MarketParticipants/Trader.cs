@@ -1,5 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.UserManagement;
@@ -10,18 +10,18 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
     public class Trader : BaseEntity
     {
         public string UserId { get; set; }
-        public Guid MarketId { get; set; }
-        public Guid? SectionId { get; set; }
-        public Guid CaretakerId { get; set; }
+        public string MarketId { get; set; }
+        public string? SectionId { get; set; }
+        public string CaretakerId { get; set; }
 
         [Required]
         [StringLength(50)]
-        public string TIN { get; set; }
+        public string? TIN { get; set; }
 
         [Required]
-        public string BusinessName { get; set; }
+        public string? BusinessName { get; set; }
         public string BusinessType { get; set; }
-        public string QRCode { get; set; }
+        public string? QRCode { get; set; }
         public virtual ApplicationUser User { get; set; }
         public virtual Market Market { get; set; }
         public virtual MarketSection Section { get; set; }
