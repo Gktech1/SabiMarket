@@ -8,5 +8,6 @@ namespace SabiMarket.Application.IRepositories
 {
     public interface IRepositoryManager
     {
+        public ILevyPaymentRepository LevyPaymentRepository { get; }
     }
 }
