@@ -19,13 +19,13 @@ public static class DefaultRoles
 public class DatabaseSeeder
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DatabaseSeeder> _logger;
+    private readonly RoleManager<ApplicationRole> _roleManager;
 
     public DatabaseSeeder(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
+        RoleManager<ApplicationRole> roleManager,
         IConfiguration configuration,
         ILogger<DatabaseSeeder> logger)
     {
@@ -52,23 +52,26 @@ public class DatabaseSeeder
     private async Task SeedRolesAsync()
     {
         _logger.LogInformation("Seeding roles...");
-
         string[] roles = {
-            DefaultRoles.Admin,
-            DefaultRoles.Vendor,
-            DefaultRoles.Customer,
-            DefaultRoles.Advertiser,
-            DefaultRoles.AssistOfficer,
-            DefaultRoles.Goodboy,
-            DefaultRoles.Trader
-
-        };
-
+        DefaultRoles.Admin,
+        DefaultRoles.Vendor,
+        DefaultRoles.Customer,
+        DefaultRoles.Advertiser,
+        DefaultRoles.AssistOfficer,
+        DefaultRoles.Goodboy,
+        DefaultRoles.Trader,
+        DefaultRoles.Chairman
+    };
         foreach (var roleName in roles)
         {
             if (!await _roleManager.RoleExistsAsync(roleName))
             {
-                await _roleManager.CreateAsync(new IdentityRole(roleName));
+                await _roleManager.CreateAsync(new ApplicationRole(roleName)  // Changed from IdentityRole
+                {
+                    CreatedAt = DateTime.UtcNow,
+                    Description = $"This is {roleName}",
+                    IsActive = true   
+                });
                 _logger.LogInformation("Created role: {RoleName}", roleName);
             }
         }
@@ -77,32 +80,40 @@ public class DatabaseSeeder
     private async Task SeedAdminUserAsync()
     {
         _logger.LogInformation("Seeding admin user...");
-
         var adminEmail = _configuration["AdminSettings:Email"];
         var adminPassword = _configuration["AdminSettings:Password"];
-
         if (string.IsNullOrEmpty(adminEmail) || string.IsNullOrEmpty(adminPassword))
         {
             throw new InvalidOperationException("Admin credentials are not configured properly.");
         }
-
         var adminUser = await _userManager.FindByEmailAsync(adminEmail);
-
         if (adminUser == null)
         {
             adminUser = new ApplicationUser
             {
+                Id = Guid.NewGuid().ToString(),
                 UserName = adminEmail,
                 Email = adminEmail,
                 FirstName = "System",
                 LastName = "Administrator",
                 EmailConfirmed = true,
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                NormalizedEmail = adminEmail.ToUpper(),
+                NormalizedUserName = adminEmail.ToUpper(),
+                Address = "Default Admin Address",
+                ProfileImageUrl = "default-admin-avatar.png",
+                SecurityStamp = Guid.NewGuid().ToString(),
+                ConcurrencyStamp = Guid.NewGuid().ToString(),
+                PhoneNumber = "+1234567890",
+                PhoneNumberConfirmed = true,
+                TwoFactorEnabled = false,
+                LockoutEnabled = true,
+                AccessFailedCount = 0,
+                LastLoginAt = null
             };
 
             var result = await _userManager.CreateAsync(adminUser, adminPassword);
-
             if (result.Succeeded)
             {
                 await _userManager.AddToRoleAsync(adminUser, DefaultRoles.Admin);

@@ -16,8 +16,7 @@ namespace SabiMarket.Domain.Entities.UserManagement
         [StringLength(100)]
         public string LastName { get; set; }
 
-        public string Address { get; set; }
-
+        public string? Address { get; set; }
         public string ProfileImageUrl { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
