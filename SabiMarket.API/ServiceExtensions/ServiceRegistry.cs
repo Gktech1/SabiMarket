@@ -3,9 +3,13 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.API.Middlewares;
+using SabiMarket.Application.Interfaces;
+using SabiMarket.Application.IRepositories;
 using SabiMarket.Application.Validators;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Infrastructure.Data;
+using SabiMarket.Infrastructure.Repositories;
+using SabiMarket.Infrastructure.Services;
 
 namespace SabiMarket.API.ServiceExtensions
 {
@@ -47,7 +51,8 @@ namespace SabiMarket.API.ServiceExtensions
             // builder.Services.AddCustomErrorHandling(); // Add this BEFORE var app = builder.Build()
             services.AddScoped<IAuthenticationService, AuthenticationService>();
             services.AddScoped<RequestTimeLoggingMiddleware>();
-
+            services.AddScoped<IRepositoryManager, RepositoryManager>();
+            services.AddScoped<IServiceManager, ServiceManager>();
 
         }
     }
