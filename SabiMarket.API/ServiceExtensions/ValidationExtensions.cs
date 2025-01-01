@@ -11,9 +11,9 @@ namespace SabiMarket.API.ServiceExtensions
             services.AddScoped<IValidator<RegistrationRequestDto>, RegistrationRequestValidator>();
 
             // Optional: Register individual validators if needed separately
-            services.AddScoped<IValidator<VendorDetailsDto>, VendorDetailsValidator>();
+           /* services.AddScoped<IValidator<VendorDetailsDto>, VendorDetailsValidator>();
             services.AddScoped<IValidator<CustomerDetailsDto>, CustomerDetailsValidator>();
-            services.AddScoped<IValidator<AdvertiserDetailsDto>, AdvertiserDetailsValidator>();
+            services.AddScoped<IValidator<AdvertiserDetailsDto>, AdvertiserDetailsValidator>();*/
 
             return services;
         }

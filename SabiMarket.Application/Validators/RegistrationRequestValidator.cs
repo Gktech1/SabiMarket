@@ -39,7 +39,8 @@ namespace SabiMarket.Application.Validators
 
             RuleFor(x => x.PhoneNumber)
                 .NotEmpty().WithMessage("Phone number is required")
-                .Matches(@"^\+?[1-9]\d{1,14}$").WithMessage("Please enter a valid phone number");
+                .Matches(@"^(\+234|234|0)[789][01]\d{8}$")
+                .WithMessage("Please enter a valid Nigerian phone number");
 
             RuleFor(x => x.Address)
                 .NotEmpty().WithMessage("Address is required")
@@ -51,7 +52,7 @@ namespace SabiMarket.Application.Validators
                 .WithMessage("Invalid role specified");
 
             // Role-specific validation
-            When(x => x.Role?.ToUpper() == "VENDOR", () =>
+          /*  When(x => x.Role?.ToUpper() == "VENDOR", () =>
             {
                 RuleFor(x => x.VendorDetails).SetValidator(new VendorDetailsValidator());
             });
@@ -64,7 +65,7 @@ namespace SabiMarket.Application.Validators
             When(x => x.Role?.ToUpper() == "ADVERTISER", () =>
             {
                 RuleFor(x => x.AdvertiserDetails).SetValidator(new AdvertiserDetailsValidator());
-            });
+            });*/
         }
 
         private async Task<bool> EmailExists(string email)
@@ -75,7 +76,7 @@ namespace SabiMarket.Application.Validators
     }
 
     // Vendor Details Validator
-    public class VendorDetailsValidator : AbstractValidator<VendorDetailsDto>
+  /*  public class VendorDetailsValidator : AbstractValidator<VendorDetailsDto>
     {
         public VendorDetailsValidator()
         {
@@ -93,10 +94,10 @@ namespace SabiMarket.Application.Validators
             RuleFor(x => x.LocalGovernmentId)
                 .GreaterThan(0).WithMessage("Please select a valid local government");
         }
-    }
+    }*/
 
     // Customer Details Validator
-    public class CustomerDetailsValidator : AbstractValidator<CustomerDetailsDto>
+  /*  public class CustomerDetailsValidator : AbstractValidator<CustomerDetailsDto>
     {
         public CustomerDetailsValidator()
         {
@@ -106,10 +107,10 @@ namespace SabiMarket.Application.Validators
             RuleFor(x => x.LocalGovernmentId)
                 .GreaterThan(0).WithMessage("Please select a valid local government");
         }
-    }
+    }*/
 
     // Advertiser Details Validator
-    public class AdvertiserDetailsValidator : AbstractValidator<AdvertiserDetailsDto>
+  /*  public class AdvertiserDetailsValidator : AbstractValidator<AdvertiserDetailsDto>
     {
         public AdvertiserDetailsValidator()
         {
@@ -124,12 +125,12 @@ namespace SabiMarket.Application.Validators
             RuleFor(x => x.Website)
                 .Must(BeAValidUrl).When(x => !string.IsNullOrEmpty(x.Website))
                 .WithMessage("Please enter a valid website URL");
-        }
+        }*/
 
-        private bool BeAValidUrl(string website)
+      /*  private bool BeAValidUrl(string website)
         {
             return Uri.TryCreate(website, UriKind.Absolute, out var uriResult)
                 && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
-        }
-    }
+        }*/
+   // }
 }
