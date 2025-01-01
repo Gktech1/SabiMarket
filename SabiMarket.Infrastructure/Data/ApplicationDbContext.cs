@@ -38,6 +38,7 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<AdvertisementView> AdvertisementViews { get; set; }
         public DbSet<ProductCategory> ProductCategories { get; set; }
         public DbSet<Chairman> Chairmen { get; set; }
+        public DbSet<Subscription> Subscriptions { get; set; }
         #endregion
 
         protected override void OnModelCreating(ModelBuilder builder)
