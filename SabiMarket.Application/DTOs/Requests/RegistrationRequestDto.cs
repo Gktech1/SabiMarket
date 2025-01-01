@@ -1,4 +1,6 @@
-﻿namespace SabiMarket.Application.DTOs.Requests
+﻿using Microsoft.Extensions.Localization;
+
+namespace SabiMarket.Application.DTOs.Requests
 {
     public class RegistrationRequestDto
     {
@@ -8,8 +10,10 @@
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
         public string Password { get; set; }
-        public string Role { get; set; }  // VENDOR, CUSTOMER, ADVERTISER
+        public string Role { get; set; }  //Sample ====> VENDOR, CUSTOMER, ADVERTISER
         public string Address { get; set; }
+
+        public string? ProfileImageUrl { get; set; }
 
         // Vendor specific fields
         public VendorDetailsDto VendorDetails { get; set; }

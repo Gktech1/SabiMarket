@@ -1,7 +1,10 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Security;
 using System.Security.Claims;
 using System.Text;
 using FluentValidation;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -11,6 +14,7 @@ using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Exceptions;
+using static QRCoder.PayloadGenerator;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -161,17 +165,18 @@ namespace SabiMarket.Infrastructure.Services
                 // Create base user
                 var user = new ApplicationUser
                 {
+                    Id = Guid.NewGuid().ToString(),
                     UserName = request.Email,
                     Email = request.Email,
                     FirstName = request.FirstName,
                     LastName = request.LastName,
                     PhoneNumber = request.PhoneNumber,
                     Address = request.Address,
+                    ProfileImageUrl = request.ProfileImageUrl ?? "",
                     IsActive = true,
                     EmailConfirmed = true,
                     CreatedAt = DateTime.UtcNow
                 };
-
                 // Create user
                 var result = await _userManager.CreateAsync(user, request.Password);
                 if (!result.Succeeded)
@@ -342,9 +347,9 @@ namespace SabiMarket.Infrastructure.Services
             try
             {
                 // Validate JWT configuration
-                var jwtSecret = _configuration["JWT:Secret"];
-                var validIssuer = _configuration["JWT:ValidIssuer"];
-                var validAudience = _configuration["JWT:ValidAudience"];
+                var jwtSecret = _configuration["JwtSettings:Secret"];
+                var validIssuer = _configuration["JwtSettings:ValidIssuer"];
+                var validAudience = _configuration["JwtSettings:ValidAudience"];
 
                 if (string.IsNullOrEmpty(jwtSecret))
                 {

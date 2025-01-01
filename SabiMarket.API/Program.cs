@@ -1,9 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.API.Extensions;
 using SabiMarket.API.Middlewares;
-using SabiMarket.Application.Interfaces;
 using SabiMarket.Infrastructure.Data;
-using SabiMarket.Infrastructure.Services;
 
 public class Program
 {
@@ -11,15 +9,16 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // Add services to the container.
+        // Add services to the container
         builder.Services.AddApplicationServices(builder.Configuration);
         builder.Services.AddControllers();
         builder.Services.AddDatabaseContext(builder.Configuration);
         builder.Services.AddCustomErrorHandling();
-        builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+        builder.Services.AddJwtAuthentication(builder.Configuration);
+        builder.Services.AddCorsPolicy();
         builder.Services.AddScoped<RequestTimeLoggingMiddleware>();
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
+        builder.Services.AddSwaggerWithJWT();
 
         var app = builder.Build();
 
@@ -29,8 +28,7 @@ public class Program
             try
             {
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                await context.Database.MigrateAsync(); // Ensure database is created and migrated
-
+                await context.Database.MigrateAsync();
                 var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
                 await seeder.SeedAsync();
             }
@@ -41,7 +39,7 @@ public class Program
             }
         }
 
-        // Middleware configuration
+        // Configure middleware
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
@@ -50,6 +48,7 @@ public class Program
 
         app.UseMiddleware<RequestTimeLoggingMiddleware>();
         app.UseHttpsRedirection();
+        app.UseCors("AllowAll");
         app.UseCustomErrorHandling();
         app.UseAuthentication();
         app.UseAuthorization();

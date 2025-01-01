@@ -1,5 +1,6 @@
 ﻿using global::SabiMarket.Application.DTOs.Requests;
 using global::SabiMarket.Application.DTOs.Responses;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SabiMarket.Application.Interfaces;
 
@@ -10,6 +11,7 @@ namespace SabiMarket.API.Controllers.Authentication
         [Route("api/[controller]")]
         [ApiController]
         [Produces("application/json")]
+        //[Authorize]
         public class AuthenticationController : ControllerBase
         {
             private readonly IAuthenticationService _authService;
@@ -68,6 +70,7 @@ namespace SabiMarket.API.Controllers.Authentication
             /// <response code="409">If the email is already registered</response>
             /// <response code="500">If there was an internal server error</response>
             [HttpPost("register")]
+            [AllowAnonymous]
             [ProducesResponseType(typeof(BaseResponse<RegistrationResponseDto>), StatusCodes.Status200OK)]
             [ProducesResponseType(typeof(BaseResponse<RegistrationResponseDto>), StatusCodes.Status400BadRequest)]
             [ProducesResponseType(typeof(BaseResponse<RegistrationResponseDto>), StatusCodes.Status409Conflict)]
