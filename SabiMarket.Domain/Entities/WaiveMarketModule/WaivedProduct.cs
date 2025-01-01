@@ -23,6 +23,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal WaivedPrice { get; set; }
+        public bool IsAvailbleForUrgentPurchase { get; set; }
 
         public int StockQuantity { get; set; }
         public virtual Vendor Vendor { get; set; }

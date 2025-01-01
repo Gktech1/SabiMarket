@@ -10,6 +10,7 @@ namespace SabiMarket.Application.IRepositories
     {
         public ILevyPaymentRepository LevyPaymentRepository { get; }
         public IMarketRepository MarketRepository { get; }
+        public IWaivedProductRepository WaivedProductRepository { get; }
         Task SaveChangesAsync();
     }
 }

@@ -3,10 +3,10 @@
     public abstract class BaseEntity
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
-        public string CreatedBy { get; set; }
-        public string UpdatedBy { get; set; }
-        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow.AddHours(1);
+        public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow.AddHours(1);
+        //public string CreatedBy { get; set; }
+        //public string UpdatedBy { get; set; }
+        //public bool IsActive { get; set; } = true;
     }
 }
