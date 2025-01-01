@@ -24,11 +24,11 @@ namespace SabiMarket.API
             builder.Services.AddSwaggerGen();
             var app = builder.Build();
 
-            using (var scope = app.Services.CreateScope())
-            {
-                var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
-                await seeder.SeedAsync();
-            };
+            //using (var scope = app.Services.CreateScope())
+            //{
+            //    var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
+            //    await seeder.SeedAsync();
+            //};
             //MONITORING 
             app.UseMiddleware<RequestTimeLoggingMiddleware>();
 
