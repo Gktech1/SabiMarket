@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Domain.Exceptions;
-using SabiMarket.Domain.Models;
 
 public static class ResponseFactory
 {
@@ -11,7 +10,7 @@ public static class ResponseFactory
         {
             Data = data,
             Message = message,
-            Status = true
+            IsSuccessful = true
         };
     }
 
@@ -21,7 +20,7 @@ public static class ResponseFactory
         {
             Data = default,
             Message = message,
-            Status = false,
+            IsSuccessful = false,
             Error = new ErrorResponse
             {
                 Type = exception.GetType().Name,
