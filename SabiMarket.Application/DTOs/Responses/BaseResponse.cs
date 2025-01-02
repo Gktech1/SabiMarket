@@ -5,6 +5,7 @@
         public T Data { get; set; }
         public bool Status { get; set; }
         public string Message { get; set; }
+        public bool IsSuccessful { get; set; }   
         public ErrorResponse Error { get; set; }
     }
 
