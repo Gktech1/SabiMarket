@@ -15,6 +15,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         //public int DurationInMonths { get; set; }
         public DateTime SubscriptionEndDate { get; set; } //= DateTime.UtcNow.AddMonths(DurationInMonths);
         public decimal Amount { get; set; }
+        public string? AccountNumber { get; set; }
         public string PaymentMethod { get; set; }
     }
 }

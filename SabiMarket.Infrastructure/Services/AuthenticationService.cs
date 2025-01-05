@@ -1,11 +1,10 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
-using System.Net;
-using System.Security;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using FluentValidation;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -14,7 +13,6 @@ using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Exceptions;
-using static QRCoder.PayloadGenerator;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -101,11 +99,20 @@ namespace SabiMarket.Infrastructure.Services
                 await _userManager.UpdateAsync(user);
 
                 // Generate JWT token with claims
-                var (token, expiresAt) = await GenerateJwtTokenAsync(user, roles.First(), userDetails);
+                //var (token, expiresAt) = await GenerateJwtTokenAsync(user, roles.First(), userDetails);
+                var (token, expiresAt, jwtId) = await GenerateJwtTokenAsync(user, roles.First(), userDetails);
 
+                // Generate refresh token
+                user.RefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+                user.RefreshTokenJwtId = jwtId;
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(30);
+                user.IsRefreshTokenUsed = false;
+
+                await _userManager.UpdateAsync(user);
                 var response = new LoginResponseDto
                 {
                     AccessToken = token,
+                    RefreshToken = user.RefreshToken,
                     ExpiresAt = expiresAt,
                     UserInfo = new UserClaimsDto
                     {
@@ -129,6 +136,79 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<LoginResponseDto>(
                     new BadRequestException("An unexpected error occurred during login"),
                     "Login failed");
+            }
+        }
+
+
+        public async Task<BaseResponse<LoginResponseDto>> RefreshTokenAsync(string refreshToken)
+        {
+            try
+            {
+                // Find user with valid refresh token
+                var user = await _userManager.Users.FirstOrDefaultAsync(u =>
+                    u.RefreshToken == refreshToken &&
+                    u.RefreshTokenExpiryTime > DateTime.UtcNow &&
+                    u.IsRefreshTokenUsed != true);
+
+                if (user == null)
+                {
+                    return ResponseFactory.Fail<LoginResponseDto>(
+                        new BadRequestException("Invalid or expired refresh token"),
+                        "Invalid token");
+                }
+
+                // Mark current refresh token as used
+                user.IsRefreshTokenUsed = true;
+                await _userManager.UpdateAsync(user);
+
+                // Get user roles
+                var roles = await _userManager.GetRolesAsync(user);
+                if (!roles.Any())
+                {
+                    return ResponseFactory.Fail<LoginResponseDto>(
+                        new UnauthorizedException("No roles assigned to this user"),
+                        "No roles assigned");
+                }
+
+                var userDetails = await GetUserDetailsByRole(user, roles.First());
+
+                // Generate new tokens
+                var (token, expiresAt, jwtId) = await GenerateJwtTokenAsync(user, roles.First(), userDetails);
+
+                // Generate new refresh token
+                user.RefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+                user.RefreshTokenJwtId = jwtId;
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(30);
+                user.IsRefreshTokenUsed = false;
+                await _userManager.UpdateAsync(user);
+
+                var response = new LoginResponseDto
+                {
+                    AccessToken = token,
+                    RefreshToken = user.RefreshToken,
+                    ExpiresAt = expiresAt,
+                    UserInfo = new UserClaimsDto
+                    {
+                        UserId = user.Id,
+                        Email = user.Email,
+                        Username = user.UserName,
+                        FirstName = user.FirstName,
+                        LastName = user.LastName,
+                        Role = roles.First(),
+                        LastLoginAt = user.LastLoginAt ?? DateTime.UtcNow,
+                        ProfileImageUrl = user.ProfileImageUrl,
+                        AdditionalDetails = userDetails
+                    }
+                };
+
+                return ResponseFactory.Success(response, "Token refreshed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while refreshing token");
+                return ResponseFactory.Fail<LoginResponseDto>(
+                    new BadRequestException("An unexpected error occurred while refreshing token"),
+                    "Refresh failed");
             }
         }
 
@@ -339,48 +419,48 @@ namespace SabiMarket.Infrastructure.Services
             return details;
         }
 
-        private async Task<(string token, DateTime expiresAt)> GenerateJwtTokenAsync(
+        private async Task<(string token, DateTime expiresAt, string jwtId)> GenerateJwtTokenAsync(
     ApplicationUser user,
     string role,
     IDictionary<string, object> additionalDetails)
         {
             try
             {
+                // Generate JWT ID
+                var jwtId = Guid.NewGuid().ToString();  // Add this line at the beginning
+
                 // Validate JWT configuration
                 var jwtSecret = _configuration["JwtSettings:Secret"];
                 var validIssuer = _configuration["JwtSettings:ValidIssuer"];
                 var validAudience = _configuration["JwtSettings:ValidAudience"];
-
                 if (string.IsNullOrEmpty(jwtSecret))
                 {
                     _logger.LogError("JWT Secret is not configured");
                     throw new InvalidOperationException("JWT configuration is missing");
                 }
-
                 if (string.IsNullOrEmpty(validIssuer) || string.IsNullOrEmpty(validAudience))
                 {
                     _logger.LogError("JWT Issuer or Audience is not configured");
                     throw new InvalidOperationException("JWT configuration is incomplete");
                 }
-
                 // Validate user data
                 if (user == null || string.IsNullOrEmpty(user.Id) || string.IsNullOrEmpty(user.Email))
                 {
                     throw new ArgumentException("Invalid user data");
                 }
-
                 // Create claims
                 var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-            new Claim(ClaimTypes.GivenName, user.FirstName ?? string.Empty),
-            new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
-            new Claim(ClaimTypes.Role, role ?? string.Empty),
-            new Claim("profile_image", user.ProfileImageUrl ?? string.Empty),
-            new Claim("last_login", user.LastLoginAt?.ToString("O") ?? DateTime.UtcNow.ToString("O"))
-        };
+                {
+                    new Claim(JwtRegisteredClaimNames.Jti, jwtId),  // Add the JWT ID claim
+                    new Claim(ClaimTypes.NameIdentifier, user.Id),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
+                    new Claim(ClaimTypes.GivenName, user.FirstName ?? string.Empty),
+                    new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
+                    new Claim(ClaimTypes.Role, role ?? string.Empty),
+                    new Claim("profile_image", user.ProfileImageUrl ?? string.Empty),
+                    new Claim("last_login", user.LastLoginAt?.ToString("O") ?? DateTime.UtcNow.ToString("O"))
+                };
 
                 // Add additional role-specific claims with null checking
                 if (additionalDetails != null)
@@ -398,7 +478,6 @@ namespace SabiMarket.Infrastructure.Services
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
                 var expiresAt = DateTime.UtcNow.AddDays(1);
-
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {
                     Subject = new ClaimsIdentity(claims),
@@ -410,8 +489,7 @@ namespace SabiMarket.Infrastructure.Services
 
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var token = tokenHandler.CreateToken(tokenDescriptor);
-
-                return (tokenHandler.WriteToken(token), expiresAt);
+                return (tokenHandler.WriteToken(token), expiresAt, jwtId);
             }
             catch (Exception ex)
             {
@@ -420,44 +498,88 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        /* private async Task<(string token, DateTime expiresAt)> GenerateJwtTokenAsync(
-             ApplicationUser user,
-             string role,
-             IDictionary<string, object> additionalDetails)
-         {
-             var claims = new List<Claim>
+
+        /*     private async Task<(string token, DateTime expiresAt, string jwtId)> GenerateJwtTokenAsync(
+         ApplicationUser user,
+         string role,
+         IDictionary<string, object> additionalDetails)
+             {
+                 try
+                 {
+                     // Validate JWT configuration
+                     var jwtSecret = _configuration["JwtSettings:Secret"];
+                     var validIssuer = _configuration["JwtSettings:ValidIssuer"];
+                     var validAudience = _configuration["JwtSettings:ValidAudience"];
+
+                     if (string.IsNullOrEmpty(jwtSecret))
+                     {
+                         _logger.LogError("JWT Secret is not configured");
+                         throw new InvalidOperationException("JWT configuration is missing");
+                     }
+
+                     if (string.IsNullOrEmpty(validIssuer) || string.IsNullOrEmpty(validAudience))
+                     {
+                         _logger.LogError("JWT Issuer or Audience is not configured");
+                         throw new InvalidOperationException("JWT configuration is incomplete");
+                     }
+
+                     // Validate user data
+                     if (user == null || string.IsNullOrEmpty(user.Id) || string.IsNullOrEmpty(user.Email))
+                     {
+                         throw new ArgumentException("Invalid user data");
+                     }
+
+                     // Create claims
+                     var claims = new List<Claim>
              {
                  new Claim(ClaimTypes.NameIdentifier, user.Id),
                  new Claim(ClaimTypes.Email, user.Email),
-                 new Claim(ClaimTypes.Name, user.UserName),
-                 new Claim(ClaimTypes.GivenName, user.FirstName),
-                 new Claim(ClaimTypes.Surname, user.LastName),
-                 new Claim(ClaimTypes.Role, role),
+                 new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
+                 new Claim(ClaimTypes.GivenName, user.FirstName ?? string.Empty),
+                 new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
+                 new Claim(ClaimTypes.Role, role ?? string.Empty),
                  new Claim("profile_image", user.ProfileImageUrl ?? string.Empty),
                  new Claim("last_login", user.LastLoginAt?.ToString("O") ?? DateTime.UtcNow.ToString("O"))
              };
 
-             // Add additional role-specific claims
-             foreach (var detail in additionalDetails)
-             {
-                 claims.Add(new Claim(detail.Key, detail.Value?.ToString() ?? string.Empty));
-             }
+                     // Add additional role-specific claims with null checking
+                     if (additionalDetails != null)
+                     {
+                         foreach (var detail in additionalDetails)
+                         {
+                             if (!string.IsNullOrEmpty(detail.Key))
+                             {
+                                 claims.Add(new Claim(detail.Key, detail.Value?.ToString() ?? string.Empty));
+                             }
+                         }
+                     }
 
-             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
-             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-             var expiresAt = DateTime.UtcNow.AddDays(1);
+                     // Create token
+                     var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
+                     var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+                     var expiresAt = DateTime.UtcNow.AddDays(1);
 
-             var token = new JwtSecurityToken(
-                 issuer: _configuration["JWT:ValidIssuer"],
-                 audience: _configuration["JWT:ValidAudience"],
-                 claims: claims,
-                 expires: expiresAt,
-                 signingCredentials: creds
-             );
+                     var tokenDescriptor = new SecurityTokenDescriptor
+                     {
+                         Subject = new ClaimsIdentity(claims),
+                         Expires = expiresAt,
+                         SigningCredentials = creds,
+                         Issuer = validIssuer,
+                         Audience = validAudience
+                     };
 
-             return (new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
-         }
- */
+                     var tokenHandler = new JwtSecurityTokenHandler();
+                     var token = tokenHandler.CreateToken(tokenDescriptor);
+
+                     return (tokenHandler.WriteToken(token), expiresAt, jwtId);
+                 }
+                 catch (Exception ex)
+                 {
+                     _logger.LogError(ex, "Error generating JWT token for user: {UserId}", user?.Id);
+                     throw;
+                 }
+             }*/
+
     }
 }
 

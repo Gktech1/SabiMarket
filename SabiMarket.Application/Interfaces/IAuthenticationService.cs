@@ -7,5 +7,6 @@ namespace SabiMarket.Application.Interfaces
     {
         Task<BaseResponse<LoginResponseDto>> LoginAsync(LoginRequestDto loginRequest);
         Task<BaseResponse<RegistrationResponseDto>> RegisterAsync(RegistrationRequestDto request);
+        Task<BaseResponse<LoginResponseDto>> RefreshTokenAsync(string refreshToken);
     }
 }
