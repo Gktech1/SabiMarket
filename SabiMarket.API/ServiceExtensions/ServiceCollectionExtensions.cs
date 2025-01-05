@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IValidator<RegistrationRequestDto>, RegistrationRequestValidator>();
         services.AddScoped<IValidator<LoginRequestDto>, LoginRequestValidator>();
+        services.AddScoped<IValidator<TokenRequestDto>, TokenRequestValidator>();
 
         return services;
     }

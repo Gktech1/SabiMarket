@@ -80,8 +80,8 @@ public class DatabaseSeeder
     private async Task SeedAdminUserAsync()
     {
         _logger.LogInformation("Seeding admin user...");
-        var adminEmail = _configuration["AdminSettings:Email"];
-        var adminPassword = _configuration["AdminSettings:Password"];
+        var adminEmail = "admin@yourapp.com";
+        var adminPassword = "YourSecurePassword123!";
         if (string.IsNullOrEmpty(adminEmail) || string.IsNullOrEmpty(adminPassword))
         {
             throw new InvalidOperationException("Admin credentials are not configured properly.");

@@ -61,6 +61,25 @@ namespace SabiMarket.API.Controllers.Authentication
             }
 
             /// <summary>
+            /// Generate Refresh Token 
+            /// </summary>
+            /// <param name="request"></param>
+            /// <returns></returns>
+            [HttpPost("refresh-token")]
+            [AllowAnonymous]
+            [ProducesResponseType(typeof(BaseResponse<LoginResponseDto>), StatusCodes.Status200OK)]
+            [ProducesResponseType(typeof(BaseResponse<LoginResponseDto>), StatusCodes.Status400BadRequest)]
+            public async Task<IActionResult> RefreshToken([FromBody] TokenRequestDto request)
+            {
+                    var response = await _authService.RefreshTokenAsync(request.RefreshToken);
+                    if (!response.IsSuccessful)
+                    {
+                        return BadRequest(response);
+                    }
+                    return Ok(response);
+            }
+
+            /// <summary>
             /// Registers a new user in the system
             /// </summary>
             /// <param name="request">User registration details</param>
