@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SabiMarket.Application.Interfaces;
 
 namespace SabiMarket.Application.IRepositories
 {
@@ -11,6 +7,13 @@ namespace SabiMarket.Application.IRepositories
         public ILevyPaymentRepository LevyPaymentRepository { get; }
         public IMarketRepository MarketRepository { get; }
         public IWaivedProductRepository WaivedProductRepository { get; }
+
+        public ICaretakerRepository CaretakerRepository { get; }
+
+        public IGoodBoyRepository GoodBoyRepository { get; }
+
+        public ITraderRepository TraderRepository { get; }
+
         Task SaveChangesAsync();
     }
 }

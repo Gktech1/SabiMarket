@@ -7,5 +7,6 @@ namespace SabiMarket.Application.Interfaces
         void AddTrader(Trader trader);
         void UpdateTrader(Trader trader);
         Task<IEnumerable<Trader>> GetAllAssistCenterOfficer(bool trackChanges);
+        Task<Trader> GetTraderById(string traderId, bool trackChanges);
     }
 }

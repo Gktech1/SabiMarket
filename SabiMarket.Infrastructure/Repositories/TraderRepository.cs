@@ -20,5 +20,9 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<IEnumerable<Trader>> GetAllAssistCenterOfficer(bool trackChanges) => await FindAll(trackChanges).ToListAsync();
 
+        public async Task<Trader> GetTraderById(string traderId, bool trackChanges) =>
+       await FindByCondition(t => t.Id == traderId, trackChanges)
+           .FirstOrDefaultAsync();
+
     }
 }
