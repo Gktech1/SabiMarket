@@ -9,6 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Controllers\UserManagement\**" />
+    <Content Remove="Controllers\UserManagement\**" />
+    <EmbeddedResource Remove="Controllers\UserManagement\**" />
+    <None Remove="Controllers\UserManagement\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" Version="8.0.11" />
@@ -28,10 +35,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SabiMarket.Infrastructure\SabiMarket.Infrastructure.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Controllers\UserManagement\" />
   </ItemGroup>
 
 </Project>

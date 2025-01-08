@@ -13,6 +13,7 @@ using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Exceptions;
+using ValidationException = FluentValidation.ValidationException;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -25,6 +26,7 @@ namespace SabiMarket.Infrastructure.Services
         private readonly IValidator<RegistrationRequestDto> _registrationValidator;
         private readonly IValidator<LoginRequestDto> _loginValidator;
         private readonly RoleManager<ApplicationRole> _roleManager;
+        private readonly IValidator<ChangePasswordDto> _changePasswordValidator;
 
         public AuthenticationService(
             UserManager<ApplicationUser> userManager,
@@ -33,7 +35,8 @@ namespace SabiMarket.Infrastructure.Services
             ILogger<AuthenticationService> logger,
             IValidator<RegistrationRequestDto> registrationValidator,
             RoleManager<ApplicationRole> roleManager,
-            IValidator<LoginRequestDto> loginValidator)
+            IValidator<LoginRequestDto> loginValidator,
+            IValidator<ChangePasswordDto> changePasswordValidator)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -42,6 +45,7 @@ namespace SabiMarket.Infrastructure.Services
             _registrationValidator = registrationValidator;
             _roleManager = roleManager;
             _loginValidator = loginValidator;
+            _changePasswordValidator = changePasswordValidator;
         }
 
         public async Task<BaseResponse<LoginResponseDto>> LoginAsync(LoginRequestDto loginRequest)
@@ -295,7 +299,6 @@ namespace SabiMarket.Infrastructure.Services
                     "Registration failed");
             }
         }
-
 
         private bool RequiresApproval(string role)
         {

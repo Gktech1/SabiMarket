@@ -13,6 +13,7 @@ namespace SabiMarket.Domain.Entities.LevyManagement
         public decimal Amount { get; set; }
         public PaymentPeriodEnum Period { get; set; }
         public PaymentMethodEnum PaymentMethod { get; set; }
+        public PaymentStatusEnum PaymentStatus { get; set; }
         public string TransactionReference { get; set; }
         public bool HasIncentive { get; set; }
         [Column(TypeName = "decimal(18,2)")]
