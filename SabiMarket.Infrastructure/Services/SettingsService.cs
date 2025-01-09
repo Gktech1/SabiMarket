@@ -123,14 +123,17 @@ namespace SabiMarket.Infrastructure.Services
                         "User profile not found");
                 }
 
-                var userRoles = await _userManager.GetRolesAsync(user);
+                var userRoles = await _userManager.GetRolesAsync(user) ?? new List<string>();
+
                 var profile = new UserProfileResponseDto
                 {
-                    Email = user.Email,
-                    FullName = $"{user.FirstName} {user.LastName}".Trim(),
+                    Email = user.Email ?? string.Empty,
+                    FullName = string.Join(" ",
+                        new[] { user.FirstName, user.LastName }
+                        .Where(x => !string.IsNullOrEmpty(x))),
                     Role = userRoles.FirstOrDefault() ?? string.Empty,
                     UserId = user.Id,
-                    PhoneNumber = user.PhoneNumber,
+                    PhoneNumber = user.PhoneNumber ?? string.Empty,
                     EmailConfirmed = user.EmailConfirmed,
                     LastLoginAt = user.LastLoginAt
                 };
