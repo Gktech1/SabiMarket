@@ -40,11 +40,11 @@ public class Program
         }
 
         // Configure middleware
-        if (app.Environment.IsDevelopment())
-        {
+        //if (app.Environment.IsDevelopment())
+        //{
             app.UseSwagger();
             app.UseSwaggerUI();
-        }
+        //}
 
         app.UseMiddleware<RequestTimeLoggingMiddleware>();
         app.UseHttpsRedirection();
