@@ -2,15 +2,9 @@
 using Microsoft.AspNetCore.Identity;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Domain.Entities.UserManagement;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SabiMarket.Application.Validators
 {
-    // UpdateProfileValidator.cs
     public class UpdateProfileValidator : AbstractValidator<UpdateProfileDto>
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -30,14 +24,13 @@ namespace SabiMarket.Application.Validators
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("Email is required")
                 .EmailAddress().WithMessage("Please provide a valid email address")
-                .MustAsync(BeUniqueEmail).WithMessage("This email is already in use")
-                .When((dto, email) => !string.IsNullOrEmpty(email));
-        }
-
-        private async Task<bool> BeUniqueEmail(string email, CancellationToken cancellationToken)
-        {
-            var user = await _userManager.FindByEmailAsync(email);
-            return user == null;
+                .MustAsync(async (model, email, cancellation) =>
+                {
+                    if (string.IsNullOrEmpty(email)) return false;
+                    var user = await _userManager.FindByEmailAsync(email);
+                    return user == null;
+                })
+                .WithMessage("This email is already in use");
         }
     }
 }
