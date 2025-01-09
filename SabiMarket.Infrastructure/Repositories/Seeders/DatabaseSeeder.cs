@@ -3,19 +3,18 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SabiMarket.Domain.Entities.UserManagement;
 
-public static class DefaultRoles
+public static class UserRoles
 {
     public const string Admin = "ADMIN";
     public const string Vendor = "VENDOR";
     public const string Customer = "CUSTOMER";
     public const string Advertiser = "ADVERTISER";
-    public const string Goodboy = "ADVERTISER";
-    public const string AssistOfficer = "ADVERTISER";
+    public const string Goodboy = "GOODBOY";                
+    public const string AssistOfficer = "ASSIST_OFFICER";   
     public const string Chairman = "CHAIRMAN";
     public const string Caretaker = "CARETAKER";
     public const string Trader = "TRADER";
 }
-
 public class DatabaseSeeder
 {
     private readonly UserManager<ApplicationUser> _userManager;
@@ -53,14 +52,14 @@ public class DatabaseSeeder
     {
         _logger.LogInformation("Seeding roles...");
         string[] roles = {
-        DefaultRoles.Admin,
-        DefaultRoles.Vendor,
-        DefaultRoles.Customer,
-        DefaultRoles.Advertiser,
-        DefaultRoles.AssistOfficer,
-        DefaultRoles.Goodboy,
-        DefaultRoles.Trader,
-        DefaultRoles.Chairman
+        UserRoles.Admin,
+        UserRoles.Vendor,
+        UserRoles.Customer,
+        UserRoles.Advertiser,
+        UserRoles.AssistOfficer,
+        UserRoles.Goodboy,
+        UserRoles.Trader,
+        UserRoles.Chairman
     };
         foreach (var roleName in roles)
         {
@@ -116,7 +115,7 @@ public class DatabaseSeeder
             var result = await _userManager.CreateAsync(adminUser, adminPassword);
             if (result.Succeeded)
             {
-                await _userManager.AddToRoleAsync(adminUser, DefaultRoles.Admin);
+                await _userManager.AddToRoleAsync(adminUser, UserRoles.Admin);
                 _logger.LogInformation("Admin user created successfully");
             }
             else

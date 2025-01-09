@@ -11,6 +11,8 @@ using SabiMarket.Application.Validators;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Services;
+using SabiMarket.Infrastructure.Helpers;
+using SabiMarket.API.ServiceExtensions;
 
 public static class ServiceCollectionExtensions
 {
@@ -51,10 +53,22 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<LoginRequestDto>, LoginRequestValidator>();
         services.AddScoped<IValidator<TokenRequestDto>, TokenRequestValidator>();
         services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordValidator>();
+        services.AddScoped<IValidator<CreateGoodBoyDto>, CreateGoodBoyValidator>();
+        services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordValidator>();
+        // Current approach - easily replaceable
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         return services;
     }
+    public static IServiceCollection AddCustomAuthorization(this IServiceCollection services)
+    {
+        services.AddAuthorization(options =>
+        {
+            AuthorizationConfiguration.ConfigureAuthorization(options);
+        });
 
+        return services;
+    }
     public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddAuthentication(options =>

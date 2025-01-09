@@ -110,5 +110,39 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
+
+        public async Task<BaseResponse<UserProfileResponseDto>> GetUserProfile(string userId)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return ResponseFactory.Fail<UserProfileResponseDto>(
+                        new NotFoundException("User not found"),
+                        "User profile not found");
+                }
+
+                var userRoles = await _userManager.GetRolesAsync(user);
+                var profile = new UserProfileResponseDto
+                {
+                    Email = user.Email,
+                    FullName = $"{user.FirstName} {user.LastName}".Trim(),
+                    Role = userRoles.FirstOrDefault() ?? string.Empty,
+                    UserId = user.Id,
+                    PhoneNumber = user.PhoneNumber,
+                    EmailConfirmed = user.EmailConfirmed,
+                    LastLoginAt = user.LastLoginAt
+                };
+
+                return ResponseFactory.Success(profile, "Profile retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving user profile for user {UserId}", userId);
+                return ResponseFactory.Fail<UserProfileResponseDto>(ex, "An unexpected error occurred");
+            }
+        }
+
     }
 }

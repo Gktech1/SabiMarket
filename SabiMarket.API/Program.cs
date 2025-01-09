@@ -19,6 +19,7 @@ public class Program
         builder.Services.AddScoped<RequestTimeLoggingMiddleware>();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerWithJWT();
+        builder.Services.AddCustomAuthorization();
 
         var app = builder.Build();
 

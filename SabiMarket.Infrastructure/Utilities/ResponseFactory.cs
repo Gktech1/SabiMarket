@@ -14,12 +14,28 @@ public static class ResponseFactory
         };
     }
 
-    public static BaseResponse<T> Fail<T>(Exception exception, string message)
+    public static BaseResponse<T> Fail<T>(string message)
     {
         return new BaseResponse<T>
         {
             Data = default,
             Message = message,
+            IsSuccessful = false,
+            Error = new ErrorResponse
+            {
+                Type = "GeneralError",
+                Message = message,
+                StatusCode = StatusCodes.Status400BadRequest
+            }
+        };
+    }
+
+    public static BaseResponse<T> Fail<T>(Exception exception, string message = null)
+    {
+        return new BaseResponse<T>
+        {
+            Data = default,
+            Message = message ?? exception.Message,
             IsSuccessful = false,
             Error = new ErrorResponse
             {
@@ -43,5 +59,3 @@ public static class ResponseFactory
         };
     }
 }
-
-
