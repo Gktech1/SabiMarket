@@ -22,7 +22,7 @@ namespace SabiMarket.Infrastructure.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
-        private readonly ILogger<AuthenticationService> _logger;  // Added logger
+        private readonly ILogger<AuthenticationService> _logger; 
         private readonly IValidator<RegistrationRequestDto> _registrationValidator;
         private readonly IValidator<LoginRequestDto> _loginValidator;
         private readonly RoleManager<ApplicationRole> _roleManager;
@@ -304,12 +304,12 @@ namespace SabiMarket.Infrastructure.Services
         {
             return role.ToUpper() switch
             {
-                DefaultRoles.Vendor => true,
-                DefaultRoles.Trader => true,
-                DefaultRoles.Chairman => true,
-                DefaultRoles.Caretaker => true,
-                DefaultRoles.Goodboy => true,
-                DefaultRoles.Customer => true,
+                UserRoles.Vendor => true,
+                UserRoles.Trader => true,
+                UserRoles.Chairman => true,
+                UserRoles.Caretaker => true,
+                UserRoles.Goodboy => true,
+                UserRoles.Customer => true,
                 _ => false
             };
         }
@@ -500,88 +500,6 @@ namespace SabiMarket.Infrastructure.Services
                 throw;
             }
         }
-
-
-        /*     private async Task<(string token, DateTime expiresAt, string jwtId)> GenerateJwtTokenAsync(
-         ApplicationUser user,
-         string role,
-         IDictionary<string, object> additionalDetails)
-             {
-                 try
-                 {
-                     // Validate JWT configuration
-                     var jwtSecret = _configuration["JwtSettings:Secret"];
-                     var validIssuer = _configuration["JwtSettings:ValidIssuer"];
-                     var validAudience = _configuration["JwtSettings:ValidAudience"];
-
-                     if (string.IsNullOrEmpty(jwtSecret))
-                     {
-                         _logger.LogError("JWT Secret is not configured");
-                         throw new InvalidOperationException("JWT configuration is missing");
-                     }
-
-                     if (string.IsNullOrEmpty(validIssuer) || string.IsNullOrEmpty(validAudience))
-                     {
-                         _logger.LogError("JWT Issuer or Audience is not configured");
-                         throw new InvalidOperationException("JWT configuration is incomplete");
-                     }
-
-                     // Validate user data
-                     if (user == null || string.IsNullOrEmpty(user.Id) || string.IsNullOrEmpty(user.Email))
-                     {
-                         throw new ArgumentException("Invalid user data");
-                     }
-
-                     // Create claims
-                     var claims = new List<Claim>
-             {
-                 new Claim(ClaimTypes.NameIdentifier, user.Id),
-                 new Claim(ClaimTypes.Email, user.Email),
-                 new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-                 new Claim(ClaimTypes.GivenName, user.FirstName ?? string.Empty),
-                 new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
-                 new Claim(ClaimTypes.Role, role ?? string.Empty),
-                 new Claim("profile_image", user.ProfileImageUrl ?? string.Empty),
-                 new Claim("last_login", user.LastLoginAt?.ToString("O") ?? DateTime.UtcNow.ToString("O"))
-             };
-
-                     // Add additional role-specific claims with null checking
-                     if (additionalDetails != null)
-                     {
-                         foreach (var detail in additionalDetails)
-                         {
-                             if (!string.IsNullOrEmpty(detail.Key))
-                             {
-                                 claims.Add(new Claim(detail.Key, detail.Value?.ToString() ?? string.Empty));
-                             }
-                         }
-                     }
-
-                     // Create token
-                     var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
-                     var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-                     var expiresAt = DateTime.UtcNow.AddDays(1);
-
-                     var tokenDescriptor = new SecurityTokenDescriptor
-                     {
-                         Subject = new ClaimsIdentity(claims),
-                         Expires = expiresAt,
-                         SigningCredentials = creds,
-                         Issuer = validIssuer,
-                         Audience = validAudience
-                     };
-
-                     var tokenHandler = new JwtSecurityTokenHandler();
-                     var token = tokenHandler.CreateToken(tokenDescriptor);
-
-                     return (tokenHandler.WriteToken(token), expiresAt, jwtId);
-                 }
-                 catch (Exception ex)
-                 {
-                     _logger.LogError(ex, "Error generating JWT token for user: {UserId}", user?.Id);
-                     throw;
-                 }
-             }*/
 
     }
 }

@@ -11,7 +11,6 @@ namespace SabiMarket.API.Controllers.Authentication
         [Route("api/[controller]")]
         [ApiController]
         [Produces("application/json")]
-        //[Authorize]
         public class AuthenticationController : ControllerBase
         {
             private readonly IAuthenticationService _authService;
