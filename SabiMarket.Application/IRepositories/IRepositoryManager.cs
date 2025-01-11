@@ -11,6 +11,7 @@ namespace SabiMarket.Application.IRepositories
         public ILevyPaymentRepository LevyPaymentRepository { get; }
         public IMarketRepository MarketRepository { get; }
         public IWaivedProductRepository WaivedProductRepository { get; }
+        public ISubscriptionRepository SubscriptionRepository { get; }
         Task SaveChangesAsync();
     }
 }

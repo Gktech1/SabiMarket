@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.Interfaces;
+using SabiMarket.Application.IRepositories;
 using SabiMarket.Application.Validators;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Infrastructure.Data;
+using SabiMarket.Infrastructure.Repositories;
 using SabiMarket.Infrastructure.Services;
 
 public static class ServiceCollectionExtensions
@@ -44,6 +46,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IValidator<RegistrationRequestDto>, RegistrationRequestValidator>();
         services.AddScoped<IValidator<LoginRequestDto>, LoginRequestValidator>();
+        services.AddScoped<IRepositoryManager, RepositoryManager>();
+        services.AddScoped<IServiceManager, ServiceManager>();
+        services.AddScoped<ICloudinaryService, CloudinaryService>();
 
         return services;
     }
