@@ -32,8 +32,8 @@ namespace SabiMarket.Infrastructure.Repositories
         public async Task<PaginatorDto<IEnumerable<Subscription>>> SearchSubscription(string searchString, PaginationFilter paginationFilter)
         {
             return await FindAll(false)
-                           .Where(a => a.User.FirstName.Contains(searchString) ||
-                           a.User.LastName.Contains(searchString))
+                           .Where(a => a.Subscriber.FirstName.Contains(searchString) ||
+                           a.Subscriber.LastName.Contains(searchString))
                            .Paginate(paginationFilter);
         }
 

@@ -20,6 +20,7 @@ namespace SabiMarket.Infrastructure.Services
             _subscriptionService = new Lazy<ISubscriptionService>(() => new SubscriptionService(contextAccessor, repositoryManager, applicationDbContext));
         }
         public IWaivedProductService IWaivedProductService => _waivedProductService.Value;
-        public ISubscriptionService SubscriptionService => _subscriptionService.Value;
+        public ISubscriptionService ISubscriptionService => _subscriptionService.Value;
+
     }
 }
