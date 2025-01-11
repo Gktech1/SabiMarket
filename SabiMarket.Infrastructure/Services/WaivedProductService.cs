@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Azure;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
+using SabiMarket.Domain.Exceptions;
 
 namespace SabiMarket.Infrastructure.Services;
+
 
 public class WaivedProductService : IWaivedProductService
 {
@@ -19,7 +22,7 @@ public class WaivedProductService : IWaivedProductService
         _repositoryManager = repositoryManager;
     }
 
-    public async Task<Result> CreateWaivedProduct(CreateWaivedProductDto dto)
+    public async Task<BaseResponse<string>> CreateWaivedProduct(CreateWaivedProductDto dto)
     {
         var waivedProd = new WaivedProduct
         {
@@ -36,37 +39,36 @@ public class WaivedProductService : IWaivedProductService
 
         _repositoryManager.WaivedProductRepository.AddWaivedProduct(waivedProd);
         await _repositoryManager.SaveChangesAsync();
-
-        return Result.Success();
+        return ResponseFactory.Success("Success", "Waive Product Created Successfully.");
     }
 
-    public async Task<Result<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string? category, PaginationFilter filter)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string? category, PaginationFilter filter)
     {
         var waivedProducts = await _repositoryManager.WaivedProductRepository.GetPagedWaivedProduct(category, filter);
         if (waivedProducts == null)
         {
-            return new Error[] { new("404", "No Record Found.") };
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaivedProduct>>>(new NotFoundException("No Record Found."), "Record not found.");
         }
 
-        return Result.Success(waivedProducts);
+        return ResponseFactory.Success<PaginatorDto<IEnumerable<WaivedProduct>>>(waivedProducts);
     }
-    public async Task<Result<WaivedProduct>> GetWaivedProductById(string Id)
+    public async Task<BaseResponse<WaivedProduct>> GetWaivedProductById(string Id)
     {
         var waivedProduct = await _repositoryManager.WaivedProductRepository.GetWaivedProductById(Id, false);
         if (waivedProduct == null)
         {
-            return new Error[] { new("404", "No Record Found.") };
+            return ResponseFactory.Fail<WaivedProduct>(new NotFoundException("No Record Found."), "Record not found.");
         }
 
-        return Result.Success(waivedProduct);
+        return ResponseFactory.Success(waivedProduct);
     }
 
-    public async Task<Result> UpdateProduct(UpdateWaivedProductDto dto)
+    public async Task<BaseResponse<string>> UpdateProduct(UpdateWaivedProductDto dto)
     {
         var product = await _repositoryManager.WaivedProductRepository.GetWaivedProductById(dto.ProductId, true);
         if (product == null)
         {
-            return new Error[] { new("404", "No Record Found.") };
+            return ResponseFactory.Fail<string>(new NotFoundException("No Record Found."), "Record not found.");
         }
         product.StockQuantity = dto.StockQuantity;
         product.OriginalPrice = dto.OriginalPrice;
@@ -77,7 +79,7 @@ public class WaivedProductService : IWaivedProductService
         product.ImageUrl = dto.ImageUrl;
 
         await _repositoryManager.SaveChangesAsync();
-        return Result.Success();
+        return ResponseFactory.Success("Success");
 
     }
 
