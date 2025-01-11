@@ -11,9 +11,9 @@ namespace SabiMarket.Application.Interfaces
 {
     public interface IWaivedProductService
     {
-        Task<Result> CreateWaivedProduct(CreateWaivedProductDto dto);
-        Task<Result<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string? category, PaginationFilter filter);
-        Task<Result<WaivedProduct>> GetWaivedProductById(string Id);
-        Task<Result> UpdateProduct(UpdateWaivedProductDto dto);
+        Task<BaseResponse<string>> CreateWaivedProduct(CreateWaivedProductDto dto);
+        Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string? category, PaginationFilter filter);
+        Task<BaseResponse<WaivedProduct>> GetWaivedProductById(string Id);
+        Task<BaseResponse<string>> UpdateProduct(UpdateWaivedProductDto dto);
     }
 }
