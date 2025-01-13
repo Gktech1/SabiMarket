@@ -8,6 +8,7 @@ namespace SabiMarket.Application.IRepositories
         public IMarketRepository MarketRepository { get; }
         public IWaivedProductRepository WaivedProductRepository { get; }
         public ISubscriptionRepository SubscriptionRepository { get; }
+        public ISubscriptionPlanRepository SubscriptionPlanRepository { get; }
 
         public ICaretakerRepository CaretakerRepository { get; }
 

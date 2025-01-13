@@ -11,5 +11,6 @@ namespace SabiMarket.Application.Interfaces
     {
         public IWaivedProductService IWaivedProductService { get; }
         public ISubscriptionService ISubscriptionService { get; }
+        public ISubscriptionPlanService ISubscriptionPlanService { get; }
     }
 }
