@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IRepositories;
-using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
@@ -32,6 +26,13 @@ namespace SabiMarket.Infrastructure.Repositories
             .Include(a => a.Sections)
             .Include(a => a.LocalGovernment)
             .FirstOrDefaultAsync();
+
+        public async Task<Market> GetMarketByUserId(string userId, bool trackChanges) => await FindByCondition(x => x.Id == userId, trackChanges)
+           .Include(a => a.Caretakers)
+           .Include(a => a.Traders)
+           .Include(a => a.Sections)
+           .Include(a => a.LocalGovernment)
+           .FirstOrDefaultAsync();
 
         public async Task<PaginatorDto<IEnumerable<Market>>> GetPagedMarket(PaginationFilter paginationFilter)
         {

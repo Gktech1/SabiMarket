@@ -18,6 +18,8 @@ namespace SabiMarket.Domain.Entities.UserManagement
 
         public string? Address { get; set; }
         public string ProfileImageUrl { get; set; }
+        public bool IsBlocked { get; set; }  = false;  
+        public string? Gender { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? LastLoginAt { get; set; }
@@ -27,6 +29,7 @@ namespace SabiMarket.Domain.Entities.UserManagement
         public bool? IsRefreshTokenUsed { get; set; }
         public string? LocalGovernmentId { get; set; }
 
+        //Admin property to be added here 
         public virtual LocalGovernment LocalGovernment { get; set; }
         public virtual Chairman Chairman { get; set; }
         public virtual Trader Trader { get; set; }

@@ -14,6 +14,8 @@ namespace SabiMarket.Infrastructure.Repositories
         private readonly Lazy<ICaretakerRepository> _cretakerRepository;
         private readonly Lazy<IGoodBoyRepository> _goodboyRepository;
         private readonly Lazy<ITraderRepository> _traderRepository;
+        private readonly Lazy<ILocalGovernmentRepository> _localgovernmentRepository;
+        private readonly Lazy<IVendorRepository> _vendorRepository;
         public RepositoryManager(ApplicationDbContext context)
         {
             _context = context;
@@ -24,6 +26,8 @@ namespace SabiMarket.Infrastructure.Repositories
             _cretakerRepository = new Lazy<ICaretakerRepository>(() => new CaretakerRepository(_context));
             _goodboyRepository = new Lazy<IGoodBoyRepository>(() => new GoodBoyRepository(_context));
             _traderRepository = new Lazy<ITraderRepository>(() => new TraderRepository(_context));
+            _localgovernmentRepository = new Lazy<ILocalGovernmentRepository>(() => new LocalGovernmentRepository(_context));
+            _vendorRepository = new Lazy<IVendorRepository>(() => new VendorRepository(_context)); 
         }
 
         public ILevyPaymentRepository LevyPaymentRepository => _levyPaymentRepository.Value;
@@ -37,6 +41,9 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public ITraderRepository TraderRepository => _traderRepository.Value;
 
+        public ILocalGovernmentRepository LocalGovernmentRepository => _localgovernmentRepository.Value;
+
+        public IVendorRepository VendorRepository => _vendorRepository.Value;  
         public Task SaveChangesAsync() => _context.SaveChangesAsync();
     }
 }
