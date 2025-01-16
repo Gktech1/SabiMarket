@@ -3,22 +3,30 @@ using System.ComponentModel.DataAnnotations.Schema;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.UserManagement;
 
-namespace SabiMarket.Domain.Entities
+namespace SabiMarket.Domain.Entities.Administration
 {
     public class Chairman : BaseEntity
     {
         public string UserId { get; set; }
+
+        public string? MarketId { get; set; }
         public string LocalGovernmentId { get; set; }
+        public string? FullName { get; set; } = string.Empty;
+
+        public string? Email { get; set; } = string.Empty;
 
         [Required]
         [StringLength(100)]
         public string Title { get; set; }
 
         public string Office { get; set; }
+
+        public int TotalRecords { get; set; }
         public DateTime TermStart { get; set; }
         public DateTime? TermEnd { get; set; }
         public DateTime? LastLoginAt { get; set; }
 
+        public virtual Market Market { get; set; }
         public virtual ApplicationUser User { get; set; }
         public virtual LocalGovernment LocalGovernment { get; set; }
     }

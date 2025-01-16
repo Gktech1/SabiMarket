@@ -52,5 +52,19 @@ namespace SabiMarket.Infrastructure.Repositories
                            .Paginate(paginationFilter);
         }
 
+        public async Task<Market> GetMarketByIdAsync(string marketId, bool trackChanges)
+        {
+            var query = FindByCondition(m => m.Id == marketId, trackChanges);
+
+            query = query
+                .Include(a => a.Caretakers)
+                .Include(a => a.Traders)
+                .Include(a => a.Sections)
+                .Include(a => a.LocalGovernment);
+
+            return await query.FirstOrDefaultAsync();
+        }
+
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
+using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Enum;
 
@@ -7,7 +8,7 @@ namespace SabiMarket.Domain.Entities.LevyManagement
     [Table("LevyPayments")]
     public class LevyPayment : BaseEntity
     {
-        public string Id { get; set; }
+        public string ChairmanId { get; set; }
         public string TraderId { get; set; }
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
@@ -25,6 +26,7 @@ namespace SabiMarket.Domain.Entities.LevyManagement
         public DateTime CollectionDate { get; set; }
         public string QRCodeScanned { get; set; }
         public virtual GoodBoy GoodBoy { get; set; }
+        public virtual Chairman Chairman { get; set; }  
 
     }
 }

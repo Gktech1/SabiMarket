@@ -16,6 +16,9 @@ namespace SabiMarket.Infrastructure.Repositories
         private readonly Lazy<ITraderRepository> _traderRepository;
         private readonly Lazy<ILocalGovernmentRepository> _localgovernmentRepository;
         private readonly Lazy<IVendorRepository> _vendorRepository;
+        private readonly Lazy<IChairmanRepository> _chairmanRepository;
+        private readonly Lazy<IAssistCenterOfficerRepository> _assistofficerRepository;
+
         public RepositoryManager(ApplicationDbContext context)
         {
             _context = context;
@@ -27,7 +30,9 @@ namespace SabiMarket.Infrastructure.Repositories
             _goodboyRepository = new Lazy<IGoodBoyRepository>(() => new GoodBoyRepository(_context));
             _traderRepository = new Lazy<ITraderRepository>(() => new TraderRepository(_context));
             _localgovernmentRepository = new Lazy<ILocalGovernmentRepository>(() => new LocalGovernmentRepository(_context));
-            _vendorRepository = new Lazy<IVendorRepository>(() => new VendorRepository(_context)); 
+            _vendorRepository = new Lazy<IVendorRepository>(() => new VendorRepository(_context));
+            _chairmanRepository = new Lazy<IChairmanRepository>(() => new ChairmanRepository(_context));
+            _assistofficerRepository = new Lazy<IAssistCenterOfficerRepository>(() => new AssistCenterOfficerRepository(_context));
         }
 
         public ILevyPaymentRepository LevyPaymentRepository => _levyPaymentRepository.Value;
@@ -43,7 +48,11 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public ILocalGovernmentRepository LocalGovernmentRepository => _localgovernmentRepository.Value;
 
-        public IVendorRepository VendorRepository => _vendorRepository.Value;  
+        public IChairmanRepository ChairmanRepository => _chairmanRepository.Value;
+
+        public IVendorRepository VendorRepository => _vendorRepository.Value;
+
+        public IAssistCenterOfficerRepository AssistCenterOfficerRepository => _assistofficerRepository.Value;
         public Task SaveChangesAsync() => _context.SaveChangesAsync();
     }
 }

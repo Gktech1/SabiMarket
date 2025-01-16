@@ -13,6 +13,7 @@
         public string Address { get; set; }
         public DateTime DateAdded { get; set; }
         public bool IsBlocked { get; set; }
+        public TraderDetailsResponseDto TraderDetails { get; set; }
         public string QrCodeData { get; set; }  // For QR code generation
     }
 

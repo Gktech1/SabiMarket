@@ -18,7 +18,10 @@ namespace SabiMarket.Application.IRepositories
 
         public ILocalGovernmentRepository LocalGovernmentRepository { get; }
 
-        public IVendorRepository VendorRepository { get; } 
+        public IVendorRepository VendorRepository { get; }
+
+        public IChairmanRepository ChairmanRepository { get; }
+        public IAssistCenterOfficerRepository AssistCenterOfficerRepository { get; }
 
         Task SaveChangesAsync();
     }

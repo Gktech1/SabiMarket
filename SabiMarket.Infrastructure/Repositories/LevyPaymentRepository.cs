@@ -39,6 +39,17 @@ namespace SabiMarket.Infrastructure.Repositories
             }
         }
 
+        public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPaymentsAsync(
+        string chairmanId, PaginationFilter paginationFilter, bool trackChanges)
+        {
+            return await FindPagedByCondition(
+                expression: lp => lp.ChairmanId == chairmanId, 
+                paginationFilter: paginationFilter,
+                trackChanges: trackChanges,
+                orderBy: query => query.OrderByDescending(lp => lp.CreatedAt)
+            );
+        }
+
         public async Task<PaginatorDto<IEnumerable<LevyPayment>>> SearchPayment(string searchString, PaginationFilter paginationFilter)
         {
             return await FindAll(false)
@@ -47,6 +58,12 @@ namespace SabiMarket.Infrastructure.Repositories
                            a.GoodBoy.User.LastName.Contains(searchString) ||
                            a.GoodBoy.User.FirstName.Contains(searchString))
                            .Paginate(paginationFilter);
+        }
+
+        public async Task<decimal> GetTotalLeviesAsync()
+        {
+            return await FindAll(trackChanges: false)
+                         .SumAsync(lp => lp.Amount);
         }
 
     }

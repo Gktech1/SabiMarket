@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Infrastructure.Data;
@@ -23,6 +24,22 @@ namespace SabiMarket.Infrastructure.Repositories
         public async Task<Trader> GetTraderById(string traderId, bool trackChanges) =>
        await FindByCondition(t => t.Id == traderId, trackChanges)
            .FirstOrDefaultAsync();
+
+        public async Task<Trader> GetTraderDetails(string userId)
+        {
+            var trader = await FindByCondition(t => t.UserId == userId, trackChanges: false)
+                .Include(t => t.User)
+                .Include(t => t.Market)
+                .FirstOrDefaultAsync();
+
+            return trader;
+
+        }
+
+        public async Task<int> GetTraderCountAsync()
+        {
+            return await FindAll(trackChanges: false).CountAsync();
+        }
 
     }
 }

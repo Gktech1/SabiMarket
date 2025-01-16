@@ -166,6 +166,7 @@ namespace SabiMarket.Infrastructure.Services
                 // Get user's market and other related information
                 var marketInfo = await _repository.MarketRepository.GetMarketByUserId(userId, false);
 
+                var traderDetailsResponse = new TraderDetailsResponseDto(); 
                 // Base user details
                 var baseDetails = new UserDetailsResponseDto
                 {
@@ -192,7 +193,7 @@ namespace SabiMarket.Infrastructure.Services
                         var vendorDetails = await _repository.VendorRepository.GetVendorDetails(userId);
                         return ResponseFactory.Success(new VendorDetailsResponseDto
                         {
-                            // Copy base details
+                            // Base details
                             Id = baseDetails.Id,
                             UserId = baseDetails.UserId,
                             FullName = baseDetails.FullName,
@@ -205,15 +206,15 @@ namespace SabiMarket.Infrastructure.Services
                             DateAdded = baseDetails.DateAdded,
                             IsBlocked = baseDetails.IsBlocked,
                             QrCodeData = baseDetails.QrCodeData,
-                            // Add vendor-specific details
+                            // Vendor-specific details
                             BusinessName = vendorDetails?.BusinessName ?? string.Empty
-                        }, "Vendor details retrieved successfully");
+                        } as UserDetailsResponseDto, "Vendor details retrieved successfully");
+
 
                     case "trader":
                         var traderDetails = await _repository.TraderRepository.GetTraderDetails(userId);
-                        return ResponseFactory.Success(new TraderDetailsResponseDto
+                        return ResponseFactory.Success(new UserDetailsResponseDto
                         {
-                            // Copy base details
                             Id = baseDetails.Id,
                             UserId = baseDetails.UserId,
                             FullName = baseDetails.FullName,
@@ -226,11 +227,14 @@ namespace SabiMarket.Infrastructure.Services
                             DateAdded = baseDetails.DateAdded,
                             IsBlocked = baseDetails.IsBlocked,
                             QrCodeData = baseDetails.QrCodeData,
-                            // Add trader-specific details
-                            TraderOccupancy = traderDetails?.Occupancy ?? string.Empty,
-                            PaymentFrequency = traderDetails?.PaymentFrequency ?? string.Empty,
-                            TraderIdentityNumber = traderDetails?.IdentityNumber ?? string.Empty
+                            TraderDetails = traderDetails == null ? null : new TraderDetailsResponseDto
+                            {
+                                TraderIdentityNumber = traderDetails.TIN,
+                                TraderOccupancy = string.Empty,
+                                PaymentFrequency = string.Empty
+                            }
                         }, "Trader details retrieved successfully");
+
 
                     default:
                         return ResponseFactory.Success(baseDetails, "User details retrieved successfully");
