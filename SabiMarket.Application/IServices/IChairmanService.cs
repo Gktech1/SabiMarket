@@ -18,6 +18,7 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<bool>> AssignCaretakerToChairman(string chairmanId, string caretakerId);
         Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers();
         Task<BaseResponse<IEnumerable<ReportResponseDto>>> GetChairmanReports(string chairmanId);
+        Task<BaseResponse<bool>> UnblockAssistantOfficer(string officerId);
         Task<BaseResponse<bool>> BlockAssistantOfficer(string officerId);
         Task<BaseResponse<AssistantOfficerResponseDto>> CreateAssistantOfficer(CreateAssistantOfficerRequestDto officerDto);
         Task<BaseResponse<AssistantOfficerResponseDto>> GetAssistantOfficerById(string officerId);

@@ -42,12 +42,22 @@ public class ChairmanController : ControllerBase
         return !response.IsSuccessful ? BadRequest(response) : CreatedAtAction(nameof(GetAssistantOfficerById), new { id = response.Data.Id }, response);
     }
 
-    [HttpPost("assistant-officer/{id}/block")]
+    [HttpPost("assistant-officer/{officerId}/unblock")]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> BlockAssistantOfficer(string id)
+    public async Task<IActionResult> UnblockAssistantOfficer(string officerid)
     {
-        var response = await _chairmanService.BlockAssistantOfficer(id);
+        var response = await _chairmanService.UnblockAssistantOfficer(officerid);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+
+    [HttpPost("assistant-officer/{officerId}/block")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> BlockAssistantOfficer(string officerid)
+    {
+        var response = await _chairmanService.BlockAssistantOfficer(officerid);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
 

@@ -338,6 +338,30 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        public async Task<BaseResponse<bool>> UnblockAssistantOfficer(string officerId)
+        {
+            try
+            {
+                var officer = await _repository.AssistCenterOfficerRepository.GetByIdAsync(officerId, trackChanges: true);
+                if (officer == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Assistant Officer not found"),
+                        "Assistant Officer not found");
+                }
+
+                officer.IsBlocked = false;
+                await _repository.SaveChangesAsync();
+
+                return ResponseFactory.Success(true, "Assistant Officer unblocked successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error unblocking Assistant Officer");
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+            }
+        }
+
         public async Task<BaseResponse<bool>> BlockAssistantOfficer(string officerId)
         {
             try
