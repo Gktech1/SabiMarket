@@ -10,33 +10,30 @@ using SabiMarket.Domain.Entities.WaiveMarketModule;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
 
-namespace SabiMarket.Infrastructure.Repositories
+namespace SabiMarket.Infrastructure.Repositories;
+
+public class SubscriptionRepository : GeneralRepository<Subscription>, ISubscriptionRepository
 {
+    public SubscriptionRepository(ApplicationDbContext context) : base(context) { }
 
-    public class SubscriptionRepository : GeneralRepository<Subscription>, ISubscriptionRepository
+    public void AddSubscription(Subscription product) => Create(product);
+
+    public async Task<IEnumerable<Subscription>> GetAllSubscriptionForExport(bool trackChanges) => await FindAll(trackChanges).ToListAsync();
+
+    public async Task<Subscription> GetSubscriptionById(string id, bool trackChanges) => await FindByCondition(x => x.Id == id, trackChanges).FirstOrDefaultAsync();
+
+    public async Task<PaginatorDto<IEnumerable<Subscription>>> GetPagedSubscription(PaginationFilter paginationFilter)
     {
-        public SubscriptionRepository(ApplicationDbContext context) : base(context) { }
+        return await FindAll(false)
+                   .Paginate(paginationFilter);
+    }
 
-        public void AddSubscription(Subscription product) => Create(product);
-
-        public async Task<IEnumerable<Subscription>> GetAllSubscriptionForExport(bool trackChanges) => await FindAll(trackChanges).ToListAsync();
-
-        public async Task<Subscription> GetSubscriptionById(string id, bool trackChanges) => await FindByCondition(x => x.Id == id, trackChanges).FirstOrDefaultAsync();
-
-        public async Task<PaginatorDto<IEnumerable<Subscription>>> GetPagedSubscription(PaginationFilter paginationFilter)
-        {
-            return await FindAll(false)
+    public async Task<PaginatorDto<IEnumerable<Subscription>>> SearchSubscription(string searchString, PaginationFilter paginationFilter)
+    {
+        return await FindAll(false).Include(x => x.Subscriber)
+                       .Where(a => a.Subscriber.FirstName.Contains(searchString) ||
+                       a.Subscriber.LastName.Contains(searchString) || a.SGId.ToLower() == searchString.ToLower())
                        .Paginate(paginationFilter);
-        }
-
-        public async Task<PaginatorDto<IEnumerable<Subscription>>> SearchSubscription(string searchString, PaginationFilter paginationFilter)
-        {
-            return await FindAll(false)
-                           .Where(a => a.Subscriber.FirstName.Contains(searchString) ||
-                           a.Subscriber.LastName.Contains(searchString))
-                           .Paginate(paginationFilter);
-        }
-
     }
 
 }
