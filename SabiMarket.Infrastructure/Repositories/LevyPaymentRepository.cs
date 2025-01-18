@@ -55,10 +55,18 @@ namespace SabiMarket.Infrastructure.Repositories
                            .Paginate(paginationFilter);
         }
 
-        public async Task<decimal> GetTotalLeviesAsync()
+       /* public async Task<decimal> GetTotalLeviesAsync()
         {
             return await FindAll(trackChanges: false)
                          .SumAsync(lp => lp.Amount);
+        }*/
+
+        public async Task<decimal> GetTotalLeviesAsync(DateTime startDate, DateTime endDate)
+        {
+            return await FindByCondition(l => 
+            l.PaymentDate >= startDate && 
+            l.PaymentDate <= endDate, trackChanges: false)
+                .SumAsync(l => l.Amount);
         }
 
         public void DeleteLevyPayment(LevyPayment levy) => Delete(levy);

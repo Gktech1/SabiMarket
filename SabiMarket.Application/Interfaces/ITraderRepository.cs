@@ -9,6 +9,6 @@ namespace SabiMarket.Application.Interfaces
         Task<IEnumerable<Trader>> GetAllAssistCenterOfficer(bool trackChanges);
         Task<Trader> GetTraderById(string traderId, bool trackChanges);
         Task<Trader> GetTraderDetails(string userId);
-        Task<int> GetTraderCountAsync();
+        Task<int> GetTraderCountAsync(DateTime startDate, DateTime endDate);
     }
 }

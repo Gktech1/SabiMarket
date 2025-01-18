@@ -11,10 +11,10 @@ using SabiMarket.Application.IServices;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Exceptions;
 using SabiMarket.Infrastructure.Helpers;
-using SabiMarket.Application.DTOs.Responses.SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Entities.LevyManagement;
+using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -200,15 +200,26 @@ namespace SabiMarket.Infrastructure.Services
         {
             try
             {
-                var totalTraders = await _repository.TraderRepository.GetTraderCountAsync();
-                var totalCaretakers = await _repository.CaretakerRepository.GetCaretakerCountAsync();
-                var totalLevies = await _repository.LevyPaymentRepository.GetTotalLeviesAsync();
+                string preset = DateRangePresets.Today;
+                var dateRange = DateRangePresets.GetPresetRange(preset);
+                var previousDateRange = GetPreviousDateRange(dateRange);
+
+                // Get current period metrics
+                var currentTraders = await _repository.TraderRepository.GetTraderCountAsync(dateRange.StartDate, dateRange.EndDate);
+                var currentCaretakers = await _repository.CaretakerRepository.GetCaretakerCountAsync(dateRange.StartDate, dateRange.EndDate);
+                var currentLevies = await _repository.LevyPaymentRepository.GetTotalLeviesAsync(dateRange.StartDate, dateRange.EndDate);
+
+                // Get previous period metrics
+                var previousTraders = await _repository.TraderRepository.GetTraderCountAsync(previousDateRange.StartDate, previousDateRange.EndDate);
+                var previousCaretakers = await _repository.CaretakerRepository.GetCaretakerCountAsync(previousDateRange.StartDate, previousDateRange.EndDate);
+                var previousLevies = await _repository.LevyPaymentRepository.GetTotalLeviesAsync(previousDateRange.StartDate, previousDateRange.EndDate);
 
                 var response = new DashboardMetricsResponseDto
                 {
-                    TotalTraders = totalTraders,
-                    TotalCaretakers = totalCaretakers,
-                    TotalLeviesCollected = totalLevies
+                    Traders = CalculateMetricChange(currentTraders, previousTraders),
+                    Caretakers = CalculateMetricChange(currentCaretakers, previousCaretakers),
+                    Levies = CalculateMetricChange((int)currentLevies, (int)previousLevies),
+                    TimePeriod = dateRange.DateRangeType
                 };
 
                 return ResponseFactory.Success(response, "Dashboard metrics retrieved successfully");
@@ -218,6 +229,32 @@ namespace SabiMarket.Infrastructure.Services
                 _logger.LogError(ex, "Error retrieving dashboard metrics");
                 return ResponseFactory.Fail<DashboardMetricsResponseDto>(ex, "An unexpected error occurred");
             }
+        }
+
+        private DateRangeDto GetPreviousDateRange(DateRangeDto currentRange)
+        {
+            var daysDifference = (currentRange.EndDate - currentRange.StartDate).Days + 1;
+            return new DateRangeDto
+            {
+                StartDate = currentRange.StartDate.AddDays(-daysDifference),
+                EndDate = currentRange.StartDate.AddDays(-1),
+                DateRangeType = currentRange.DateRangeType
+            };
+        }
+
+        private MetricWithChange CalculateMetricChange(int currentValue, int previousValue)
+        {
+            decimal percentageChange = previousValue == 0 ?
+                100 :
+                ((decimal)(currentValue - previousValue) / previousValue) * 100;
+
+            return new MetricWithChange
+            {
+                CurrentValue = currentValue,
+                PreviousValue = previousValue,
+                PercentageChange = Math.Round(Math.Abs(percentageChange), 1),
+                ChangeDirection = percentageChange >= 0 ? "Up" : "Down"
+            };
         }
 
         public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets()
@@ -530,6 +567,256 @@ namespace SabiMarket.Infrastructure.Services
             {
                 _logger.LogError(ex, "Error retrieving levies");
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyResponseDto>>>(ex, "Error retrieving levies");
+            }
+        }
+
+        // Market Management Implementations
+        public async Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request)
+        {
+            try
+            {
+                var market = _mapper.Map<Market>(request);
+                _repository.MarketRepository.AddMarket(market);
+                await _repository.SaveChangesAsync();
+
+                var marketDto = _mapper.Map<MarketResponseDto>(market);
+                return ResponseFactory.Success(marketDto, "Market created successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating market");
+                return ResponseFactory.Fail<MarketResponseDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<bool>> UpdateMarket(string marketId, UpdateMarketRequestDto request)
+        {
+            try
+            {
+                var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, trackChanges: true);
+                if (market == null)
+                {
+                    return ResponseFactory.Fail<bool>(new NotFoundException("Market not found"), "Market not found");
+                }
+
+                _mapper.Map(request, market);
+                await _repository.SaveChangesAsync();
+                return ResponseFactory.Success(true, "Market updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating market");
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<bool>> DeleteMarket(string marketId)
+        {
+            try
+            {
+                var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, trackChanges: true);
+                if (market == null)
+                {
+                    return ResponseFactory.Fail<bool>(new NotFoundException("Market not found"), "Market not found");
+                }
+
+                _repository.MarketRepository.DeleteMarket(market);
+                await _repository.SaveChangesAsync();
+                return ResponseFactory.Success(true, "Market deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting market");
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<MarketRevenueDto>> GetMarketRevenue(string marketId)
+        {
+            try
+            {
+                string preset = DateRangePresets.ThisMonth;
+                var dateRange = DateRangePresets.GetPresetRange(preset);
+                var revenue = await _repository.MarketRepository.GetMarketRevenueAsync(
+                    marketId,
+                    dateRange.StartDate,
+                    dateRange.EndDate
+                );
+                var revenueDto = _mapper.Map<MarketRevenueDto>(revenue);
+                return ResponseFactory.Success(revenueDto, "Market revenue retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving market revenue");
+                return ResponseFactory.Fail<MarketRevenueDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<ReportMetricsDto>> GetReportMetrics()
+        {
+            try
+            {
+                string preset = DateRangePresets.ThisMonth;
+                var dateRange = DateRangePresets.GetPresetRange(preset);
+                var metrics = await _repository.ReportRepository.GetMetricsAsync(dateRange.StartDate, dateRange.EndDate);
+                var metricsDto = _mapper.Map<ReportMetricsDto>(metrics);
+                metricsDto.Period = dateRange.DateRangeType;
+                return ResponseFactory.Success(metricsDto, "Report metrics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving report metrics");
+                return ResponseFactory.Fail<ReportMetricsDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        // Trader Management Implementations
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<TraderResponseDto>>>> GetTraders(
+            string marketId, PaginationFilter filter)
+        {
+            try
+            {
+                var tradersPage = await _repository.TraderRepository.GetTradersByMarketAsync(marketId, filter, trackChanges: false);
+                var traderDtos = _mapper.Map<IEnumerable<TraderResponseDto>>(tradersPage.PageItems);
+
+                var paginatedResult = new PaginatorDto<IEnumerable<TraderResponseDto>>
+                {
+                    PageItems = traderDtos,
+                    CurrentPage = filter.PageNumber,
+                    PageSize = filter.PageSize,
+                    NumberOfPages = tradersPage.NumberOfPages
+                };
+
+                return ResponseFactory.Success(paginatedResult, "Traders retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving traders");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<TraderResponseDto>>>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<string>> GenerateTraderQRCode(string traderId)
+        {
+            try
+            {
+                var trader = await _repository.TraderRepository.GetTraderByIdAsync(traderId, trackChanges: false);
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<string>(new NotFoundException("Trader not found"), "Trader not found");
+                }
+
+                // Generate QR code data
+                var qrData = $"SABIMARKET-TRADER-{trader.Id}-{DateTime.UtcNow:yyyyMMddHHmmss}";
+                return ResponseFactory.Success(qrData, "QR code generated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating QR code");
+                return ResponseFactory.Fail<string>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogDto>>>> GetAuditLogs(PaginationFilter filter)
+        {
+            try
+            {
+                var auditLogs = await _repository.AuditLogRepository.GetAuditLogsAsync(filter, trackChanges: false);
+                var auditLogDtos = _mapper.Map<IEnumerable<AuditLogDto>>(auditLogs.PageItems);
+
+                var paginatedResult = new PaginatorDto<IEnumerable<AuditLogDto>>
+                {
+                    PageItems = auditLogDtos,
+                    CurrentPage = filter.PageNumber,
+                    PageSize = filter.PageSize,
+                    NumberOfPages = auditLogs.NumberOfPages
+                };
+
+                return ResponseFactory.Success(paginatedResult, "Audit logs retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving audit logs");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<AuditLogDto>>>(ex, "An unexpected error occurred");
+            }
+        }
+
+        // Report Generation Implementations
+        public async Task<BaseResponse<ReportMetricsDto>> GetReportMetrics(DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                var metrics = await _repository.ReportRepository.GetMetricsAsync(startDate, endDate);
+                var metricsDto = _mapper.Map<ReportMetricsDto>(metrics);
+                return ResponseFactory.Success(metricsDto, "Report metrics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving report metrics");
+                return ResponseFactory.Fail<ReportMetricsDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<DailyMetricsDto>> GetDailyMetricsChange()
+        {
+            try
+            {
+                var yesterday = DateTime.UtcNow.AddDays(-1).Date;
+                var today = DateTime.UtcNow.Date;
+
+                var yesterdayMetrics = await _repository.MetricsRepository.GetDailyMetricsAsync(yesterday);
+                var todayMetrics = await _repository.MetricsRepository.GetDailyMetricsAsync(today);
+
+                var dailyChanges = new DailyMetricsDto
+                {
+                    TradersChange = CalculatePercentageChange(yesterdayMetrics.TotalTraders, todayMetrics.TotalTraders),
+                    CaretakersChange = CalculatePercentageChange(yesterdayMetrics.TotalCaretakers, todayMetrics.TotalCaretakers),
+                    LeviesChange = CalculatePercentageChange(yesterdayMetrics.TotalLevies, todayMetrics.TotalLevies)
+                };
+
+                return ResponseFactory.Success(dailyChanges, "Daily metrics changes retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating daily metrics changes");
+                return ResponseFactory.Fail<DailyMetricsDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        private decimal CalculatePercentageChange(decimal previous, decimal current)
+        {
+            if (previous == 0) return 100;
+            return ((current - previous) / previous) * 100;
+        }
+
+        // Market Analytics Implementations
+        public async Task<BaseResponse<MarketComplianceDto>> GetMarketComplianceRates(string marketId)
+        {
+            try
+            {
+                var compliance = await _repository.MarketRepository.GetComplianceRatesAsync(marketId);
+                var complianceDto = _mapper.Map<MarketComplianceDto>(compliance);
+                return ResponseFactory.Success(complianceDto, "Market compliance rates retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving market compliance rates");
+                return ResponseFactory.Fail<MarketComplianceDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<MarketRevenueDto>> GetMarketRevenue(string marketId, DateRangeDto dateRange)
+        {
+            try
+            {
+                var revenue = await _repository.MarketRepository.GetMarketRevenueAsync(marketId, dateRange.StartDate, dateRange.EndDate);
+                var revenueDto = _mapper.Map<MarketRevenueDto>(revenue);
+                return ResponseFactory.Success(revenueDto, "Market revenue retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving market revenue");
+                return ResponseFactory.Fail<MarketRevenueDto>(ex, "An unexpected error occurred");
             }
         }
 

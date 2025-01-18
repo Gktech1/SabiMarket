@@ -10,11 +10,15 @@ namespace SabiMarket.Infrastructure.Repositories
 
     public class MarketRepository : GeneralRepository<Market>, IMarketRepository
     {
+        private readonly ApplicationDbContext _context;
         public MarketRepository(ApplicationDbContext context) : base(context)
         {
+            _context = context; 
         }
 
         public void AddMarket(Market market) => Create(market);
+
+        public void DeleteMarket(Market market) => Delete(market);
 
         public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges) => await FindAll(trackChanges).Include(a => a.Caretakers)
             .Include(a => a.Traders)
@@ -65,6 +69,45 @@ namespace SabiMarket.Infrastructure.Repositories
             return await query.FirstOrDefaultAsync();
         }
 
+        public async Task<Market> GetMarketRevenueAsync(string marketId, DateTime startDate, DateTime endDate)
+        {
+                var market = await FindByCondition(m => m.Id == marketId, trackChanges: false)
+                    .Include(m => m.Traders)
+                    .Include(m => m.LocalGovernment)
+                    .Include(m => m.Sections)
+                    .FirstOrDefaultAsync();
+
+                if (market == null)
+                    return null;
+
+                // Get levy payments for this market's traders within the date range
+                var levyPayments = await _context.LevyPayments
+                    .Where(lp => lp.MarketId == marketId &&
+                           lp.PaymentDate >= startDate &&
+                           lp.PaymentDate <= endDate)
+                    .ToListAsync();
+
+                // Create the revenue entity
+                var marketRevenue = new Market
+                {
+                    Id = market.Id,
+                    MarketName = market.Name,
+                    TotalRevenue = levyPayments.Sum(lp => lp.Amount),
+                    PaymentTransactions = levyPayments.Count,
+                    Location = market.Location,
+                    LocalGovernmentName = market.LocalGovernment?.Name,
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    TotalTraders = market.Traders?.Count ?? 0,
+                    MarketCapacity = market.Capacity,
+                    OccupancyRate = market.Capacity > 0
+                        ? (decimal)(market.Traders?.Count ?? 0) / market.Capacity * 100
+                        : 0
+                };
+
+                return marketRevenue;
+            
+        }
 
     }
 }

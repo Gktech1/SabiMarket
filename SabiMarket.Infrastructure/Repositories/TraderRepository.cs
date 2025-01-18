@@ -36,10 +36,20 @@ namespace SabiMarket.Infrastructure.Repositories
 
         }
 
-        public async Task<int> GetTraderCountAsync()
+     /*   public async Task<int> GetTraderCountAsync()
         {
             return await FindAll(trackChanges: false).CountAsync();
+        }*/
+
+        public async Task<int> GetTraderCountAsync(DateTime startDate, DateTime endDate)
+        {
+            return await FindByCondition(t =>
+            t.CreatedAt 
+            >= startDate &&
+            t.CreatedAt <= endDate, trackChanges: false)
+                .CountAsync();
         }
+
 
     }
 }

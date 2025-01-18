@@ -12,6 +12,7 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
         public string UserId { get; set; }
         public string MarketId { get; set; }
         public string ChairmanId { get; set; }  
+        public bool IsBlocked { get; set; } = false;
         public virtual ApplicationUser User { get; set; }
         public virtual Market Market { get; set; }
 

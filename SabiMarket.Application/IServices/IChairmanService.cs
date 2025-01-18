@@ -1,7 +1,6 @@
 ﻿using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
-using SabiMarket.Application.DTOs.Responses.SabiMarket.Application.DTOs.Responses;
 
 namespace SabiMarket.Application.IServices
 {
@@ -27,5 +26,30 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<bool>> DeleteLevy(string levyId);
         Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId);
         Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter);
+        Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request);
+        Task<BaseResponse<bool>> UpdateMarket(string marketId, UpdateMarketRequestDto request);
+        Task<BaseResponse<bool>> DeleteMarket(string marketId);
+        Task<BaseResponse<MarketDetailsDto>> GetMarketDetails(string marketId);
+        Task<BaseResponse<IEnumerable<MarketResponseDto>>> SearchMarkets(string searchTerm);
+        Task<BaseResponse<MarketRevenueDto>> GetMarketRevenue(string marketId);
+
+        // Trader Management
+        Task<BaseResponse<PaginatorDto<IEnumerable<TraderResponseDto>>>> GetTraders(string marketId, PaginationFilter filter);
+        Task<BaseResponse<TraderDetailsDto>> GetTraderDetails(string traderId);
+        Task<BaseResponse<string>> GenerateTraderQRCode(string traderId);
+
+        // Settings Management
+        Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogDto>>>> GetAuditLogs(PaginationFilter filter);
+        Task<BaseResponse<bool>> ConfigureLevySetup(LevySetupRequestDto request);
+        Task<BaseResponse<IEnumerable<LevySetupResponseDto>>> GetLevySetups();
+
+        // Report Generation
+        Task<BaseResponse<ReportMetricsDto>> GetReportMetrics(DateTime startDate, DateTime endDate);
+        Task<BaseResponse<byte[]>> ExportReport(ReportExportRequestDto request);
+        Task<BaseResponse<DailyMetricsDto>> GetDailyMetricsChange();
+
+        // Market Analytics
+        Task<BaseResponse<MarketComplianceDto>> GetMarketComplianceRates(string marketId);
+        Task<BaseResponse<MarketRevenueDto>> GetMarketRevenue(string marketId, DateRangeDto dateRange);
     }
 }

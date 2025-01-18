@@ -16,7 +16,7 @@ namespace SabiMarket.Application.IRepositories
         Task<LevyPayment> GetPaymentById(string id, bool trackChanges);
         Task<PaginatorDto<IEnumerable<LevyPayment>>> GetPagedPayment(int? period, PaginationFilter paginationFilter);
         Task<PaginatorDto<IEnumerable<LevyPayment>>> SearchPayment(string searchString, PaginationFilter paginationFilter);
-        Task<decimal> GetTotalLeviesAsync();
+        Task<decimal> GetTotalLeviesAsync(DateTime startDate, DateTime endDate);
         void DeleteLevyPayment(LevyPayment levy);
     }
 }

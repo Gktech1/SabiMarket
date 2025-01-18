@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SabiMarket.API.ServiceExtensions;
 using SabiMarket.Application.DTOs.Requests;
-using SabiMarket.Application.DTOs.Responses.SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
