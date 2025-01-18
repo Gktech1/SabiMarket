@@ -14,6 +14,7 @@ using SabiMarket.Infrastructure.Helpers;
 using SabiMarket.Application.DTOs.Responses.SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.MarketParticipants;
+using SabiMarket.Domain.Entities.LevyManagement;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -292,8 +293,9 @@ namespace SabiMarket.Infrastructure.Services
 
         public async Task<BaseResponse<AssistantOfficerResponseDto>> GetAssistantOfficerById(string officerId)
         {
-           
-            try{
+
+            try
+            {
                 var officer = await _repository.AssistCenterOfficerRepository.GetByIdAsync(officerId, trackChanges: false);
                 if (officer == null)
                 {
@@ -409,31 +411,132 @@ namespace SabiMarket.Infrastructure.Services
 
         }
 
-    }
-}
-
-
-/*
-        public async Task<BaseResponse<bool>> UpdateChairmanLevel(string chairmanId, string newLevel)
+        public async Task<BaseResponse<LevyResponseDto>> CreateLevy(CreateLevyRequestDto request)
         {
             try
             {
-                var chairman = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, trackChanges: true);
-                if (chairman == null)
-                {
-                    return ResponseFactory.Fail<bool>(
-                        new NotFoundException("Chairman not found"),
-                        "Chairman not found");
-                }
-
-                chairman.Level = newLevel;
+                var levy = _mapper.Map<LevyPayment>(request);
+                _repository.LevyPaymentRepository.AddPayment(levy);
                 await _repository.SaveChangesAsync();
 
-                return ResponseFactory.Success(true, "Chairman level updated successfully");
+                var responseDto = _mapper.Map<LevyResponseDto>(levy);
+                return ResponseFactory.Success(responseDto, "Levy created successfully.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating chairman level");
-                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+                _logger.LogError(ex, "Error creating levy");
+                return ResponseFactory.Fail<LevyResponseDto>(ex, "Error creating levy");
             }
-        }*/
+        }
+
+        public async Task<BaseResponse<bool>> UpdateLevy(string levyId, UpdateLevyRequestDto request)
+        {
+            try
+            {
+                var levy = await _repository.LevyPaymentRepository.GetPaymentById(levyId, trackChanges: true);
+                if (levy == null)
+                {
+                    return ResponseFactory.Fail<bool>(new NotFoundException("Levy not found"), "Levy not found.");
+                }
+
+                _mapper.Map(request, levy);
+                await _repository.SaveChangesAsync();
+
+                return ResponseFactory.Success(true, "Levy updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating levy");
+                return ResponseFactory.Fail<bool>(ex, "Error updating levy");
+            }
+        }
+
+        public async Task<BaseResponse<bool>> DeleteLevy(string levyId)
+        {
+            try
+            {
+                var levy = await _repository.LevyPaymentRepository.GetPaymentById(levyId, trackChanges: true);
+                if (levy == null)
+                {
+                    return ResponseFactory.Fail<bool>(new NotFoundException("Levy not found"), "Levy not found.");
+                }
+
+                _repository.LevyPaymentRepository.DeleteLevyPayment(levy);
+                await _repository.SaveChangesAsync();
+
+                return ResponseFactory.Success(true, "Levy deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting levy");
+                return ResponseFactory.Fail<bool>(ex, "Error deleting levy");
+            }
+        }
+
+        public async Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId)
+        {
+            try
+            {
+                // Fetch the levy payment from the repository
+                var levy = await _repository.LevyPaymentRepository.GetPaymentById(levyId, trackChanges: false);
+
+                // Check if levy exists
+                if (levy == null)
+                {
+                    return ResponseFactory.Fail<LevyResponseDto>(new NotFoundException("Levy not found"), "Levy not found.");
+                }
+
+                // Map the levy payment entity to response DTO
+                var levyDto = _mapper.Map<LevyResponseDto>(levy);
+
+                // Return a successful response
+                return ResponseFactory.Success(levyDto, "Levy retrieved successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving levy");
+                return ResponseFactory.Fail<LevyResponseDto>(ex, "Error retrieving levy");
+            }
+        }
+
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter)
+        {
+            try
+            {
+                // Fetch paginated levy payments from the repository
+                var levyPayments = await _repository.LevyPaymentRepository.GetLevyPaymentsAsync(chairmanId, filter, trackChanges: false);
+
+                // Map the levy payment entities to response DTOs
+                var levyDtos = _mapper.Map<IEnumerable<LevyResponseDto>>(levyPayments.PageItems);
+
+                // Calculate the number of pages
+                var numberOfPages = levyPayments.NumberOfPages;
+
+                // Create the paginated result
+                var paginatedResult = new PaginatorDto<IEnumerable<LevyResponseDto>>
+                {
+                    PageItems = levyDtos,
+                    PageSize = filter.PageSize,
+                    CurrentPage = filter.PageNumber,
+                    NumberOfPages = numberOfPages
+                };
+
+
+
+                // Return a successful response
+                return ResponseFactory.Success(paginatedResult, "Levies retrieved successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving levies");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyResponseDto>>>(ex, "Error retrieving levies");
+            }
+        }
+
+    }
+
+}
+
+
+
+

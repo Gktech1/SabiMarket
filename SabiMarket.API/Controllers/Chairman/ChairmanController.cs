@@ -24,6 +24,56 @@ public class ChairmanController : ControllerBase
         _logger = logger;
     }
 
+    [HttpPost("levy")]
+    [ProducesResponseType(typeof(BaseResponse<LevyResponseDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(BaseResponse<LevyResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<LevyResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateLevy([FromBody] CreateLevyRequestDto request)
+    {
+        var response = await _chairmanService.CreateLevy(request);
+        return !response.IsSuccessful ? BadRequest(response) : CreatedAtAction(nameof(GetLevyById), new { id = response.Data.Id }, response);
+    }
+
+    [HttpPut("levy/{levyId}")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateLevy(string levyId, [FromBody] UpdateLevyRequestDto request)
+    {
+        var response = await _chairmanService.UpdateLevy(levyId, request);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+    [HttpDelete("levy/{levyId}")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteLevy(string levyId)
+    {
+        var response = await _chairmanService.DeleteLevy(levyId);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+    [HttpGet("levy/{levyId}")]
+    [ProducesResponseType(typeof(BaseResponse<LevyResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<LevyResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<LevyResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetLevyById(string levyId)
+    {
+        var response = await _chairmanService.GetLevyById(levyId);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+    [HttpGet("chairman/{chairmanId}/levies")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAllLevies(string chairmanId, [FromQuery] PaginationFilter filter)
+    {
+        var response = await _chairmanService.GetAllLevies(chairmanId, filter);
+        return !response.IsSuccessful ? StatusCode(StatusCodes.Status500InternalServerError, response) : Ok(response);
+    }
+
     [HttpGet("assistant-officer/{id}")]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
@@ -42,7 +92,7 @@ public class ChairmanController : ControllerBase
         return !response.IsSuccessful ? BadRequest(response) : CreatedAtAction(nameof(GetAssistantOfficerById), new { id = response.Data.Id }, response);
     }
 
-    [HttpPost("assistant-officer/{officerId}/unblock")]
+    [HttpPatch("assistant-officer/{officerId}/unblock")]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UnblockAssistantOfficer(string officerid)
@@ -52,7 +102,7 @@ public class ChairmanController : ControllerBase
     }
 
 
-    [HttpPost("assistant-officer/{officerId}/block")]
+    [HttpPatch("assistant-officer/{officerId}/block")]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> BlockAssistantOfficer(string officerid)

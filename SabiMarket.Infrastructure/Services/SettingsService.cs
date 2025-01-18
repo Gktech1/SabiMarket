@@ -18,16 +18,18 @@ namespace SabiMarket.Infrastructure.Services
         private readonly IValidator<ChangePasswordDto> _changePasswordValidator;
         private readonly ILogger<AuthenticationService> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IValidator<UpdateProfileDto> _updateProfileValidator;
         private readonly IRepositoryManager _repository;
         public SettingsService(IValidator<ChangePasswordDto> changePasswordValidator, ILogger<AuthenticationService> logger,
-            UserManager<ApplicationUser> userManager, IValidator<UpdateProfileDto> updateProfileValidator, IRepositoryManager repository)
+            UserManager<ApplicationUser> userManager, IValidator<UpdateProfileDto> updateProfileValidator, IRepositoryManager repository, SignInManager<ApplicationUser> signInManager)
         {
             _changePasswordValidator = changePasswordValidator;
             _logger = logger;
             _userManager = userManager;
             _updateProfileValidator = updateProfileValidator;
             _repository = repository;
+            _signInManager = signInManager;
         }
 
         public async Task<BaseResponse<bool>> ChangePassword(string userId, ChangePasswordDto changePasswordDto)
@@ -69,6 +71,30 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
+
+        public async Task<BaseResponse<bool>> LogoutUser(string userId)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return ResponseFactory.Fail<bool>(new NotFoundException("User not found"), "User not found");
+                }
+
+                // Force logout by invalidating security stamp
+                await _userManager.UpdateSecurityStampAsync(user);
+                await _signInManager.SignOutAsync();
+
+                return ResponseFactory.Success(true, "User logged out successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during logout");
+                return ResponseFactory.Fail<bool>(ex, "An error occurred during logout");
+            }
+        }
+
 
         public async Task<BaseResponse<bool>> UpdateProfile(string userId, UpdateProfileDto updateProfileDto)
         {

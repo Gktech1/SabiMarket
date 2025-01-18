@@ -22,5 +22,10 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<bool>> BlockAssistantOfficer(string officerId);
         Task<BaseResponse<AssistantOfficerResponseDto>> CreateAssistantOfficer(CreateAssistantOfficerRequestDto officerDto);
         Task<BaseResponse<AssistantOfficerResponseDto>> GetAssistantOfficerById(string officerId);
+        Task<BaseResponse<LevyResponseDto>> CreateLevy(CreateLevyRequestDto request);
+        Task<BaseResponse<bool>> UpdateLevy(string levyId, UpdateLevyRequestDto request);
+        Task<BaseResponse<bool>> DeleteLevy(string levyId);
+        Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId);
+        Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter);
     }
 }

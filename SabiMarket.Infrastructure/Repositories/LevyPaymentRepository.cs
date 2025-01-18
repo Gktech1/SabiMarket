@@ -1,12 +1,7 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities.LevyManagement;
-using SabiMarket.Domain.Enum;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
 
@@ -65,6 +60,8 @@ namespace SabiMarket.Infrastructure.Repositories
             return await FindAll(trackChanges: false)
                          .SumAsync(lp => lp.Amount);
         }
+
+        public void DeleteLevyPayment(LevyPayment levy) => Delete(levy);
 
     }
 }

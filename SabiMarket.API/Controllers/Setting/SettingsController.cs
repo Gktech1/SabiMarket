@@ -65,6 +65,38 @@ namespace SabiMarket.API.Controllers
 
             return Ok(response);
         }
+        /// <summary>
+        /// log out user from application
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost("logout-user")]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> LogoutUser()
+        {
+            var userId = _currentUser.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(ResponseFactory.Fail<bool>("User is not authenticated"));
+            }
+
+            var response = await _settingsService.LogoutUser(userId);
+
+            if (!response.IsSuccessful)
+            {
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status404NotFound => NotFound(response),
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
 
         /// <summary>
         /// Updates the profile information for the authenticated user
