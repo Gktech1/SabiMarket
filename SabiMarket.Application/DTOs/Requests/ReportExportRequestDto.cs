@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SabiMarket.Domain.Enum;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -32,22 +33,5 @@ namespace SabiMarket.Application.DTOs.Requests
         public bool IncludeRevenueBreakdown { get; set; } = true;
         public bool IncludeMarketMetrics { get; set; } = true;
         public string TimeZone { get; set; } = "UTC";
-    }
-
-    public enum ReportType
-    {
-        MarketCount,
-        TotalRevenue,
-        LevyBreakdown,
-        ComplianceRates,
-        MarketRevenue,
-        Comprehensive // Includes all report types
-    }
-
-    public enum ExportFormat
-    {
-        PDF,
-        Excel,
-        CSV
     }
 }

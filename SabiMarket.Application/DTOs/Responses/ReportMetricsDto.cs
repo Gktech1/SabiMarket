@@ -91,7 +91,7 @@
 
         // Revenue Statistics
         public decimal TotalRevenue { get; set; }
-        public ICollection<DailyRevenueDto> DailyRevenue { get; set; }
+       // public ICollection<DailyRevenueDto> DailyRevenue { get; set; }
 
         // Payment Methods Statistics
         public ICollection<PaymentMethodStatDto> PaymentMethods { get; set; }
@@ -128,7 +128,7 @@
         public ICollection<ComplianceCategoryDto> ComplianceByCategory { get; set; }
 
         // Trend Analysis
-        public ICollection<ComplianceTrendDto> MonthlyTrends { get; set; }
+        //public ICollection<ComplianceTrendDto> MonthlyTrends { get; set; }
     }
 
     public class ComplianceCategoryDto

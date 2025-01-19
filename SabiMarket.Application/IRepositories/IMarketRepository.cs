@@ -1,6 +1,5 @@
 ﻿using SabiMarket.Application.DTOs;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
-using System.Threading.Tasks;
 
 namespace SabiMarket.Application.IRepositories
 {
@@ -15,6 +14,7 @@ namespace SabiMarket.Application.IRepositories
         Task<PaginatorDto<IEnumerable<Market>>> SearchMarket(string searchString, PaginationFilter paginationFilter);
         Task<Market> GetMarketByIdAsync(string marketId, bool trackChanges);
         Task<Market> GetMarketRevenueAsync(string marketId, DateTime startDate, DateTime endDate);
+        Task<Market> GetComplianceRatesAsync(string marketId);
 
     }
 }

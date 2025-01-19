@@ -23,6 +23,106 @@ public class ChairmanController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("daily-metrics")]
+    [ProducesResponseType(typeof(BaseResponse<DashboardMetricsResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<DashboardMetricsResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetDailyMetricsChange()
+    {
+        var response = await _chairmanService.GetDailyMetricsChange();
+        return !response.IsSuccessful ?
+            StatusCode(StatusCodes.Status500InternalServerError, response) :
+            Ok(response);
+    }
+
+    [HttpGet("export-report")]
+    [ProducesResponseType(typeof(BaseResponse<byte[]>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<byte[]>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<byte[]>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ExportReport([FromQuery] ReportExportRequestDto request)
+    {
+        var response = await _chairmanService.ExportReport(request);
+        if (!response.IsSuccessful)
+            return BadRequest(response);
+
+        return File(
+            response.Data,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"market_report_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
+        );
+    }
+
+    [HttpGet("markets/{marketId}/revenue")]
+    [ProducesResponseType(typeof(BaseResponse<MarketRevenueDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<MarketRevenueDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<MarketRevenueDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetMarketRevenue(string marketId, [FromQuery] DateRangeDto dateRange)
+    {
+        var response = await _chairmanService.GetMarketRevenue(marketId, dateRange);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+    [HttpPost("levy-setup")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ConfigureLevySetup([FromBody] LevySetupRequestDto request)
+    {
+        var response = await _chairmanService.ConfigureLevySetup(request);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+    [HttpGet("levy-setups")]
+    [ProducesResponseType(typeof(BaseResponse<IEnumerable<LevySetupResponseDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<IEnumerable<LevySetupResponseDto>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetLevySetups()
+    {
+        var response = await _chairmanService.GetLevySetups();
+        return !response.IsSuccessful ?
+            StatusCode(StatusCodes.Status500InternalServerError, response) :
+            Ok(response);
+    }
+
+    [HttpGet("traders/{traderId}/details")]
+    [ProducesResponseType(typeof(BaseResponse<TraderDetailsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<TraderDetailsDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<TraderDetailsDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTraderDetails(string traderId)
+    {
+        var response = await _chairmanService.GetTraderDetails(traderId);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+    [HttpGet("markets/{marketId}/details")]
+    [ProducesResponseType(typeof(BaseResponse<MarketDetailsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<MarketDetailsDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<MarketDetailsDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetMarketDetails(string marketId)
+    {
+        var response = await _chairmanService.GetMarketDetails(marketId);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+    [HttpGet("markets/search")]
+    [ProducesResponseType(typeof(BaseResponse<IEnumerable<MarketResponseDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<IEnumerable<MarketResponseDto>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SearchMarkets([FromQuery] string searchTerm)
+    {
+        var response = await _chairmanService.SearchMarkets(searchTerm);
+        return !response.IsSuccessful ?
+            StatusCode(StatusCodes.Status500InternalServerError, response) :
+            Ok(response);
+    }
+
+    [HttpGet("traders/{traderId}/qrcode")]
+    [ProducesResponseType(typeof(BaseResponse<QRCodeResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<QRCodeResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<QRCodeResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GenerateTraderQRCode(string traderId)
+    {
+        var response = await _chairmanService.GenerateTraderQRCode(traderId);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
     [HttpPost("levy")]
     [ProducesResponseType(typeof(BaseResponse<LevyResponseDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(BaseResponse<LevyResponseDto>), StatusCodes.Status400BadRequest)]

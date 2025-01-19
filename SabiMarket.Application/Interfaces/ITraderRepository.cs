@@ -1,14 +1,14 @@
-﻿using SabiMarket.Domain.Entities.MarketParticipants;
+﻿using SabiMarket.Application.DTOs;
+using SabiMarket.Application.IRepositories;
+using SabiMarket.Domain.Entities.MarketParticipants;
 
-namespace SabiMarket.Application.Interfaces
+public interface ITraderRepository : IGeneralRepository<Trader>
 {
-    public interface ITraderRepository
-    {
-        void AddTrader(Trader trader);
-        void UpdateTrader(Trader trader);
-        Task<IEnumerable<Trader>> GetAllAssistCenterOfficer(bool trackChanges);
-        Task<Trader> GetTraderById(string traderId, bool trackChanges);
-        Task<Trader> GetTraderDetails(string userId);
-        Task<int> GetTraderCountAsync(DateTime startDate, DateTime endDate);
-    }
+    void AddTrader(Trader trader);
+    void UpdateTrader(Trader trader);
+    Task<Trader> GetTraderById(string traderId, bool trackChanges);
+    Task<Trader> GetTraderDetails(string userId);
+    Task<int> GetTraderCountAsync(DateTime startDate, DateTime endDate);
+    Task<PaginatorDto<IEnumerable<Trader>>> GetTradersByMarketAsync(string marketId, PaginationFilter paginationFilter, bool trackChanges = false);
+    Task<IEnumerable<Trader>> GetAllTradersByMarketAsync(string marketId, bool trackChanges = false);
 }

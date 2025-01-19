@@ -72,13 +72,5 @@ namespace SabiMarket.Infrastructure.Repositories
             return await FindByCondition(r => r.Id == chairmanId, trackChanges: false)
                 .ToListAsync();
         }
-
-       
-        public async Task<decimal> GetTotalLeviesAsync(DateTime startDate, DateTime endDate)
-        {
-            return await FindByCondition(l => l.PaymentDate >= startDate && l.PaymentDate <= endDate)
-                .SumAsync(l => l.Amount);
-        }
-
     }
 }

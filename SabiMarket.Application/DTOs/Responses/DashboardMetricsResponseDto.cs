@@ -1,15 +1,18 @@
 ﻿public class DashboardMetricsResponseDto
 {
-    public MetricWithChange Traders { get; set; }
-    public MetricWithChange Caretakers { get; set; }
-    public MetricWithChange Levies { get; set; }
+    public MetricChangeDto Traders { get; set; }
+    public MetricChangeDto Caretakers { get; set; }
+    public MetricChangeDto Levies { get; set; }
     public string TimePeriod { get; set; }
+    public MetricChangeDto ComplianceRate { get; set; }
+    public MetricChangeDto TransactionCount { get; set; }
+    public MetricChangeDto ActiveMarkets { get; set; }
 }
 
-public class MetricWithChange
+public class MetricChangeDto
 {
-    public int CurrentValue { get; set; }
+    public decimal CurrentValue { get; set; }
+    public decimal PreviousValue { get; set; }
     public decimal PercentageChange { get; set; }
-    public string ChangeDirection { get; set; }  // "Up" or "Down"
-    public int PreviousValue { get; set; }
+    public string ChangeDirection { get; set; }
 }

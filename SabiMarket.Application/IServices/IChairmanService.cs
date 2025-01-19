@@ -36,7 +36,7 @@ namespace SabiMarket.Application.IServices
         // Trader Management
         Task<BaseResponse<PaginatorDto<IEnumerable<TraderResponseDto>>>> GetTraders(string marketId, PaginationFilter filter);
         Task<BaseResponse<TraderDetailsDto>> GetTraderDetails(string traderId);
-        Task<BaseResponse<string>> GenerateTraderQRCode(string traderId);
+        Task<BaseResponse<QRCodeResponseDto>> GenerateTraderQRCode(string traderId);
 
         // Settings Management
         Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogDto>>>> GetAuditLogs(PaginationFilter filter);
@@ -46,7 +46,8 @@ namespace SabiMarket.Application.IServices
         // Report Generation
         Task<BaseResponse<ReportMetricsDto>> GetReportMetrics(DateTime startDate, DateTime endDate);
         Task<BaseResponse<byte[]>> ExportReport(ReportExportRequestDto request);
-        Task<BaseResponse<DailyMetricsDto>> GetDailyMetricsChange();
+        Task<BaseResponse<ReportMetricsDto>> GetReportMetrics();
+        Task<BaseResponse<DashboardMetricsResponseDto>> GetDailyMetricsChange();
 
         // Market Analytics
         Task<BaseResponse<MarketComplianceDto>> GetMarketComplianceRates(string marketId);

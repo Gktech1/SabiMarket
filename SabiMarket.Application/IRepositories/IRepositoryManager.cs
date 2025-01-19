@@ -23,6 +23,9 @@ namespace SabiMarket.Application.IRepositories
 
         public IChairmanRepository ChairmanRepository { get; }
         public IAssistCenterOfficerRepository AssistCenterOfficerRepository { get; }
+        public IAuditLogRepository AuditLogRepository { get; }
+
+        public IReportRepository ReportRepository { get; }
 
         Task SaveChangesAsync();
     }

@@ -109,5 +109,47 @@ namespace SabiMarket.Infrastructure.Repositories
             
         }
 
+
+        public async Task<Market> GetComplianceRatesAsync(string marketId)
+        {
+            var market = await FindByCondition(m => m.Id == marketId, trackChanges: false)
+                .Include(m => m.Traders)
+                .Include(m => m.LocalGovernment)
+                .Include(m => m.Sections)
+                .FirstOrDefaultAsync();
+
+            if (market == null)
+                return null;
+
+            // Get all levy payments for this market
+            var levyPayments = await _context.LevyPayments
+                .Where(lp => lp.MarketId == marketId)
+                .ToListAsync();
+
+            // Calculate compliance metrics
+            var totalTraders = market.Traders?.Count ?? 0;
+            var tradersWithPayments = levyPayments
+                .Select(lp => lp.TraderId)
+                .Distinct()
+                .Count();
+
+            // Create the compliance entity
+            var marketCompliance = new Market
+            {
+                Id = market.Id,
+                MarketName = market.Name,
+                Location = market.Location,
+                LocalGovernmentName = market.LocalGovernment?.Name,
+                TotalTraders = totalTraders,
+                ComplianceRate = totalTraders > 0
+                    ? (decimal)tradersWithPayments / totalTraders * 100
+                    : 0,
+                CompliantTraders = tradersWithPayments,
+                NonCompliantTraders = totalTraders - tradersWithPayments
+            };
+
+            return marketCompliance;
+        }
+
     }
 }

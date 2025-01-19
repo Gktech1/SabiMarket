@@ -242,13 +242,13 @@ namespace SabiMarket.Infrastructure.Services
             };
         }
 
-        private MetricWithChange CalculateMetricChange(int currentValue, int previousValue)
+        private MetricChangeDto CalculateMetricChange(int currentValue, int previousValue)
         {
             decimal percentageChange = previousValue == 0 ?
                 100 :
                 ((decimal)(currentValue - previousValue) / previousValue) * 100;
 
-            return new MetricWithChange
+            return new MetricChangeDto
             {
                 CurrentValue = currentValue,
                 PreviousValue = previousValue,
@@ -696,32 +696,64 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<string>> GenerateTraderQRCode(string traderId)
+        public async Task<BaseResponse<QRCodeResponseDto>> GenerateTraderQRCode(string traderId)
         {
             try
             {
-                var trader = await _repository.TraderRepository.GetTraderByIdAsync(traderId, trackChanges: false);
+                // Get trader details
+                var trader = await _repository.TraderRepository.GetTraderById(traderId, trackChanges: false);
                 if (trader == null)
                 {
-                    return ResponseFactory.Fail<string>(new NotFoundException("Trader not found"), "Trader not found");
+                    return ResponseFactory.Fail<QRCodeResponseDto>(
+                        new NotFoundException("Trader not found"),
+                        "Trader not found");
                 }
 
-                // Generate QR code data
-                var qrData = $"SABIMARKET-TRADER-{trader.Id}-{DateTime.UtcNow:yyyyMMddHHmmss}";
-                return ResponseFactory.Success(qrData, "QR code generated successfully");
+                // Generate QR code content with trader information
+                var qrData = GenerateTraderQRContent(trader);
+
+                // Generate QR code image
+                var qrCodeImage = QRCodeHelper.GenerateQRCode(qrData, 300, 300);
+
+                var response = new QRCodeResponseDto
+                {
+                    QRCodeImage = qrCodeImage,
+                    QRCodeData = qrData,
+                    TraderId = trader.Id,
+                    TraderName = trader.BusinessName,
+                    GeneratedAt = DateTime.UtcNow
+                };
+
+                return ResponseFactory.Success(response, "QR code generated successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error generating QR code");
-                return ResponseFactory.Fail<string>(ex, "An unexpected error occurred");
+                _logger.LogError(ex, "Error generating QR code for trader {TraderId}: {Error}", traderId, ex.Message);
+                return ResponseFactory.Fail<QRCodeResponseDto>(ex, "An unexpected error occurred while generating QR code");
             }
+        }
+
+        private string GenerateTraderQRContent(Trader trader)
+        {
+            // Create a more structured QR content
+            var qrContent = new
+            {
+                Id = trader.Id,
+                BusinessName = trader.BusinessName,
+                MarketId = trader.MarketId,
+                Timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss"),
+                Prefix = "SABIMARKET-TRADER"
+            };
+
+            // Serialize to JSON for more structured data
+            return System.Text.Json.JsonSerializer.Serialize(qrContent);
         }
 
         public async Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogDto>>>> GetAuditLogs(PaginationFilter filter)
         {
             try
             {
-                var auditLogs = await _repository.AuditLogRepository.GetAuditLogsAsync(filter, trackChanges: false);
+                var auditLogs = await _repository.AuditLogRepository.GetPagedAuditLogs(filter);
                 var auditLogDtos = _mapper.Map<IEnumerable<AuditLogDto>>(auditLogs.PageItems);
 
                 var paginatedResult = new PaginatorDto<IEnumerable<AuditLogDto>>
@@ -757,29 +789,52 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<DailyMetricsDto>> GetDailyMetricsChange()
+        public async Task<BaseResponse<DashboardMetricsResponseDto>> GetDailyMetricsChange()
         {
             try
             {
-                var yesterday = DateTime.UtcNow.AddDays(-1).Date;
-                var today = DateTime.UtcNow.Date;
+                string preset = DateRangePresets.Today;
+                var dateRange = DateRangePresets.GetPresetRange(preset);
+                var previousDateRange = GetPreviousDateRange(dateRange);
 
-                var yesterdayMetrics = await _repository.MetricsRepository.GetDailyMetricsAsync(yesterday);
-                var todayMetrics = await _repository.MetricsRepository.GetDailyMetricsAsync(today);
+                // Get current day metrics
+                var currentMetrics = await _repository.ReportRepository.GetMetricsAsync(dateRange.StartDate, dateRange.EndDate);
 
-                var dailyChanges = new DailyMetricsDto
+                // Get previous day metrics
+                var previousMetrics = await _repository.ReportRepository.GetMetricsAsync(previousDateRange.StartDate, previousDateRange.EndDate);
+
+                var response = new DashboardMetricsResponseDto
                 {
-                    TradersChange = CalculatePercentageChange(yesterdayMetrics.TotalTraders, todayMetrics.TotalTraders),
-                    CaretakersChange = CalculatePercentageChange(yesterdayMetrics.TotalCaretakers, todayMetrics.TotalCaretakers),
-                    LeviesChange = CalculatePercentageChange(yesterdayMetrics.TotalLevies, todayMetrics.TotalLevies)
+                    Traders = CalculateMetricChange(currentMetrics.TotalTraders, previousMetrics.TotalTraders),
+                    Caretakers = CalculateMetricChange(currentMetrics.TotalCaretakers, previousMetrics.TotalCaretakers),
+                    Levies = CalculateMetricChange((int)currentMetrics.TotalRevenueGenerated, (int)previousMetrics.TotalRevenueGenerated),
+                    TimePeriod = dateRange.DateRangeType,
+                    ComplianceRate = new MetricChangeDto
+                    {
+                        CurrentValue = currentMetrics.ComplianceRate,
+                        PreviousValue = previousMetrics.ComplianceRate,
+                        PercentageChange = CalculatePercentageChange(previousMetrics.ComplianceRate, currentMetrics.ComplianceRate)
+                    },
+                    TransactionCount = new MetricChangeDto
+                    {
+                        CurrentValue = currentMetrics.PaymentTransactions,
+                        PreviousValue = previousMetrics.PaymentTransactions,
+                        PercentageChange = CalculatePercentageChange(previousMetrics.PaymentTransactions, currentMetrics.PaymentTransactions)
+                    },
+                    ActiveMarkets = new MetricChangeDto
+                    {
+                        CurrentValue = currentMetrics.ActiveMarkets,
+                        PreviousValue = previousMetrics.ActiveMarkets,
+                        PercentageChange = CalculatePercentageChange(previousMetrics.ActiveMarkets, currentMetrics.ActiveMarkets)
+                    }
                 };
 
-                return ResponseFactory.Success(dailyChanges, "Daily metrics changes retrieved successfully");
+                return ResponseFactory.Success(response, "Daily metrics changes retrieved successfully");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error calculating daily metrics changes");
-                return ResponseFactory.Fail<DailyMetricsDto>(ex, "An unexpected error occurred");
+                return ResponseFactory.Fail<DashboardMetricsResponseDto>(ex, "An unexpected error occurred");
             }
         }
 
@@ -805,11 +860,32 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        public async Task<BaseResponse<byte[]>> ExportReport(ReportExportRequestDto request)
+        {
+            try
+            {
+                var report = await _repository.ReportRepository.ExportReport(request.StartDate, request.EndDate);
+                var reportData = _mapper.Map<ReportExportDto>(report);
+                var excelBytes = await ExcelExportHelper.GenerateMarketReport(reportData);
+                return ResponseFactory.Success(excelBytes, "Report exported successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting report");
+                return ResponseFactory.Fail<byte[]>(ex, "An unexpected error occurred");
+            }
+        }
+
         public async Task<BaseResponse<MarketRevenueDto>> GetMarketRevenue(string marketId, DateRangeDto dateRange)
         {
             try
             {
-                var revenue = await _repository.MarketRepository.GetMarketRevenueAsync(marketId, dateRange.StartDate, dateRange.EndDate);
+                var revenue = await _repository.MarketRepository.GetMarketRevenueAsync(
+                    marketId,
+                    dateRange.StartDate,
+                    dateRange.EndDate
+                );
+
                 var revenueDto = _mapper.Map<MarketRevenueDto>(revenue);
                 return ResponseFactory.Success(revenueDto, "Market revenue retrieved successfully");
             }
@@ -817,6 +893,100 @@ namespace SabiMarket.Infrastructure.Services
             {
                 _logger.LogError(ex, "Error retrieving market revenue");
                 return ResponseFactory.Fail<MarketRevenueDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<bool>> ConfigureLevySetup(LevySetupRequestDto request)
+        {
+            try
+            {
+                var levySetup = _mapper.Map<LevyPayment>(request);
+                _repository.LevyPaymentRepository.AddPayment(levySetup);
+                await _repository.SaveChangesAsync();
+
+                return ResponseFactory.Success(true, "Levy setup configured successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error configuring levy setup");
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<IEnumerable<LevySetupResponseDto>>> GetLevySetups()
+        {
+            try
+            {
+                var levySetups = await _repository.LevyPaymentRepository.GetAllLevySetupsAsync(trackChanges: false);
+                var levySetupDtos = _mapper.Map<IEnumerable<LevySetupResponseDto>>(levySetups);
+
+                return ResponseFactory.Success(levySetupDtos, "Levy setups retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving levy setups");
+                return ResponseFactory.Fail<IEnumerable<LevySetupResponseDto>>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<TraderDetailsDto>> GetTraderDetails(string traderId)
+        {
+            try
+            {
+                var trader = await _repository.TraderRepository.GetTraderById(traderId, trackChanges: false);
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<TraderDetailsDto>(
+                        new NotFoundException("Trader not found"),
+                        "Trader not found");
+                }
+
+                var traderDto = _mapper.Map<TraderDetailsDto>(trader);
+                return ResponseFactory.Success(traderDto, "Trader details retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving trader details");
+                return ResponseFactory.Fail<TraderDetailsDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<MarketDetailsDto>> GetMarketDetails(string marketId)
+        {
+            try
+            {
+                var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, trackChanges: false);
+                if (market == null)
+                {
+                    return ResponseFactory.Fail<MarketDetailsDto>(
+                        new NotFoundException("Market not found"),
+                        "Market not found");
+                }
+
+                var marketDto = _mapper.Map<MarketDetailsDto>(market);
+                return ResponseFactory.Success(marketDto, "Market details retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving market details");
+                return ResponseFactory.Fail<MarketDetailsDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> SearchMarkets(string searchTerm)
+        {
+            try
+            {
+                var paginationFilter = new PaginationFilter { PageNumber = 1, PageSize = 100 }; // Default values
+                var searchResults = await _repository.MarketRepository.SearchMarket(searchTerm, paginationFilter);
+                var marketDtos = _mapper.Map<IEnumerable<MarketResponseDto>>(searchResults.PageItems);
+
+                return ResponseFactory.Success(marketDtos, "Markets search completed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching markets");
+                return ResponseFactory.Fail<IEnumerable<MarketResponseDto>>(ex, "An unexpected error occurred");
             }
         }
 
