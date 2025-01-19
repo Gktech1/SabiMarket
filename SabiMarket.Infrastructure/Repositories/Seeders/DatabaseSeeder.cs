@@ -1,7 +1,11 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using SabiMarket.Domain.Entities.Administration;
+using SabiMarket.Domain.Entities;
 using SabiMarket.Domain.Entities.UserManagement;
+using SabiMarket.Infrastructure.Data;
 
 public static class UserRoles
 {
@@ -21,17 +25,20 @@ public class DatabaseSeeder
     private readonly IConfiguration _configuration;
     private readonly ILogger<DatabaseSeeder> _logger;
     private readonly RoleManager<ApplicationRole> _roleManager;
+    private readonly ApplicationDbContext _context;
 
     public DatabaseSeeder(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
         IConfiguration configuration,
-        ILogger<DatabaseSeeder> logger)
+        ILogger<DatabaseSeeder> logger,
+        ApplicationDbContext context)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _configuration = configuration;
         _logger = logger;
+        _context = context;
     }
 
     public async Task SeedAsync()
@@ -116,8 +123,46 @@ public class DatabaseSeeder
             if (result.Succeeded)
             {
                 await _userManager.AddToRoleAsync(adminUser, UserRoles.Admin);
-                _logger.LogInformation("Admin user created successfully");
+
+                // Create Admin entity with dashboard access and stats
+                var admin = new Admin
+                {
+                    UserId = adminUser.Id,
+                    Position = "System Administrator",
+                    Department = "IT Administration",
+                    AdminLevel = "Super Admin",
+                    HasDashboardAccess = true,
+                    HasRoleManagementAccess = true,
+                    HasTeamManagementAccess = true,
+                    HasAuditLogAccess = true,
+                    RegisteredLGAs = 0,
+                    ActiveChairmen = 0,
+                    TotalRevenue = 0,
+                    StatsLastUpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Admins.Add(admin);
+                await _context.SaveChangesAsync();
+
+                // Add initial audit log
+                var auditLog = new AuditLog
+                {
+                    UserId = adminUser.Id,
+                    Activity = "Admin user created",
+                    Module = "Authentication",
+                    Details = "Initial admin user created during system setup"
+                };
+                auditLog.SetDateTime(DateTime.UtcNow);
+
+                _context.AuditLogs.Add(auditLog);
+                await _context.SaveChangesAsync();
             }
+            /*  var result = await _userManager.CreateAsync(adminUser, adminPassword);
+              if (result.Succeeded)
+              {
+                  await _userManager.AddToRoleAsync(adminUser, UserRoles.Admin);
+                  _logger.LogInformation("Admin user created successfully");
+              }*/
             else
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));

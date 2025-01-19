@@ -1,12 +1,43 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SabiMarket.Domain.Entities.UserManagement;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SabiMarket.Domain.Entities.Administration
 {
-    internal class Admin
+    [Table("Admins")]
+    public class Admin : BaseEntity
     {
+        [Required]
+        public string UserId { get; set; }
+
+        // Dashboard Stats Tracking
+        public int RegisteredLGAs { get; set; }
+        public int ActiveChairmen { get; set; }
+        public decimal TotalRevenue { get; set; }
+
+        // Admin Portal Specific Data
+        [MaxLength(100)]
+        public string AdminLevel { get; set; }  // For different levels of admin access
+
+        [MaxLength(100)]
+        public string Department { get; set; }
+
+        [MaxLength(100)]
+        public string Position { get; set; }
+
+        public bool HasDashboardAccess { get; set; } = true;
+        public bool HasRoleManagementAccess { get; set; } = true;
+        public bool HasTeamManagementAccess { get; set; } = true;
+        public bool HasAuditLogAccess { get; set; } = true;
+
+        // Last Dashboard Access
+        public DateTime? LastDashboardAccess { get; set; }
+
+        // Navigation Properties
+        public virtual ApplicationUser User { get; set; }
+        public virtual ICollection<AuditLog> AdminAuditLogs { get; set; }
+
+        // Stats Last Updated
+        public DateTime StatsLastUpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }
