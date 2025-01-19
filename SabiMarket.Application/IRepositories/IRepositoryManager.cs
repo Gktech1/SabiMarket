@@ -1,4 +1,5 @@
 ﻿using SabiMarket.Application.Interfaces;
+using SabiMarket.Infrastructure.Repositories;
 
 namespace SabiMarket.Application.IRepositories
 {
@@ -15,6 +16,16 @@ namespace SabiMarket.Application.IRepositories
         public IGoodBoyRepository GoodBoyRepository { get; }
 
         public ITraderRepository TraderRepository { get; }
+
+        public ILocalGovernmentRepository LocalGovernmentRepository { get; }
+
+        public IVendorRepository VendorRepository { get; }
+
+        public IChairmanRepository ChairmanRepository { get; }
+        public IAssistCenterOfficerRepository AssistCenterOfficerRepository { get; }
+        public IAuditLogRepository AuditLogRepository { get; }
+
+        public IReportRepository ReportRepository { get; }
 
         Task SaveChangesAsync();
     }

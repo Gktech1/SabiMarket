@@ -18,6 +18,8 @@ namespace SabiMarket.Domain.Entities.LocalGovernmentAndMArket
 
         public string Address { get; set; }
 
+        public string? LGA {  get; set; }   
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal CurrentRevenue { get; set; }
 

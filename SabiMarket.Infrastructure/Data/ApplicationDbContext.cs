@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using SabiMarket.Domain.Entities;
+using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.AdvertisementModule;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;

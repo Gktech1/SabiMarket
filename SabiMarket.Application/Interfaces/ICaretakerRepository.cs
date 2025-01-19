@@ -12,8 +12,12 @@ namespace SabiMarket.Application.Interfaces
         Task<bool> CaretakerExists(string userId, string marketId);
         Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPayments(string caretakerId, PaginationFilter paginationFilter, bool trackChanges);
         Task<LevyPayment> GetLevyPaymentDetails(string levyId, bool trackChanges);
+        Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersAsync(
+           string chairmanId, PaginationFilter paginationFilter, bool trackChanges);
         Task<PaginatorDto<IEnumerable<GoodBoy>>> GetGoodBoys(string caretakerId, PaginationFilter paginationFilter, bool trackChanges);
         void CreateCaretaker(Caretaker caretaker);
         void DeleteCaretaker(Caretaker caretaker);
+        Task<int> GetCaretakerCountAsync(DateTime? startDate = null, DateTime? endDate = null);
+        Task<IEnumerable<Caretaker>> GetAllCaretakers(bool trackChanges);
     }
 }

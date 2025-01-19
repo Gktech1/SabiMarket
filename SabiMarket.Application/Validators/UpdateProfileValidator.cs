@@ -1,36 +1,34 @@
 ﻿using FluentValidation;
-using Microsoft.AspNetCore.Identity;
 using SabiMarket.Application.DTOs.Requests;
-using SabiMarket.Domain.Entities.UserManagement;
 
-namespace SabiMarket.Application.Validators
+public class UpdateProfileValidator : AbstractValidator<UpdateProfileDto>
 {
-    public class UpdateProfileValidator : AbstractValidator<UpdateProfileDto>
+    public UpdateProfileValidator()
     {
-        private readonly UserManager<ApplicationUser> _userManager;
+        RuleFor(x => x.FullName)
+            .NotEmpty().WithMessage("Full name is required")
+            .MaximumLength(200).WithMessage("Full name cannot exceed 200 characters")
+            .Matches(@"^[a-zA-Z]+(?: [a-zA-Z]+)*$")
+            .WithMessage("Full name should contain only letters and spaces");
 
-        public UpdateProfileValidator(UserManager<ApplicationUser> userManager)
+        RuleFor(x => x.EmailAddress)
+            .NotEmpty().WithMessage("Email address is required")
+            .EmailAddress().WithMessage("Invalid email address format")
+            .MaximumLength(256); // IdentityUser email max length
+
+        RuleFor(x => x.PhoneNumber)
+            .NotEmpty().WithMessage("Phone number is required")
+            .Matches(@"^\+?[1-9]\d{1,14}$")
+            .WithMessage("Invalid phone number format");
+
+        RuleFor(x => x.LocalGovernmentId)
+            .NotEmpty().WithMessage("Local Government is required");
+
+        When(x => !string.IsNullOrEmpty(x.ProfileImageUrl), () =>
         {
-            _userManager = userManager;
-
-            RuleFor(x => x.FullName)
-                .NotEmpty().WithMessage("Full name is required")
-                .MinimumLength(2).WithMessage("Full name must be at least 2 characters")
-                .MaximumLength(100).WithMessage("Full name cannot exceed 100 characters")
-                .Matches(@"^[a-zA-Z\s]+$").WithMessage("Full name can only contain letters and spaces")
-                .Must(name => name.Trim().Split(' ').Length >= 2)
-                .WithMessage("Please provide both first and last name");
-
-            RuleFor(x => x.Email)
-                .NotEmpty().WithMessage("Email is required")
-                .EmailAddress().WithMessage("Please provide a valid email address")
-                .MustAsync(async (model, email, cancellation) =>
-                {
-                    if (string.IsNullOrEmpty(email)) return false;
-                    var user = await _userManager.FindByEmailAsync(email);
-                    return user == null;
-                })
-                .WithMessage("This email is already in use");
-        }
+            RuleFor(x => x.ProfileImageUrl)
+                .Must(url => Uri.TryCreate(url, UriKind.Absolute, out _))
+                .WithMessage("Invalid profile image URL format");
+        });
     }
 }

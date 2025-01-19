@@ -1,4 +1,5 @@
-﻿using SabiMarket.Domain.Entities.MarketParticipants;
+﻿using SabiMarket.Application.DTOs;
+using SabiMarket.Domain.Entities.MarketParticipants;
 
 namespace SabiMarket.Application.Interfaces
 {
@@ -7,5 +8,8 @@ namespace SabiMarket.Application.Interfaces
         void AddAssistCenterOfficer(AssistCenterOfficer assistCenter);
         void UpdateAssistCenterOfficer(AssistCenterOfficer assistCenter);
         Task<IEnumerable<AssistCenterOfficer>> GetAllAssistCenterOfficer(bool trackChanges);
+        Task<PaginatorDto<IEnumerable<AssistCenterOfficer>>> GetAssistantOfficersAsync(
+    string chairmanId, PaginationFilter paginationFilter, bool trackChanges);
+        Task<AssistCenterOfficer> GetByIdAsync(string officerId, bool trackChanges);
     }
 }

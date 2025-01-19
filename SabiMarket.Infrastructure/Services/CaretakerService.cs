@@ -442,5 +442,51 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        public async Task<BaseResponse<bool>> UnblockGoodBoy(string caretakerId, string goodBoyId)
+        {
+            try
+            {
+                var caretaker = await _repository.CaretakerRepository
+                    .GetCaretakerById(caretakerId, trackChanges: true);
+
+                if (caretaker == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Caretaker not found"),
+                        "Caretaker not found");
+                }
+
+                var goodBoy = caretaker.GoodBoys
+                    .FirstOrDefault(gb => gb.Id == goodBoyId);
+
+                if (goodBoy == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("GoodBoy not found"),
+                        "GoodBoy not found");
+                }
+
+                // Update the status to Active
+                goodBoy.Status = StatusEnum.Unlocked; // Ensure the enum has an Active state
+
+                // Optionally re-enable the user account
+                var user = await _userManager.FindByIdAsync(goodBoy.UserId);
+                if (user != null)
+                {
+                    user.LockoutEnd = null; // Remove the lockout
+                    await _userManager.UpdateAsync(user);
+                }
+
+                await _repository.SaveChangesAsync();
+
+                return ResponseFactory.Success(true, "GoodBoy unblocked successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error unblocking GoodBoy");
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+            }
+        }
+
     }
 }

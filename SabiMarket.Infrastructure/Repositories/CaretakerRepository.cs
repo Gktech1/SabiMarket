@@ -47,6 +47,16 @@ namespace SabiMarket.Infrastructure.Repositories
             return await query.Paginate(paginationFilter);
         }
 
+        public async Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersAsync(
+           string chairmanId, PaginationFilter paginationFilter, bool trackChanges)
+        {
+            return await FindPagedByCondition(
+                expression: c => c.ChairmanId == chairmanId,
+                paginationFilter: paginationFilter,
+                trackChanges: trackChanges,
+                orderBy: query => query.OrderBy(c => c.CreatedAt));
+        }
+
         public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPayments(
             string caretakerId, PaginationFilter paginationFilter, bool trackChanges)
         {
@@ -86,6 +96,38 @@ namespace SabiMarket.Infrastructure.Repositories
         public void CreateCaretaker(Caretaker caretaker) => Create(caretaker);
 
         public void DeleteCaretaker(Caretaker caretaker) => Delete(caretaker);
+
+        /*public async Task<int> GetCaretakerCountAsync()
+        {
+            return await FindAll(trackChanges: false).CountAsync();
+        }*/
+
+        public async Task<int> GetCaretakerCountAsync(DateTime? startDate = null, DateTime? endDate = null)
+        {
+                var query = FindAll(trackChanges: false);
+
+                if (startDate.HasValue)
+                {
+                    query = query.Where(c => c.CreatedAt >= startDate.Value);
+                }
+
+                if (endDate.HasValue)
+                {
+                    query = query.Where(c => c.CreatedAt <= endDate.Value);
+                }
+
+                // Optional: You might want to only count active caretakers
+                query = query.Where(c => !c.IsBlocked);
+
+                return await query.CountAsync();
+        }
+
+        public async Task<IEnumerable<Caretaker>> GetAllCaretakers(bool trackChanges) =>
+            await FindAll(trackChanges)
+                .Include(c => c.Market)
+                .Include(c => c.GoodBoys)
+                .Include(c => c.AssignedTraders)
+                .ToListAsync();
     }
 }
 

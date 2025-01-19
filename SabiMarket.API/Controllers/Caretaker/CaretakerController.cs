@@ -127,6 +127,16 @@ public class CaretakerController : ControllerBase
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
 
+    [HttpPatch("{caretakerId}/goodboys/{goodBoyId}/unblock")]
+    [Authorize(Policy = PolicyNames.RequireCaretakerOnly)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UnblockGoodBoy(string caretakerId, string goodBoyId)
+    {
+        var response = await _caretakerService.UnblockGoodBoy(caretakerId, goodBoyId);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
     [HttpPatch("{caretakerId}/goodboys/{goodBoyId}/block")]
     [Authorize(Policy = PolicyNames.RequireCaretakerOnly)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]

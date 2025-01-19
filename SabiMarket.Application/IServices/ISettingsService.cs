@@ -7,6 +7,7 @@ namespace SabiMarket.Application.IServices
     {
         Task<BaseResponse<bool>> ChangePassword(string userId, ChangePasswordDto changePasswordDto);
         Task<BaseResponse<bool>> UpdateProfile(string userId, UpdateProfileDto updateProfileDto);
-        Task<BaseResponse<UserProfileResponseDto>> GetUserProfile(string userId);
+        Task<BaseResponse<UserDetailsResponseDto>> GetUserDetails(string userId, string userType);
+        Task<BaseResponse<bool>> LogoutUser(string userId);
     }
 }

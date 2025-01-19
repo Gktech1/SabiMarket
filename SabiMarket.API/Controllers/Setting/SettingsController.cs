@@ -65,6 +65,38 @@ namespace SabiMarket.API.Controllers
 
             return Ok(response);
         }
+        /// <summary>
+        /// log out user from application
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost("logout-user")]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> LogoutUser()
+        {
+            var userId = _currentUser.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(ResponseFactory.Fail<bool>("User is not authenticated"));
+            }
+
+            var response = await _settingsService.LogoutUser(userId);
+
+            if (!response.IsSuccessful)
+            {
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status404NotFound => NotFound(response),
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
 
         /// <summary>
         /// Updates the profile information for the authenticated user
@@ -114,19 +146,19 @@ namespace SabiMarket.API.Controllers
         /// <response code="404">User not found</response>
         /// <response code="500">Internal server error</response>
         [HttpGet("getuserprofile")]
-        [ProducesResponseType(typeof(BaseResponse<UserProfileResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<UserDetailsResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(BaseResponse<UserProfileResponseDto>), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(BaseResponse<UserProfileResponseDto>), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetUserProfile()
+        [ProducesResponseType(typeof(BaseResponse<UserDetailsResponseDto>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BaseResponse<UserDetailsResponseDto>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetUserProfile(string userType)
         {
             var userId = _currentUser.GetUserId();
             if (string.IsNullOrEmpty(userId))
             {
-                return Unauthorized(ResponseFactory.Fail<UserProfileResponseDto>("User is not authenticated"));
+                return Unauthorized(ResponseFactory.Fail<UserDetailsResponseDto>("User is not authenticated"));
             }
 
-            var response = await _settingsService.GetUserProfile(userId);
+            var response = await _settingsService.GetUserDetails(userId, userType);
 
             if (!response.IsSuccessful)
             {
