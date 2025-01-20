@@ -416,6 +416,33 @@ namespace SabiMarket.Infrastructure.Data
                 entity.HasIndex(rp => new { rp.RoleId, rp.Name }).IsUnique();
             });
             #endregion
+           
+            #region Subscription Configuration
+            builder.Entity<Subscription>(entity =>
+            {
+                entity.ToTable("Subscriptions");
+
+                // Configure properties
+                entity.Property(e => e.SGId).IsRequired();
+                entity.Property(e => e.Amount).HasPrecision(18, 2);
+                entity.Property(e => e.ProofOfPayment).IsRequired();
+                entity.Property(e => e.SubscriptionStartDate).HasDefaultValueSql("GETDATE()");
+
+                // Configure relationships
+                entity.HasOne(s => s.Subscriber)
+                    .WithMany()
+                    .HasForeignKey(s => s.SubscriberId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(s => s.SubscriptionActivator)
+                    .WithMany()
+                    .HasForeignKey(s => s.SubscriptionActivatorId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Indexes if needed
+                entity.HasIndex(e => e.SGId);
+            });
+            #endregion
 
         }
 
