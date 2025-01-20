@@ -30,7 +30,8 @@ namespace SabiMarket.Domain.Entities.UserManagement
         public bool? IsRefreshTokenUsed { get; set; }
         public string? LocalGovernmentId { get; set; }
 
-        //Admin property to be added here 
+        public string? AdminId { get; set; }
+        public virtual Admin Admin { get; set; }
         public virtual LocalGovernment LocalGovernment { get; set; }
         public virtual Chairman Chairman { get; set; }
         public virtual Trader Trader { get; set; }

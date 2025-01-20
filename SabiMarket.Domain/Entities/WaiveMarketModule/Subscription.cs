@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SabiMarket.Domain.Entities.UserManagement;
-using SabiMarket.Domain.Enum;
+﻿using SabiMarket.Domain.Entities.UserManagement;
 
 namespace SabiMarket.Domain.Entities.WaiveMarketModule
 {

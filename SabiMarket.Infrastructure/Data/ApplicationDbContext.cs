@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using SabiMarket.Domain.Entities;
 using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.AdvertisementModule;
 using SabiMarket.Domain.Entities.LevyManagement;
@@ -27,7 +28,6 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<GoodBoy> GoodBoys { get; set; }
         public DbSet<AssistCenterOfficer> AssistCenterOfficers { get; set; }
         public DbSet<LevyPayment> LevyPayments { get; set; }
-        //public DbSet<LevyCollection> LevyCollections { get; set; }
         public DbSet<Vendor> Vendors { get; set; }
         public DbSet<Customer> Customers { get; set; }
         public DbSet<WaivedProduct> WaivedProducts { get; set; }
@@ -39,6 +39,11 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<ProductCategory> ProductCategories { get; set; }
         public DbSet<Chairman> Chairmen { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
+        // Add Admin DbSet
+        public DbSet<Admin> Admins { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
+
         #endregion
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -52,13 +57,24 @@ namespace SabiMarket.Infrastructure.Data
             builder.Entity<ApplicationUser>(entity =>
             {
                 entity.ToTable("Users");
+
+                // Basic properties
                 entity.Property(e => e.FirstName).HasMaxLength(100);
                 entity.Property(e => e.LastName).HasMaxLength(100);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
-                entity.Property(e => e.Address).IsRequired(false);  // Make nullable in database
+                entity.Property(e => e.Address).IsRequired(false);
+                entity.Property(e => e.AdminId).IsRequired(false);  // Make AdminId nullable
+
+                // Configure LocalGovernment relationship
                 entity.HasOne(u => u.LocalGovernment)
                       .WithMany(lg => lg.Users)
                       .HasForeignKey(u => u.LocalGovernmentId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Configure Admin relationship
+                entity.HasOne(u => u.Admin)
+                      .WithOne(a => a.User)
+                      .HasForeignKey<Admin>(a => a.UserId)  // Foreign key on Admin
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -313,6 +329,129 @@ namespace SabiMarket.Infrastructure.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
             #endregion
+
+            #region Identity Configuration
+            // Update ApplicationRole configuration
+            builder.Entity<ApplicationRole>(entity =>
+            {
+                entity.ToTable("Roles");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+            });
+            #endregion
+
+            #region Admin Configuration
+            builder.Entity<Admin>(entity =>
+            {
+                entity.ToTable("Admins");
+
+                // Properties
+                entity.Property(e => e.AdminLevel)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.Department)
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.Position)
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.TotalRevenue)
+                      .HasPrecision(18, 2);
+
+                entity.Property(e => e.StatsLastUpdatedAt)
+                      .HasDefaultValueSql("GETDATE()");
+
+                // Default values for access flags
+                entity.Property(e => e.HasDashboardAccess).HasDefaultValue(true);
+                entity.Property(e => e.HasRoleManagementAccess).HasDefaultValue(true);
+                entity.Property(e => e.HasTeamManagementAccess).HasDefaultValue(true);
+                entity.Property(e => e.HasAuditLogAccess).HasDefaultValue(true);
+
+                // Configure User relationship (inverse side)
+                entity.HasOne(a => a.User)
+                      .WithOne(u => u.Admin)
+                      .HasForeignKey<Admin>(a => a.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+            #endregion
+
+            #region AuditLog Configuration
+            builder.Entity<AuditLog>(entity =>
+            {
+                entity.ToTable("AuditLogs");
+
+                // Properties
+                entity.Property(e => e.Date).IsRequired();
+                entity.Property(e => e.Time).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.Activity).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.Module).HasMaxLength(50);
+                entity.Property(e => e.Details).HasMaxLength(500);
+                entity.Property(e => e.IpAddress).HasMaxLength(50);
+
+                // Relationships
+                entity.HasOne(a => a.User)
+                      .WithMany()
+                      .HasForeignKey(a => a.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+            #endregion
+
+            #region Role Configuration
+            builder.Entity<ApplicationRole>(entity =>
+            {
+                entity.ToTable("Roles");
+
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            });
+
+            builder.Entity<RolePermission>(entity =>
+            {
+                entity.ToTable("RolePermissions");
+
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+
+                entity.HasOne(rp => rp.Role)
+                      .WithMany(r => r.Permissions)
+                      .HasForeignKey(rp => rp.RoleId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(rp => new { rp.RoleId, rp.Name }).IsUnique();
+            });
+            #endregion
+
+            #region Subscription Configuration
+            builder.Entity<Subscription>(entity =>
+            {
+                entity.ToTable("Subscriptions");
+
+                // Configure properties
+                entity.Property(e => e.SGId).IsRequired();
+                entity.Property(e => e.Amount).HasPrecision(18, 2);
+                entity.Property(e => e.ProofOfPayment).IsRequired();
+                entity.Property(e => e.SubscriptionStartDate).HasDefaultValueSql("GETDATE()");
+
+                // Configure relationships
+                entity.HasOne(s => s.Subscriber)
+                    .WithMany()
+                    .HasForeignKey(s => s.SubscriberId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(s => s.SubscriptionActivator)
+                    .WithMany()
+                    .HasForeignKey(s => s.SubscriptionActivatorId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Indexes if needed
+                entity.HasIndex(e => e.SGId);
+            });
+            #endregion
+
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
