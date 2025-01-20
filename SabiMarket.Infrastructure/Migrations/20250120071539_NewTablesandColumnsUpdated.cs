@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SabiMarket.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class NewTablesandColumnsAdded : Migration
+    public partial class NewTablesandColumnsUpdated : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -31,7 +31,7 @@ namespace SabiMarket.Infrastructure.Migrations
                 name: "PaymentMethod",
                 schema: "dbo",
                 table: "Subscriptions",
-                newName: "SGId");
+                newName: "ProofOfPayment");
 
             migrationBuilder.RenameIndex(
                 name: "IX_Subscriptions_UserId",
@@ -43,9 +43,8 @@ namespace SabiMarket.Infrastructure.Migrations
                 name: "AdminId",
                 schema: "dbo",
                 table: "Users",
-                type: "nvarchar(450)",
-                nullable: false,
-                defaultValue: "");
+                type: "nvarchar(max)",
+                nullable: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "Gender",
@@ -61,6 +60,16 @@ namespace SabiMarket.Infrastructure.Migrations
                 type: "bit",
                 nullable: false,
                 defaultValue: false);
+
+            migrationBuilder.AlterColumn<DateTime>(
+                name: "SubscriptionStartDate",
+                schema: "dbo",
+                table: "Subscriptions",
+                type: "datetime2",
+                nullable: false,
+                defaultValueSql: "GETDATE()",
+                oldClrType: typeof(DateTime),
+                oldType: "datetime2");
 
             migrationBuilder.AddColumn<bool>(
                 name: "IsAdminConfirmPayment",
@@ -79,10 +88,10 @@ namespace SabiMarket.Infrastructure.Migrations
                 defaultValue: false);
 
             migrationBuilder.AddColumn<string>(
-                name: "ProofOfPayment",
+                name: "SGId",
                 schema: "dbo",
                 table: "Subscriptions",
-                type: "nvarchar(max)",
+                type: "nvarchar(450)",
                 nullable: false,
                 defaultValue: "");
 
@@ -319,7 +328,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     RegisteredLGAs = table.Column<int>(type: "int", nullable: false),
                     ActiveChairmen = table.Column<int>(type: "int", nullable: false),
                     TotalRevenue = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    AdminLevel = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    AdminLevel = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Department = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Position = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     HasDashboardAccess = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
@@ -391,8 +400,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         column: x => x.AdminId,
                         principalSchema: "dbo",
                         principalTable: "Admins",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_AuditLogs_Users_UserId",
                         column: x => x.UserId,
@@ -403,10 +411,10 @@ namespace SabiMarket.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Users_AdminId",
+                name: "IX_Subscriptions_SGId",
                 schema: "dbo",
-                table: "Users",
-                column: "AdminId");
+                table: "Subscriptions",
+                column: "SGId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Subscriptions_SubscriberId",
@@ -527,7 +535,7 @@ namespace SabiMarket.Infrastructure.Migrations
                 principalSchema: "dbo",
                 principalTable: "Users",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);  // Changed from Cascade to Restrict
+                onDelete: ReferentialAction.Restrict);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Subscriptions_Users_SubscriptionActivatorId",
@@ -537,38 +545,7 @@ namespace SabiMarket.Infrastructure.Migrations
                 principalSchema: "dbo",
                 principalTable: "Users",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);  // Changed from Cascade to Restrict
-
-
-            /* migrationBuilder.AddForeignKey(
-                 name: "FK_Subscriptions_Users_SubscriberId",
-                 schema: "dbo",
-                 table: "Subscriptions",
-                 column: "SubscriberId",
-                 principalSchema: "dbo",
-                 principalTable: "Users",
-                 principalColumn: "Id",
-                 onDelete: ReferentialAction.Cascade);
-
-             migrationBuilder.AddForeignKey(
-                 name: "FK_Subscriptions_Users_SubscriptionActivatorId",
-                 schema: "dbo",
-                 table: "Subscriptions",
-                 column: "SubscriptionActivatorId",
-                 principalSchema: "dbo",
-                 principalTable: "Users",
-                 principalColumn: "Id",
-                 onDelete: ReferentialAction.Cascade);*/
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_Users_Admins_AdminId",
-                schema: "dbo",
-                table: "Users",
-                column: "AdminId",
-                principalSchema: "dbo",
-                principalTable: "Admins",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Restrict);
         }
 
         /// <inheritdoc />
@@ -609,11 +586,6 @@ namespace SabiMarket.Infrastructure.Migrations
                 schema: "dbo",
                 table: "Subscriptions");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_Users_Admins_AdminId",
-                schema: "dbo",
-                table: "Users");
-
             migrationBuilder.DropTable(
                 name: "AuditLogs",
                 schema: "dbo");
@@ -627,9 +599,9 @@ namespace SabiMarket.Infrastructure.Migrations
                 schema: "dbo");
 
             migrationBuilder.DropIndex(
-                name: "IX_Users_AdminId",
+                name: "IX_Subscriptions_SGId",
                 schema: "dbo",
-                table: "Users");
+                table: "Subscriptions");
 
             migrationBuilder.DropIndex(
                 name: "IX_Subscriptions_SubscriberId",
@@ -687,7 +659,7 @@ namespace SabiMarket.Infrastructure.Migrations
                 table: "Subscriptions");
 
             migrationBuilder.DropColumn(
-                name: "ProofOfPayment",
+                name: "SGId",
                 schema: "dbo",
                 table: "Subscriptions");
 
@@ -833,7 +805,7 @@ namespace SabiMarket.Infrastructure.Migrations
                 newName: "UserId");
 
             migrationBuilder.RenameColumn(
-                name: "SGId",
+                name: "ProofOfPayment",
                 schema: "dbo",
                 table: "Subscriptions",
                 newName: "PaymentMethod");
@@ -843,6 +815,16 @@ namespace SabiMarket.Infrastructure.Migrations
                 schema: "dbo",
                 table: "Subscriptions",
                 newName: "IX_Subscriptions_UserId");
+
+            migrationBuilder.AlterColumn<DateTime>(
+                name: "SubscriptionStartDate",
+                schema: "dbo",
+                table: "Subscriptions",
+                type: "datetime2",
+                nullable: false,
+                oldClrType: typeof(DateTime),
+                oldType: "datetime2",
+                oldDefaultValueSql: "GETDATE()");
 
             migrationBuilder.AddColumn<string>(
                 name: "AccountNumber",

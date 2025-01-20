@@ -29,6 +29,8 @@ namespace SabiMarket.Domain.Entities.UserManagement
         public DateTime? RefreshTokenExpiryTime { get; set; }
         public bool? IsRefreshTokenUsed { get; set; }
         public string? LocalGovernmentId { get; set; }
+
+        public string? AdminId { get; set; }
         public virtual Admin Admin { get; set; }
         public virtual LocalGovernment LocalGovernment { get; set; }
         public virtual Chairman Chairman { get; set; }

@@ -28,7 +28,6 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<GoodBoy> GoodBoys { get; set; }
         public DbSet<AssistCenterOfficer> AssistCenterOfficers { get; set; }
         public DbSet<LevyPayment> LevyPayments { get; set; }
-        //public DbSet<LevyCollection> LevyCollections { get; set; }
         public DbSet<Vendor> Vendors { get; set; }
         public DbSet<Customer> Customers { get; set; }
         public DbSet<WaivedProduct> WaivedProducts { get; set; }
@@ -58,13 +57,24 @@ namespace SabiMarket.Infrastructure.Data
             builder.Entity<ApplicationUser>(entity =>
             {
                 entity.ToTable("Users");
+
+                // Basic properties
                 entity.Property(e => e.FirstName).HasMaxLength(100);
                 entity.Property(e => e.LastName).HasMaxLength(100);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
-                entity.Property(e => e.Address).IsRequired(false);  // Make nullable in database
+                entity.Property(e => e.Address).IsRequired(false);
+                entity.Property(e => e.AdminId).IsRequired(false);  // Make AdminId nullable
+
+                // Configure LocalGovernment relationship
                 entity.HasOne(u => u.LocalGovernment)
                       .WithMany(lg => lg.Users)
                       .HasForeignKey(u => u.LocalGovernmentId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Configure Admin relationship
+                entity.HasOne(u => u.Admin)
+                      .WithOne(a => a.User)
+                      .HasForeignKey<Admin>(a => a.UserId)  // Foreign key on Admin
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -337,57 +347,43 @@ namespace SabiMarket.Infrastructure.Data
             {
                 entity.ToTable("Admins");
 
-                // Required fields
-                entity.Property(e => e.Position)
+                // Properties
+                entity.Property(e => e.AdminLevel)
                       .IsRequired()
                       .HasMaxLength(100);
 
                 entity.Property(e => e.Department)
                       .HasMaxLength(100);
 
-                entity.Property(e => e.AdminLevel)
-                      .IsRequired()
-                      .HasMaxLength(50);
+                entity.Property(e => e.Position)
+                      .HasMaxLength(100);
 
-                // Statistics properties
                 entity.Property(e => e.TotalRevenue)
                       .HasPrecision(18, 2);
 
                 entity.Property(e => e.StatsLastUpdatedAt)
                       .HasDefaultValueSql("GETDATE()");
 
-                // Boolean flags for access control
-                entity.Property(e => e.HasDashboardAccess)
-                      .HasDefaultValue(true);
+                // Default values for access flags
+                entity.Property(e => e.HasDashboardAccess).HasDefaultValue(true);
+                entity.Property(e => e.HasRoleManagementAccess).HasDefaultValue(true);
+                entity.Property(e => e.HasTeamManagementAccess).HasDefaultValue(true);
+                entity.Property(e => e.HasAuditLogAccess).HasDefaultValue(true);
 
-                entity.Property(e => e.HasRoleManagementAccess)
-                      .HasDefaultValue(true);
-
-                entity.Property(e => e.HasTeamManagementAccess)
-                      .HasDefaultValue(true);
-
-                entity.Property(e => e.HasAuditLogAccess)
-                      .HasDefaultValue(true);
-
-                // One-to-One relationship with ApplicationUser
+                // Configure User relationship (inverse side)
                 entity.HasOne(a => a.User)
-                      .WithOne()
+                      .WithOne(u => u.Admin)
                       .HasForeignKey<Admin>(a => a.UserId)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                // One-to-Many relationship with AuditLogs
-                entity.HasMany(a => a.AdminAuditLogs)
-                      .WithOne()
-                      .HasForeignKey("AdminId")
                       .OnDelete(DeleteBehavior.Restrict);
             });
             #endregion
 
-            #region Audit & Permissions Configuration
+            #region AuditLog Configuration
             builder.Entity<AuditLog>(entity =>
             {
                 entity.ToTable("AuditLogs");
 
+                // Properties
                 entity.Property(e => e.Date).IsRequired();
                 entity.Property(e => e.Time).IsRequired().HasMaxLength(20);
                 entity.Property(e => e.Activity).IsRequired().HasMaxLength(255);
@@ -395,10 +391,23 @@ namespace SabiMarket.Infrastructure.Data
                 entity.Property(e => e.Details).HasMaxLength(500);
                 entity.Property(e => e.IpAddress).HasMaxLength(50);
 
+                // Relationships
                 entity.HasOne(a => a.User)
                       .WithMany()
                       .HasForeignKey(a => a.UserId)
                       .OnDelete(DeleteBehavior.Restrict);
+            });
+            #endregion
+
+            #region Role Configuration
+            builder.Entity<ApplicationRole>(entity =>
+            {
+                entity.ToTable("Roles");
+
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
             });
 
             builder.Entity<RolePermission>(entity =>
@@ -412,11 +421,10 @@ namespace SabiMarket.Infrastructure.Data
                       .HasForeignKey(rp => rp.RoleId)
                       .OnDelete(DeleteBehavior.Cascade);
 
-                // Create unique constraint for Role-Permission combination
                 entity.HasIndex(rp => new { rp.RoleId, rp.Name }).IsUnique();
             });
             #endregion
-           
+
             #region Subscription Configuration
             builder.Entity<Subscription>(entity =>
             {
