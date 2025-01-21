@@ -20,7 +20,8 @@ namespace SabiMarket.Infrastructure.Repositories
         private readonly Lazy<IChairmanRepository> _chairmanRepository;
         private readonly Lazy<IAssistCenterOfficerRepository> _assistofficerRepository;
         private readonly Lazy<IAuditLogRepository> _auditlogRepository;
-        private readonly Lazy<IReportRepository> _reportRepository;  
+        private readonly Lazy<IReportRepository> _reportRepository;
+        private readonly Lazy<IAdminRepository> _adminRepository;
 
 
         public RepositoryManager(ApplicationDbContext context)
@@ -40,6 +41,7 @@ namespace SabiMarket.Infrastructure.Repositories
             _assistofficerRepository = new Lazy<IAssistCenterOfficerRepository>(() => new AssistCenterOfficerRepository(_context));
             _auditlogRepository = new Lazy<IAuditLogRepository>(() => new AuditLogRepository(_context));
             _reportRepository = new Lazy<IReportRepository>(() => new ReportRepository(_context));
+            _adminRepository = new Lazy<IAdminRepository>(() => new AdminRepository(_context));
         }
 
         public ILevyPaymentRepository LevyPaymentRepository => _levyPaymentRepository.Value;
@@ -64,6 +66,7 @@ namespace SabiMarket.Infrastructure.Repositories
         public IAuditLogRepository AuditLogRepository => _auditlogRepository.Value;
 
         public IReportRepository ReportRepository => _reportRepository.Value;
+        public IAdminRepository AdminRepository => _adminRepository.Value;
 
         public Task SaveChangesAsync() => _context.SaveChangesAsync();
     }
