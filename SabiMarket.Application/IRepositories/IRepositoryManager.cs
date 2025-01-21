@@ -27,6 +27,8 @@ namespace SabiMarket.Application.IRepositories
 
         public IReportRepository ReportRepository { get; }
 
+        public IAdminRepository AdminRepository { get; }
+
         Task SaveChangesAsync();
     }
 }
