@@ -23,6 +23,16 @@ public class ChairmanController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("markets/{marketId}/levy-setups")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetMarketLevies(string marketId, [FromQuery] PaginationFilter filter)
+    {
+        var response = await _chairmanService.GetMarketLevies(marketId, filter);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
     [HttpGet("daily-metrics")]
     [ProducesResponseType(typeof(BaseResponse<DashboardMetricsResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<DashboardMetricsResponseDto>), StatusCodes.Status500InternalServerError)]

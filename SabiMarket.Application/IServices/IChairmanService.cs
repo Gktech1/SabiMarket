@@ -21,11 +21,6 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<bool>> BlockAssistantOfficer(string officerId);
         Task<BaseResponse<AssistantOfficerResponseDto>> CreateAssistantOfficer(CreateAssistantOfficerRequestDto officerDto);
         Task<BaseResponse<AssistantOfficerResponseDto>> GetAssistantOfficerById(string officerId);
-        Task<BaseResponse<LevyResponseDto>> CreateLevy(CreateLevyRequestDto request);
-        Task<BaseResponse<bool>> UpdateLevy(string levyId, UpdateLevyRequestDto request);
-        Task<BaseResponse<bool>> DeleteLevy(string levyId);
-        Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId);
-        Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter);
         Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request);
         Task<BaseResponse<bool>> UpdateMarket(string marketId, UpdateMarketRequestDto request);
         Task<BaseResponse<bool>> DeleteMarket(string marketId);
@@ -52,5 +47,13 @@ namespace SabiMarket.Application.IServices
         // Market Analytics
         Task<BaseResponse<MarketComplianceDto>> GetMarketComplianceRates(string marketId);
         Task<BaseResponse<MarketRevenueDto>> GetMarketRevenue(string marketId, DateRangeDto dateRange);
+
+        // New levy management methods
+        Task<BaseResponse<LevyResponseDto>> CreateLevy(CreateLevyRequestDto request);
+        Task<BaseResponse<bool>> UpdateLevy(string levyId, UpdateLevyRequestDto request);
+        Task<BaseResponse<bool>> DeleteLevy(string levyId);
+        Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId);
+        Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter);
+        Task<BaseResponse<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>> GetMarketLevies(string marketId, PaginationFilter paginationFilter);
     }
 }

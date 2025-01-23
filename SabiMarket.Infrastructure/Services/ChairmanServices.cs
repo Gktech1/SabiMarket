@@ -15,6 +15,8 @@ using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
+using SabiMarket.Domain.Enum;
+using SabiMarket.Infrastructure.Utilities;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -29,7 +31,11 @@ namespace SabiMarket.Infrastructure.Services
         private readonly IValidator<UpdateProfileDto> _updateProfileValidator;
         private readonly IValidator<CreateAssistantOfficerRequestDto> _createAssistOfficerValidator;
 
+        // Add these properties to your ChairmanService class
+        private readonly IValidator<CreateLevyRequestDto> _createLevyValidator;
+        private readonly IValidator<UpdateLevyRequestDto> _updateLevyValidator;
 
+        // Update the constructor to include new validators
         public ChairmanService(
             IRepositoryManager repository,
             ILogger<ChairmanService> logger,
@@ -37,6 +43,8 @@ namespace SabiMarket.Infrastructure.Services
             UserManager<ApplicationUser> userManager,
             IValidator<CreateChairmanRequestDto> createChairmanValidator,
             IValidator<UpdateProfileDto> updateProfileValidator,
+            IValidator<CreateLevyRequestDto> createLevyValidator,
+            IValidator<UpdateLevyRequestDto> updateLevyValidator,
             ICurrentUserService currentUser)
         {
             _repository = repository;
@@ -45,9 +53,42 @@ namespace SabiMarket.Infrastructure.Services
             _userManager = userManager;
             _createChairmanValidator = createChairmanValidator;
             _updateProfileValidator = updateProfileValidator;
+            _createLevyValidator = createLevyValidator;
+            _updateLevyValidator = updateLevyValidator;
             _currentUser = currentUser;
         }
 
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>> GetMarketLevies(string marketId, PaginationFilter paginationFilter)
+        {
+            try
+            {
+                var chairmanId = _currentUser.GetUserId();
+                var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, false);
+
+                if (market == null || market.ChairmanId != chairmanId)
+                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>(
+                        new UnauthorizedException("Unauthorized to view this market's levies"),
+                        "Unauthorized access");
+
+                var query = await _repository.LevyPaymentRepository.GetMarketLevySetups(marketId);
+                var paginatedLevies = await query.Paginate(paginationFilter);
+
+                var result = new PaginatorDto<IEnumerable<LevyInfoResponseDto>>
+                {
+                    PageItems = _mapper.Map<IEnumerable<LevyInfoResponseDto>>(paginatedLevies.PageItems),
+                    PageSize = paginatedLevies.PageSize,
+                    CurrentPage = paginatedLevies.CurrentPage,
+                    NumberOfPages = paginatedLevies.NumberOfPages
+                };
+
+                return ResponseFactory.Success(result, "Market levy configurations retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving market levy configurations");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>(ex, "An unexpected error occurred");
+            }
+        }
         public async Task<BaseResponse<ChairmanResponseDto>> GetChairmanById(string chairmanId)
         {
             try
@@ -452,7 +493,38 @@ namespace SabiMarket.Infrastructure.Services
         {
             try
             {
+                var validationResult = await _createLevyValidator.ValidateAsync(request);
+                if (!validationResult.IsValid)
+                {
+                    return ResponseFactory.Fail<LevyResponseDto>(
+                        new FluentValidation.ValidationException(validationResult.Errors),
+                        "Validation failed");
+                }
+
+                // Get current chairman ID from current user service
+                var chairmanId = _currentUser.GetUserId();
+
+                // Validate market exists and belongs to chairman
+                var market = await _repository.MarketRepository.GetMarketById(request.MarketId,false);
+                if (market == null || market.ChairmanId != chairmanId)
+                    return ResponseFactory.Fail<LevyResponseDto>(new NotFoundException("Market not found"), "Market not found or unauthorized.");
+
+                // Validate trader exists and belongs to the market
+                var trader = await _repository.TraderRepository.GetTraderById(request.TraderId, false);
+                if (trader == null || trader.MarketId != request.MarketId)
+                    return ResponseFactory.Fail<LevyResponseDto>(new NotFoundException("Trader not found"), "Trader not found or not in specified market.");
+
+                // Validate good boy exists and is active
+                var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyById(request.GoodBoyId);
+                if (goodBoy == null || goodBoy.Status == StatusEnum.Blocked)
+                    return ResponseFactory.Fail<LevyResponseDto>(new NotFoundException("Good Boy not found"), "Good Boy not found or inactive.");
+
                 var levy = _mapper.Map<LevyPayment>(request);
+                levy.ChairmanId = chairmanId;
+                levy.PaymentStatus = PaymentStatusEnum.Pending;
+                levy.PaymentDate = DateTime.UtcNow;
+                levy.TransactionReference = GenerateTransactionReference();
+
                 _repository.LevyPaymentRepository.AddPayment(levy);
                 await _repository.SaveChangesAsync();
 
@@ -470,13 +542,38 @@ namespace SabiMarket.Infrastructure.Services
         {
             try
             {
+                var validationResult = await _updateLevyValidator.ValidateAsync(request);
+                if (!validationResult.IsValid)
+                    return ResponseFactory.Fail<bool>(
+                        new FluentValidation.ValidationException(validationResult.Errors),
+                        "Validation failed");
+                // Get current chairman ID from current user service
+                var chairmanId = _currentUser.GetUserId();
+
                 var levy = await _repository.LevyPaymentRepository.GetPaymentById(levyId, trackChanges: true);
-                if (levy == null)
+                if (levy == null || levy.ChairmanId != chairmanId)
+                    return ResponseFactory.Fail<bool>(new NotFoundException("Levy not found"), "Levy not found or unauthorized.");
+
+                // Validate market exists and belongs to chairman
+                var market = await _repository.MarketRepository.GetMarketById(request.MarketId, false);
+                if (market == null || market.ChairmanId != chairmanId)
+                    return ResponseFactory.Fail<bool>(new NotFoundException("Market not found"), "Market not found or unauthorized.");
+
+                // Validate trader exists and belongs to the market
+                var trader = await _repository.TraderRepository.GetTraderById(request.TraderId, false);
+                if (trader == null || trader.MarketId != request.MarketId)
+                    return ResponseFactory.Fail<bool>(new NotFoundException("Trader not found"), "Trader not found or not in specified market.");
+
+                if (!string.IsNullOrEmpty(request.GoodBoyId))
                 {
-                    return ResponseFactory.Fail<bool>(new NotFoundException("Levy not found"), "Levy not found.");
+                    var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyById(request.GoodBoyId);
+                    if (goodBoy == null || goodBoy.Status == StatusEnum.Blocked)
+                        return ResponseFactory.Fail<bool>(new NotFoundException("Good Boy not found"), "Good Boy not found or inactive.");
                 }
 
                 _mapper.Map(request, levy);
+                levy.UpdatedAt = DateTime.UtcNow;
+
                 await _repository.SaveChangesAsync();
 
                 return ResponseFactory.Success(true, "Levy updated successfully.");
@@ -486,6 +583,11 @@ namespace SabiMarket.Infrastructure.Services
                 _logger.LogError(ex, "Error updating levy");
                 return ResponseFactory.Fail<bool>(ex, "Error updating levy");
             }
+        }
+
+        private string GenerateTransactionReference()
+        {
+            return $"LVY-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8)}".ToUpper();
         }
 
         public async Task<BaseResponse<bool>> DeleteLevy(string levyId)

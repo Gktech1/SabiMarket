@@ -1,10 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
-using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
 using SabiMarket.Domain.Enum;
+using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 
 namespace SabiMarket.Infrastructure.Repositories
 {
@@ -112,7 +112,7 @@ namespace SabiMarket.Infrastructure.Repositories
         }
 
         // Added method to get all configurations for a market
-        public async Task<IEnumerable<LevyPayment>> GetMarketLevySetups(string marketId)
+   /*     public async Task<IEnumerable<LevyPayment>> GetMarketLevySetups(string marketId)
         {
             return await _context.LevyPayments
                 .Where(lp => lp.MarketId == marketId)
@@ -120,6 +120,16 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
                 .OrderBy(lp => lp.Period)
                 .ToListAsync();
+        }*/
+
+        public async Task<IQueryable<LevyPayment>> GetMarketLevySetups(string marketId)
+        {
+            return _context.LevyPayments
+                .Where(lp => lp.MarketId == marketId)
+                .GroupBy(lp => lp.Period)
+                .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
+                .OrderBy(lp => lp.Period)
+                .AsQueryable();
         }
     }
 }
