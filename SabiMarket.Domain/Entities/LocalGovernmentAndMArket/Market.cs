@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.MarketParticipants;
 
 namespace SabiMarket.Domain.Entities.LocalGovernmentAndMArket
@@ -9,6 +10,7 @@ namespace SabiMarket.Domain.Entities.LocalGovernmentAndMArket
     {
         public string LocalGovernmentId { get; set; }
 
+        public string ChairmanId { get; set; }
         [Required]
         [StringLength(100)]
         public string Name { get; set; }
@@ -32,6 +34,9 @@ namespace SabiMarket.Domain.Entities.LocalGovernmentAndMArket
         public int NonCompliantTraders { get; set; }
 
         // Navigation properties
+
+        public virtual Chairman Chairman { get; set; }
+
         public virtual LocalGovernment LocalGovernment { get; set; }
         public virtual ICollection<Trader> Traders { get; set; }
         public virtual ICollection<Caretaker> Caretakers { get; set; }
