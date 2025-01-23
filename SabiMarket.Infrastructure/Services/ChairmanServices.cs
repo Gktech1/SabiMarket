@@ -16,6 +16,7 @@ using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Enum;
+using SabiMarket.Infrastructure.Utilities;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -57,27 +58,24 @@ namespace SabiMarket.Infrastructure.Services
             _currentUser = currentUser;
         }
 
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>> GetMarketLevies(
-            string marketId, PaginationFilter paginationFilter)
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>> GetMarketLevies(string marketId, PaginationFilter paginationFilter)
         {
             try
             {
                 var chairmanId = _currentUser.GetUserId();
                 var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, false);
+
                 if (market == null || market.ChairmanId != chairmanId)
-                {
                     return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>(
                         new UnauthorizedException("Unauthorized to view this market's levies"),
                         "Unauthorized access");
-                }
 
-                var query = _repository.LevyPaymentRepository.GetMarketLevySetups(marketId);
+                var query = await _repository.LevyPaymentRepository.GetMarketLevySetups(marketId);
                 var paginatedLevies = await query.Paginate(paginationFilter);
 
-                var levyDtos = _mapper.Map<IEnumerable<LevyInfoResponseDto>>(paginatedLevies.PageItems);
                 var result = new PaginatorDto<IEnumerable<LevyInfoResponseDto>>
                 {
-                    PageItems = levyDtos,
+                    PageItems = _mapper.Map<IEnumerable<LevyInfoResponseDto>>(paginatedLevies.PageItems),
                     PageSize = paginatedLevies.PageSize,
                     CurrentPage = paginatedLevies.CurrentPage,
                     NumberOfPages = paginatedLevies.NumberOfPages
@@ -88,8 +86,7 @@ namespace SabiMarket.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving market levy configurations");
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>(
-                    ex, "An unexpected error occurred");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>(ex, "An unexpected error occurred");
             }
         }
         public async Task<BaseResponse<ChairmanResponseDto>> GetChairmanById(string chairmanId)
