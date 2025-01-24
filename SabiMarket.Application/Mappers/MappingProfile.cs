@@ -236,7 +236,7 @@ public class MappingProfile : Profile
            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
 
         CreateMap<CreateGoodBoyRequestDto, GoodBoy>()
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => StatusEnum.Active));
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => StatusEnum.Unlocked));
 
         CreateMap<GoodBoy, GoodBoyResponseDto>()
             .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
@@ -256,7 +256,7 @@ public class MappingProfile : Profile
         CreateMap<ProcessLevyPaymentDto, LevyPayment>()
         .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => DateTime.UtcNow))
         .ForMember(dest => dest.TransactionReference, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
-        .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => PaymentStatus.Successful));
+        .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => PaymentStatusEnum.Paid));
 
 
         CreateMap<UpdateGoodBoyProfileDto, ApplicationUser>();
