@@ -15,7 +15,15 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<PaginatorDto<IEnumerable<GoodBoyResponseDto>>>> GetGoodBoys(
             GoodBoyFilterRequestDto filterDto, PaginationFilter paginationFilter);
 
+        Task<BaseResponse<TraderDetailsDto>> GetTraderDetails(string traderId);
+
         Task<BaseResponse<bool>> ProcessLevyPayment(string goodBoyId, ProcessLevyPaymentDto paymentDto);
+
+        Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto);
+        Task<BaseResponse<bool>> VerifyTraderPaymentStatus(string traderId);
+        Task<BaseResponse<bool>> UpdateTraderPayment(string traderId, ProcessLevyPaymentDto paymentDto);
     }
+
 }
+
 

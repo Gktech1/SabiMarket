@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using SabiMarket.Infrastructure.Utilities;
 using System.Text.Json;
 using SabiMarket.Application.Interfaces;
+using ValidationException = FluentValidation.ValidationException;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -341,6 +342,182 @@ namespace SabiMarket.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing levy payment");
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<TraderDetailsDto>> GetTraderDetails(string traderId)
+        {
+            try
+            {
+                var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyById(traderId, trackChanges: false);
+                if (goodBoy == null)
+                {
+                    await CreateAuditLog(
+                        "Trader Details Lookup Failed",
+                        $"Failed to find trader with ID: {traderId}",
+                        "Trader Query"
+                    );
+                    return ResponseFactory.Fail<TraderDetailsDto>(
+                        new NotFoundException("Trader not found"),
+                        "Trader not found");
+                }
+
+                var traderDetails = _mapper.Map<TraderDetailsDto>(goodBoy);
+
+                await CreateAuditLog(
+                    "Trader Details Lookup",
+                    $"Retrieved trader details for ID: {traderId}",
+                    "Trader Query"
+                );
+
+                return ResponseFactory.Success(traderDetails, "Trader details retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving trader details");
+                return ResponseFactory.Fail<TraderDetailsDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto)
+        {
+            try
+            {
+                // Validate QR code format (OSH/LAG/23401)
+                if (!scanDto.QRCodeData.StartsWith("OSH/LAG/"))
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        "Invalid trader QR code");
+                }
+
+                var traderId = scanDto.QRCodeData.Replace("OSH/LAG/", "");
+                var trader = await _repository.GoodBoyRepository.GetGoodBoyById(traderId, trackChanges: false);
+
+                if (trader == null)
+                {
+                    await CreateAuditLog(
+                        "QR Code Validation Failed",
+                        $"Invalid trader ID from QR Code: {traderId}",
+                        "Payment Processing"
+                    );
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new NotFoundException("Trader not found"),
+                        "Invalid trader QR code");
+                }
+
+                // Check if scanning user is authorized
+                var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyByUserId(scanDto.ScannedByUserId);
+                if (goodBoy == null)
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new UnauthorizedException("Unauthorized scan attempt"),
+                        "Unauthorized to scan trader QR codes");
+                }
+
+                var validationResponse = new TraderQRValidationResponseDto
+                {
+                    TraderId = trader.Id,
+                    TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
+                    TraderOccupancy = "Open Space",
+                    TraderIdentityNumber = $"OSH/LAG/{trader.Id}",
+                    PaymentFrequency = "2 days - N500",
+                    LastPaymentDate = trader.LevyPayments
+                        .OrderByDescending(p => p.PaymentDate)
+                        .FirstOrDefault()?.PaymentDate
+                };
+
+                await CreateAuditLog(
+                    "Trader QR Code Scanned",
+                    $"Trader QR Code scanned by GoodBoy: {goodBoy.Id} for Trader: {trader.Id}",
+                    "Payment Processing"
+                );
+
+                return ResponseFactory.Success(validationResponse, "Trader QR code validated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating trader QR code");
+                return ResponseFactory.Fail<TraderQRValidationResponseDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<bool>> VerifyTraderPaymentStatus(string traderId)
+        {
+            try
+            {
+                var trader = await _repository.GoodBoyRepository.GetGoodBoyById(traderId, trackChanges: false);
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Trader not found"),
+                        "Trader not found");
+                }
+
+                var lastPayment = trader.LevyPayments
+                    .OrderByDescending(p => p.PaymentDate)
+                    .FirstOrDefault();
+
+                if (lastPayment == null)
+                {
+                    return ResponseFactory.Success(false, "Payment required");
+                }
+
+                // Check if payment is within the 2-day window
+                var daysSinceLastPayment = (DateTime.UtcNow - lastPayment.PaymentDate).TotalDays;
+                var isPaymentValid = daysSinceLastPayment <= 2;
+
+                return ResponseFactory.Success(isPaymentValid,
+                    isPaymentValid ? "Payment is up to date" : "Payment required");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying trader payment status");
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<bool>> UpdateTraderPayment(string traderId, ProcessLevyPaymentDto paymentDto)
+        {
+            try
+            {
+                var trader = await _repository.GoodBoyRepository.GetGoodBoyById(traderId, trackChanges: false);
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Trader not found"),
+                        "Trader not found");
+                }
+
+                // Verify payment hasn't already been made today
+                var existingPayment = trader.LevyPayments
+                    .Any(p => p.PaymentDate.Date == DateTime.UtcNow.Date);
+
+                if (existingPayment)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new ValidationException("Payment already processed for today"),
+                        "Payment already processed for today");
+                }
+
+                var levyPayment = _mapper.Map<LevyPayment>(paymentDto);
+                levyPayment.GoodBoyId = traderId;
+
+                _repository.LevyPaymentRepository.Create(levyPayment);
+
+                await CreateAuditLog(
+                    "Levy Payment Updated",
+                    $"Updated levy payment for Trader: {traderId}, Amount: {paymentDto.Amount}",
+                    "Payment Processing"
+                );
+
+                await _repository.SaveChangesAsync();
+
+                return ResponseFactory.Success(true, "Payment processed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating trader payment");
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }

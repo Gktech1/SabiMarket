@@ -18,6 +18,13 @@ public class GoodBoyRepository : GeneralRepository<GoodBoy>, IGoodBoyRepository
     public async Task<IEnumerable<GoodBoy>> GetAllAssistCenterOfficer(bool trackChanges) =>
         await FindAll(trackChanges).ToListAsync();
 
+    public async Task<GoodBoy> GetGoodBoyByUserId(string userId, bool trackChanges = false) =>
+       await FindByCondition(g => g.UserId == userId, trackChanges)
+           .Include(g => g.User)
+           .Include(g => g.Market)
+           .Include(g => g.LevyPayments)
+           .FirstOrDefaultAsync();
+
     public async Task<GoodBoy> GetGoodBoyById(string id, bool trackChanges = false) =>
         await FindByCondition(g => g.Id == id, trackChanges)
             .FirstOrDefaultAsync();
