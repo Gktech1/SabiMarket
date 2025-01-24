@@ -6,6 +6,7 @@ using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
+using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Enum;
 
 public class MappingProfile : Profile
@@ -179,6 +180,89 @@ public class MappingProfile : Profile
            .ForMember(dest => dest.GrowthRate, opt => opt.Ignore())     // This needs calculation
            .ForMember(dest => dest.AverageDaily, opt => opt.Ignore())   // This needs calculation
            .ForMember(dest => dest.AverageMonthly, opt => opt.Ignore());// This needs calculation
+
+        CreateMap<AssistCenterOfficer, AssistantOfficerResponseDto>()
+           .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => $"{src.User.FirstName} {src.User.LastName}".Trim()))
+           .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
+           .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber))
+           .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+           .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.Name))
+           .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+           .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt));
+
+        CreateMap<Caretaker, CaretakerResponseDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
+            .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.User.FirstName))
+            .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.User.LastName))
+            .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+            .ForMember(dest => dest.Market, opt => opt.MapFrom(src => src.Market))
+            .ForMember(dest => dest.GoodBoys, opt => opt.MapFrom(src => src.GoodBoys))
+            .ForMember(dest => dest.AssignedTraders, opt => opt.MapFrom(src => src.AssignedTraders))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive));
+
+        CreateMap<Market, MarketResponseDto>()
+           .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+           .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+           .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
+           .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+           .ForMember(dest => dest.TotalTraders, opt => opt.MapFrom(src => src.TotalTraders))
+           .ForMember(dest => dest.Capacity, opt => opt.MapFrom(src => src.MarketCapacity))
+           .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+           .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+           .ForMember(dest => dest.CaretakerIds, opt => opt.MapFrom(src => src.Caretakers.Select(c => c.Id)));
+
+        CreateMap<GoodBoy, GoodBoyResponseDto>()
+            .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber))
+            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
+                $"{src.User.FirstName} {src.User.LastName}"))
+            .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+            .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.Name))
+            .ForMember(dest => dest.TraderId, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.TraderOccupancy, opt => opt.MapFrom(src => "Open Space"))
+            .ForMember(dest => dest.PaymentFrequency, opt => opt.MapFrom(src => "2 days - N500"))
+            .ForMember(dest => dest.LastPaymentDate, opt => opt.MapFrom(src =>
+                src.LevyPayments.OrderByDescending(p => p.PaymentDate).FirstOrDefault().PaymentDate))
+            .ForMember(dest => dest.LevyPayments, opt => opt.MapFrom(src => src.LevyPayments));
+
+        CreateMap<CreateGoodBoyRequestDto, ApplicationUser>()
+           .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
+           .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+           .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+
+        CreateMap<CreateGoodBoyRequestDto, GoodBoy>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => StatusEnum.Unlocked));
+
+        CreateMap<GoodBoy, GoodBoyResponseDto>()
+            .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
+            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
+                $"{src.User.FirstName} {src.User.LastName}"))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber))
+            .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+            .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.Name))
+            .ForMember(dest => dest.TraderId, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.TraderOccupancy, opt => opt.MapFrom(src => "Open Space"))
+            .ForMember(dest => dest.PaymentFrequency, opt => opt.MapFrom(src => "2 days - N500"))
+            .ForMember(dest => dest.Amount, opt => opt.MapFrom(src => 500m))
+            .ForMember(dest => dest.LastPaymentDate, opt => opt.MapFrom(src =>
+                src.LevyPayments.OrderByDescending(p => p.PaymentDate).FirstOrDefault().PaymentDate));
+
+        CreateMap<ProcessLevyPaymentDto, LevyPayment>()
+        .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => DateTime.UtcNow))
+        .ForMember(dest => dest.TransactionReference, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
+        .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => PaymentStatusEnum.Paid));
+
+
+        CreateMap<UpdateGoodBoyProfileDto, ApplicationUser>();
+        CreateMap<LevyPayment, LevyPaymentResponseDto>();
+
+        CreateMap<LevyPayment, LevyPaymentResponseDto>();
 
         CreateMap<Market, MarketResponseDto>();
         CreateMap<GoodBoy, GoodBoyResponseDto>();
