@@ -19,6 +19,7 @@ using SabiMarket.Domain.Enum;
 using SabiMarket.Infrastructure.Utilities;
 using SabiMarket.Domain.Entities;
 using Microsoft.AspNetCore.Http;
+using ValidationException = FluentValidation.ValidationException;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -310,7 +311,7 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<MarketResponseDto>> GetMarketDetails(string marketId)
+        public async Task<BaseResponse<MarketDetailsDto>> GetMarketDetails(string marketId)
         {
             var correlationId = Guid.NewGuid().ToString();
             try
@@ -320,15 +321,12 @@ namespace SabiMarket.Infrastructure.Services
                     $"CorrelationId: {correlationId} - Fetching market details for ID: {marketId}",
                     "Market Management"
                 );
-
                 var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, trackChanges: false);
-
                 await CreateAuditLog(
                     "Market Details Retrieved",
                     $"CorrelationId: {correlationId} - Market details retrieved successfully",
                     "Market Management"
                 );
-
                 return ResponseFactory.Success(_mapper.Map<MarketDetailsDto>(market), "Market details retrieved successfully");
             }
             catch (Exception ex)
@@ -341,7 +339,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<MarketDetailsDto>(ex, "Error retrieving market details");
             }
         }
-
         public async Task<BaseResponse<bool>> DeleteLevy(string levyId)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1286,7 +1283,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<AuditLogDto>>>(ex, "An unexpected error occurred");
             }
         }
-
         public async Task<BaseResponse<ReportMetricsDto>> GetReportMetrics(DateTime startDate, DateTime endDate)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1319,7 +1315,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<ReportMetricsDto>(ex, "An unexpected error occurred");
             }
         }
-
         public async Task<BaseResponse<DashboardMetricsResponseDto>> GetDailyMetricsChange()
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1382,144 +1377,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<DashboardMetricsResponseDto>(ex, "An unexpected error occurred");
             }
         }
-
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogDto>>>> GetAuditLogs(PaginationFilter filter)
-        {
-            var correlationId = Guid.NewGuid().ToString();
-            try
-            {
-                await CreateAuditLog(
-                    "Audit Logs Query",
-                    $"CorrelationId: {correlationId} - Retrieving audit logs - Page: {filter.PageNumber}, Size: {filter.PageSize}",
-                    "Audit Management"
-                );
-
-                var auditLogs = await _repository.AuditLogRepository.GetPagedAuditLogs(filter);
-                var auditLogDtos = _mapper.Map<IEnumerable<AuditLogDto>>(auditLogs.PageItems);
-
-                var result = new PaginatorDto<IEnumerable<AuditLogDto>>
-                {
-                    PageItems = auditLogDtos,
-                    CurrentPage = filter.PageNumber,
-                    PageSize = filter.PageSize,
-                    NumberOfPages = auditLogs.NumberOfPages
-                };
-
-                await CreateAuditLog(
-                    "Audit Logs Retrieved",
-                    $"CorrelationId: {correlationId} - Retrieved {auditLogDtos.Count()} logs",
-                    "Audit Management"
-                );
-
-                return ResponseFactory.Success(result, "Audit logs retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                await CreateAuditLog(
-                    "Audit Logs Query Failed",
-                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                    "Audit Management"
-                );
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<AuditLogDto>>>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<ReportMetricsDto>> GetReportMetrics(DateTime startDate, DateTime endDate)
-        {
-            var correlationId = Guid.NewGuid().ToString();
-            try
-            {
-                await CreateAuditLog(
-                    "Report Metrics Query",
-                    $"CorrelationId: {correlationId} - Fetching metrics from {startDate} to {endDate}",
-                    "Report Management"
-                );
-
-                var metrics = await _repository.ReportRepository.GetMetricsAsync(startDate, endDate);
-                var metricsDto = _mapper.Map<ReportMetricsDto>(metrics);
-
-                await CreateAuditLog(
-                    "Report Metrics Retrieved",
-                    $"CorrelationId: {correlationId} - Metrics retrieved successfully",
-                    "Report Management"
-                );
-
-                return ResponseFactory.Success(metricsDto, "Report metrics retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                await CreateAuditLog(
-                    "Report Metrics Query Failed",
-                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                    "Report Management"
-                );
-                return ResponseFactory.Fail<ReportMetricsDto>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<DashboardMetricsResponseDto>> GetDailyMetricsChange()
-        {
-            var correlationId = Guid.NewGuid().ToString();
-            try
-            {
-                await CreateAuditLog(
-                    "Daily Metrics Query",
-                    $"CorrelationId: {correlationId} - Calculating daily metrics changes",
-                    "Dashboard Analytics"
-                );
-
-                string preset = DateRangePresets.Today;
-                var dateRange = DateRangePresets.GetPresetRange(preset);
-                var previousDateRange = GetPreviousDateRange(dateRange);
-
-                var currentMetrics = await _repository.ReportRepository.GetMetricsAsync(dateRange.StartDate, dateRange.EndDate);
-                var previousMetrics = await _repository.ReportRepository.GetMetricsAsync(previousDateRange.StartDate, previousDateRange.EndDate);
-
-                var response = new DashboardMetricsResponseDto
-                {
-                    Traders = CalculateMetricChange(currentMetrics.TotalTraders, previousMetrics.TotalTraders),
-                    Caretakers = CalculateMetricChange(currentMetrics.TotalCaretakers, previousMetrics.TotalCaretakers),
-                    Levies = CalculateMetricChange((int)currentMetrics.TotalRevenueGenerated, (int)previousMetrics.TotalRevenueGenerated),
-                    TimePeriod = dateRange.DateRangeType,
-                    ComplianceRate = new MetricChangeDto
-                    {
-                        CurrentValue = currentMetrics.ComplianceRate,
-                        PreviousValue = previousMetrics.ComplianceRate,
-                        PercentageChange = CalculatePercentageChange(previousMetrics.ComplianceRate, currentMetrics.ComplianceRate)
-                    },
-                    TransactionCount = new MetricChangeDto
-                    {
-                        CurrentValue = currentMetrics.PaymentTransactions,
-                        PreviousValue = previousMetrics.PaymentTransactions,
-                        PercentageChange = CalculatePercentageChange(previousMetrics.PaymentTransactions, currentMetrics.PaymentTransactions)
-                    },
-                    ActiveMarkets = new MetricChangeDto
-                    {
-                        CurrentValue = currentMetrics.ActiveMarkets,
-                        PreviousValue = previousMetrics.ActiveMarkets,
-                        PercentageChange = CalculatePercentageChange(previousMetrics.ActiveMarkets, currentMetrics.ActiveMarkets)
-                    }
-                };
-
-                await CreateAuditLog(
-                    "Daily Metrics Retrieved",
-                    $"CorrelationId: {correlationId} - Daily metrics changes calculated successfully",
-                    "Dashboard Analytics"
-                );
-
-                return ResponseFactory.Success(response, "Daily metrics changes retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                await CreateAuditLog(
-                    "Daily Metrics Query Failed",
-                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                    "Dashboard Analytics"
-                );
-                return ResponseFactory.Fail<DashboardMetricsResponseDto>(ex, "An unexpected error occurred");
-            }
-        }
-
         public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1591,290 +1448,45 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>(ex, "An unexpected error occurred");
             }
         }
-        public async Task<BaseResponse<ChairmanResponseDto>> CreateChairman(CreateChairmanRequestDto chairmanDto)
+        public async Task<BaseResponse<MarketRevenueDto>> GetMarketRevenue(string marketId)
         {
+            var correlationId = Guid.NewGuid().ToString();
             try
             {
-                var userId = _currentUser.GetUserId();
-                var validationResult = await _createChairmanValidator.ValidateAsync(chairmanDto);
-                if (!validationResult.IsValid)
-                {
-                    return ResponseFactory.Fail<ChairmanResponseDto>(
-                        new FluentValidation.ValidationException(validationResult.Errors),
-                        "Validation failed");
-                }
+                await CreateAuditLog(
+                    "Market Revenue Query",
+                    $"CorrelationId: {correlationId} - Fetching revenue for market: {marketId}",
+                    "Market Management"
+                );
 
-                var existingChairman = await _repository.ChairmanRepository.ChairmanExistsAsync(userId, chairmanDto.MarketId);
-                if (existingChairman)
-                {
-                    return ResponseFactory.Fail<ChairmanResponseDto>(
-                        new BadRequestException("Chairman already exists"),
-                        "Chairman already exists");
-                }
+                string preset = DateRangePresets.ThisMonth;
+                var dateRange = DateRangePresets.GetPresetRange(preset);
+                var revenue = await _repository.MarketRepository.GetMarketRevenueAsync(
+                    marketId,
+                    dateRange.StartDate,
+                    dateRange.EndDate
+                );
+                var revenueDto = _mapper.Map<MarketRevenueDto>(revenue);
 
-                var chairman = _mapper.Map<Chairman>(chairmanDto);
-                _repository.ChairmanRepository.CreateChairman(chairman);
-                await _repository.SaveChangesAsync();
+                await CreateAuditLog(
+                    "Market Revenue Retrieved",
+                    $"CorrelationId: {correlationId} - Successfully retrieved revenue data",
+                    "Market Management"
+                );
 
-                var createdChairman = _mapper.Map<ChairmanResponseDto>(chairman);
-                return ResponseFactory.Success(createdChairman, "Chairman created successfully");
+                return ResponseFactory.Success(revenueDto, "Market revenue retrieved successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating chairman");
-                return ResponseFactory.Fail<ChairmanResponseDto>(ex, "An unexpected error occurred");
+                await CreateAuditLog(
+                    "Market Revenue Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Market Management"
+                );
+                _logger.LogError(ex, "Error retrieving market revenue");
+                return ResponseFactory.Fail<MarketRevenueDto>(ex, "An unexpected error occurred");
             }
-        }
-
-        public async Task<BaseResponse<bool>> UpdateChairmanProfile(string chairmanId, UpdateProfileDto profileDto)
-        {
-            try
-            {
-                var validationResult = await _updateProfileValidator.ValidateAsync(profileDto);
-                if (!validationResult.IsValid)
-                {
-                    return ResponseFactory.Fail<bool>(
-                        new FluentValidation.ValidationException(validationResult.Errors),
-                        "Validation failed");
-                }
-
-                var chairman = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, trackChanges: true);
-                if (chairman == null)
-                {
-                    return ResponseFactory.Fail<bool>(
-                        new NotFoundException("Chairman not found"),
-                        "Chairman not found");
-                }
-
-                _mapper.Map(profileDto, chairman);
-                await _repository.SaveChangesAsync();
-
-                return ResponseFactory.Success(true, "Chairman profile updated successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating chairman profile");
-                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-            }
-        }
-
-        private DateRangeDto GetPreviousDateRange(DateRangeDto currentRange)
-        {
-            var daysDifference = (currentRange.EndDate - currentRange.StartDate).Days + 1;
-            return new DateRangeDto
-            {
-                StartDate = currentRange.StartDate.AddDays(-daysDifference),
-                EndDate = currentRange.StartDate.AddDays(-1),
-                DateRangeType = currentRange.DateRangeType
-            };
-        }
-
-        private MetricChangeDto CalculateMetricChange(int currentValue, int previousValue)
-        {
-            decimal percentageChange = previousValue == 0 ?
-                100 :
-                ((decimal)(currentValue - previousValue) / previousValue) * 100;
-
-            return new MetricChangeDto
-            {
-                CurrentValue = currentValue,
-                PreviousValue = previousValue,
-                PercentageChange = Math.Round(Math.Abs(percentageChange), 1),
-                ChangeDirection = percentageChange >= 0 ? "Up" : "Down"
-            };
-        }
-
-        public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets()
-        {
-            try
-            {
-                var markets = await _repository.MarketRepository.GetAllMarketForExport(trackChanges: false);
-                var marketDtos = _mapper.Map<IEnumerable<MarketResponseDto>>(markets);
-
-                return ResponseFactory.Success(marketDtos, "Markets retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving markets");
-                return ResponseFactory.Fail<IEnumerable<MarketResponseDto>>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<bool>> AssignCaretakerToMarket(string marketId, string caretakerId)
-        {
-            try
-            {
-                // Fetch the market by ID
-                var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, trackChanges: true);
-                if (market == null)
-                {
-                    return ResponseFactory.Fail<bool>(new NotFoundException("Market not found"), "Market not found");
-                }
-
-                // Fetch the caretaker by ID
-                var caretaker = await _repository.CaretakerRepository.GetCaretakerById(caretakerId, trackChanges: true);
-                if (caretaker == null)
-                {
-                    return ResponseFactory.Fail<bool>(new NotFoundException("Caretaker not found"), "Caretaker not found");
-                }
-
-                // Check if caretaker is already assigned to the market
-                if (market.Caretakers.Any(c => c.Id == caretakerId))
-                {
-                    return ResponseFactory.Fail<bool>(new InvalidOperationException("Caretaker is already assigned to this market"), "Caretaker already assigned");
-                }
-
-                // Assign the caretaker to the market
-                market.Caretakers.Add(caretaker);
-
-                // Save changes
-                await _repository.SaveChangesAsync();
-
-                return ResponseFactory.Success(true, "Caretaker assigned to market successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error assigning caretaker to market");
-                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers()
-        {
-            try
-            {
-                var caretakers = await _repository.CaretakerRepository.GetAllCaretakers(trackChanges: false);
-                var caretakerDtos = _mapper.Map<IEnumerable<CaretakerResponseDto>>(caretakers);
-
-                return ResponseFactory.Success(caretakerDtos, "Caretakers retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving caretakers");
-                return ResponseFactory.Fail<IEnumerable<CaretakerResponseDto>>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<AssistantOfficerResponseDto>> GetAssistantOfficerById(string officerId)
-        {
-
-            try
-            {
-                var officer = await _repository.AssistCenterOfficerRepository.GetByIdAsync(officerId, trackChanges: false);
-                if (officer == null)
-                {
-                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                        new NotFoundException("Assistant Officer not found"),
-                        "Assistant Officer not found");
-                }
-
-                var officerDto = _mapper.Map<AssistantOfficerResponseDto>(officer);
-                return ResponseFactory.Success(officerDto, "Assistant Officer retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving Assistant Officer");
-                return ResponseFactory.Fail<AssistantOfficerResponseDto>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<AssistantOfficerResponseDto>> CreateAssistantOfficer(CreateAssistantOfficerRequestDto officerDto)
-        {
-            try
-            {
-                var validationResult = await _createAssistOfficerValidator.ValidateAsync(officerDto);
-                if (!validationResult.IsValid)
-                {
-                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                        new FluentValidation.ValidationException(validationResult.Errors),
-                        "Validation failed");
-                }
-
-                var officer = _mapper.Map<AssistCenterOfficer>(officerDto);
-                _repository.AssistCenterOfficerRepository.AddAssistCenterOfficer(officer);
-                await _repository.SaveChangesAsync();
-
-                var createdOfficer = _mapper.Map<AssistantOfficerResponseDto>(officer);
-                return ResponseFactory.Success(createdOfficer, "Assistant Officer created successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating Assistant Officer");
-                return ResponseFactory.Fail<AssistantOfficerResponseDto>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<bool>> UnblockAssistantOfficer(string officerId)
-        {
-            try
-            {
-                var officer = await _repository.AssistCenterOfficerRepository.GetByIdAsync(officerId, trackChanges: true);
-                if (officer == null)
-                {
-                    return ResponseFactory.Fail<bool>(
-                        new NotFoundException("Assistant Officer not found"),
-                        "Assistant Officer not found");
-                }
-
-                officer.IsBlocked = false;
-                await _repository.SaveChangesAsync();
-
-                return ResponseFactory.Success(true, "Assistant Officer unblocked successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error unblocking Assistant Officer");
-                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<bool>> BlockAssistantOfficer(string officerId)
-        {
-            try
-            {
-                var officer = await _repository.AssistCenterOfficerRepository.GetByIdAsync(officerId, trackChanges: true);
-                if (officer == null)
-                {
-                    return ResponseFactory.Fail<bool>(
-                        new NotFoundException("Assistant Officer not found"),
-                        "Assistant Officer not found");
-                }
-
-                officer.IsBlocked = true;
-                await _repository.SaveChangesAsync();
-
-                return ResponseFactory.Success(true, "Assistant Officer blocked successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error blocking Assistant Officer");
-                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-            }
-        }
-        public async Task<BaseResponse<IEnumerable<ReportResponseDto>>> GetChairmanReports(string chairmanId)
-        {
-            try
-            {
-                var reports = await _repository.ChairmanRepository.GetReportsByChairmanIdAsync(chairmanId);
-                if (reports == null || !reports.Any())
-                {
-                    return ResponseFactory.Fail<IEnumerable<ReportResponseDto>>(
-                        new NotFoundException("No reports found"),
-                        "No reports available");
-                }
-
-                var reportDtos = _mapper.Map<IEnumerable<ReportResponseDto>>(reports);
-                return ResponseFactory.Success(reportDtos, "Reports retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving chairman reports");
-                return ResponseFactory.Fail<IEnumerable<ReportResponseDto>>(ex, "An unexpected error occurred");
-            }
-
-
-        }
-
+        }  
         public async Task<BaseResponse<LevyResponseDto>> CreateLevy(CreateLevyRequestDto request)
         {
             try
@@ -1923,7 +1535,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<LevyResponseDto>(ex, "Error creating levy");
             }
         }
-
         public async Task<BaseResponse<bool>> UpdateLevy(string levyId, UpdateLevyRequestDto request)
         {
             try
@@ -1970,219 +1581,34 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "Error updating levy");
             }
         }
+        private MetricChangeDto CalculateMetricChange(int currentValue, int previousValue)
+        {
+            decimal percentageChange = previousValue == 0 ?
+                100 :
+                ((decimal)(currentValue - previousValue) / previousValue) * 100;
 
+            return new MetricChangeDto
+            {
+                CurrentValue = currentValue,
+                PreviousValue = previousValue,
+                PercentageChange = Math.Round(Math.Abs(percentageChange), 1),
+                ChangeDirection = percentageChange >= 0 ? "Up" : "Down"
+            };
+        }
+        private DateRangeDto GetPreviousDateRange(DateRangeDto currentRange)
+        {
+            var daysDifference = (currentRange.EndDate - currentRange.StartDate).Days + 1;
+            return new DateRangeDto
+            {
+                StartDate = currentRange.StartDate.AddDays(-daysDifference),
+                EndDate = currentRange.StartDate.AddDays(-1),
+                DateRangeType = currentRange.DateRangeType
+            };
+        }
         private string GenerateTransactionReference()
         {
             return $"LVY-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8)}".ToUpper();
         }
-
-        public async Task<BaseResponse<bool>> DeleteLevy(string levyId)
-        {
-            try
-            {
-                var levy = await _repository.LevyPaymentRepository.GetPaymentById(levyId, trackChanges: true);
-                if (levy == null)
-                {
-                    return ResponseFactory.Fail<bool>(new NotFoundException("Levy not found"), "Levy not found.");
-                }
-
-                _repository.LevyPaymentRepository.DeleteLevyPayment(levy);
-                await _repository.SaveChangesAsync();
-
-                return ResponseFactory.Success(true, "Levy deleted successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting levy");
-                return ResponseFactory.Fail<bool>(ex, "Error deleting levy");
-            }
-        }
-
-        public async Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId)
-        {
-            try
-            {
-                // Fetch the levy payment from the repository
-                var levy = await _repository.LevyPaymentRepository.GetPaymentById(levyId, trackChanges: false);
-
-                // Check if levy exists
-                if (levy == null)
-                {
-                    return ResponseFactory.Fail<LevyResponseDto>(new NotFoundException("Levy not found"), "Levy not found.");
-                }
-
-                // Map the levy payment entity to response DTO
-                var levyDto = _mapper.Map<LevyResponseDto>(levy);
-
-                // Return a successful response
-                return ResponseFactory.Success(levyDto, "Levy retrieved successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving levy");
-                return ResponseFactory.Fail<LevyResponseDto>(ex, "Error retrieving levy");
-            }
-        }
-
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter)
-        {
-            try
-            {
-                // Fetch paginated levy payments from the repository
-                var levyPayments = await _repository.LevyPaymentRepository.GetLevyPaymentsAsync(chairmanId, filter, trackChanges: false);
-
-                // Map the levy payment entities to response DTOs
-                var levyDtos = _mapper.Map<IEnumerable<LevyResponseDto>>(levyPayments.PageItems);
-
-                // Calculate the number of pages
-                var numberOfPages = levyPayments.NumberOfPages;
-
-                // Create the paginated result
-                var paginatedResult = new PaginatorDto<IEnumerable<LevyResponseDto>>
-                {
-                    PageItems = levyDtos,
-                    PageSize = filter.PageSize,
-                    CurrentPage = filter.PageNumber,
-                    NumberOfPages = numberOfPages
-                };
-
-
-
-                // Return a successful response
-                return ResponseFactory.Success(paginatedResult, "Levies retrieved successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving levies");
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyResponseDto>>>(ex, "Error retrieving levies");
-            }
-        }
-
-        // Market Management Implementations
-  
-        public async Task<BaseResponse<bool>> DeleteMarket(string marketId)
-        {
-            try
-            {
-                var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, trackChanges: true);
-                if (market == null)
-                {
-                    return ResponseFactory.Fail<bool>(new NotFoundException("Market not found"), "Market not found");
-                }
-
-                _repository.MarketRepository.DeleteMarket(market);
-                await _repository.SaveChangesAsync();
-                return ResponseFactory.Success(true, "Market deleted successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting market");
-                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<MarketRevenueDto>> GetMarketRevenue(string marketId)
-        {
-            try
-            {
-                string preset = DateRangePresets.ThisMonth;
-                var dateRange = DateRangePresets.GetPresetRange(preset);
-                var revenue = await _repository.MarketRepository.GetMarketRevenueAsync(
-                    marketId,
-                    dateRange.StartDate,
-                    dateRange.EndDate
-                );
-                var revenueDto = _mapper.Map<MarketRevenueDto>(revenue);
-                return ResponseFactory.Success(revenueDto, "Market revenue retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving market revenue");
-                return ResponseFactory.Fail<MarketRevenueDto>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<ReportMetricsDto>> GetReportMetrics()
-        {
-            try
-            {
-                string preset = DateRangePresets.ThisMonth;
-                var dateRange = DateRangePresets.GetPresetRange(preset);
-                var metrics = await _repository.ReportRepository.GetMetricsAsync(dateRange.StartDate, dateRange.EndDate);
-                var metricsDto = _mapper.Map<ReportMetricsDto>(metrics);
-                metricsDto.Period = dateRange.DateRangeType;
-                return ResponseFactory.Success(metricsDto, "Report metrics retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving report metrics");
-                return ResponseFactory.Fail<ReportMetricsDto>(ex, "An unexpected error occurred");
-            }
-        }
-
-        // Trader Management Implementations
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<TraderResponseDto>>>> GetTraders(
-            string marketId, PaginationFilter filter)
-        {
-            try
-            {
-                var tradersPage = await _repository.TraderRepository.GetTradersByMarketAsync(marketId, filter, trackChanges: false);
-                var traderDtos = _mapper.Map<IEnumerable<TraderResponseDto>>(tradersPage.PageItems);
-
-                var paginatedResult = new PaginatorDto<IEnumerable<TraderResponseDto>>
-                {
-                    PageItems = traderDtos,
-                    CurrentPage = filter.PageNumber,
-                    PageSize = filter.PageSize,
-                    NumberOfPages = tradersPage.NumberOfPages
-                };
-
-                return ResponseFactory.Success(paginatedResult, "Traders retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving traders");
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<TraderResponseDto>>>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<QRCodeResponseDto>> GenerateTraderQRCode(string traderId)
-        {
-            try
-            {
-                // Get trader details
-                var trader = await _repository.TraderRepository.GetTraderById(traderId, trackChanges: false);
-                if (trader == null)
-                {
-                    return ResponseFactory.Fail<QRCodeResponseDto>(
-                        new NotFoundException("Trader not found"),
-                        "Trader not found");
-                }
-
-                // Generate QR code content with trader information
-                var qrData = GenerateTraderQRContent(trader);
-
-                // Generate QR code image
-                var qrCodeImage = QRCodeHelper.GenerateQRCode(qrData, 300, 300);
-
-                var response = new QRCodeResponseDto
-                {
-                    QRCodeImage = qrCodeImage,
-                    QRCodeData = qrData,
-                    TraderId = trader.Id,
-                    TraderName = trader.BusinessName,
-                    GeneratedAt = DateTime.UtcNow
-                };
-
-                return ResponseFactory.Success(response, "QR code generated successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error generating QR code for trader {TraderId}: {Error}", traderId, ex.Message);
-                return ResponseFactory.Fail<QRCodeResponseDto>(ex, "An unexpected error occurred while generating QR code");
-            }
-        }
-
         private string GenerateTraderQRContent(Trader trader)
         {
             // Create a more structured QR content
@@ -2198,104 +1624,597 @@ namespace SabiMarket.Infrastructure.Services
             // Serialize to JSON for more structured data
             return System.Text.Json.JsonSerializer.Serialize(qrContent);
         }
-
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogDto>>>> GetAuditLogs(PaginationFilter filter)
-        {
-            try
-            {
-                var auditLogs = await _repository.AuditLogRepository.GetPagedAuditLogs(filter);
-                var auditLogDtos = _mapper.Map<IEnumerable<AuditLogDto>>(auditLogs.PageItems);
-
-                var paginatedResult = new PaginatorDto<IEnumerable<AuditLogDto>>
-                {
-                    PageItems = auditLogDtos,
-                    CurrentPage = filter.PageNumber,
-                    PageSize = filter.PageSize,
-                    NumberOfPages = auditLogs.NumberOfPages
-                };
-
-                return ResponseFactory.Success(paginatedResult, "Audit logs retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving audit logs");
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<AuditLogDto>>>(ex, "An unexpected error occurred");
-            }
-        }
-
-        // Report Generation Implementations
-        public async Task<BaseResponse<ReportMetricsDto>> GetReportMetrics(DateTime startDate, DateTime endDate)
-        {
-            try
-            {
-                var metrics = await _repository.ReportRepository.GetMetricsAsync(startDate, endDate);
-                var metricsDto = _mapper.Map<ReportMetricsDto>(metrics);
-                return ResponseFactory.Success(metricsDto, "Report metrics retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving report metrics");
-                return ResponseFactory.Fail<ReportMetricsDto>(ex, "An unexpected error occurred");
-            }
-        }
-
-        public async Task<BaseResponse<DashboardMetricsResponseDto>> GetDailyMetricsChange()
-        {
-            try
-            {
-                string preset = DateRangePresets.Today;
-                var dateRange = DateRangePresets.GetPresetRange(preset);
-                var previousDateRange = GetPreviousDateRange(dateRange);
-
-                // Get current day metrics
-                var currentMetrics = await _repository.ReportRepository.GetMetricsAsync(dateRange.StartDate, dateRange.EndDate);
-
-                // Get previous day metrics
-                var previousMetrics = await _repository.ReportRepository.GetMetricsAsync(previousDateRange.StartDate, previousDateRange.EndDate);
-
-                var response = new DashboardMetricsResponseDto
-                {
-                    Traders = CalculateMetricChange(currentMetrics.TotalTraders, previousMetrics.TotalTraders),
-                    Caretakers = CalculateMetricChange(currentMetrics.TotalCaretakers, previousMetrics.TotalCaretakers),
-                    Levies = CalculateMetricChange((int)currentMetrics.TotalRevenueGenerated, (int)previousMetrics.TotalRevenueGenerated),
-                    TimePeriod = dateRange.DateRangeType,
-                    ComplianceRate = new MetricChangeDto
-                    {
-                        CurrentValue = currentMetrics.ComplianceRate,
-                        PreviousValue = previousMetrics.ComplianceRate,
-                        PercentageChange = CalculatePercentageChange(previousMetrics.ComplianceRate, currentMetrics.ComplianceRate)
-                    },
-                    TransactionCount = new MetricChangeDto
-                    {
-                        CurrentValue = currentMetrics.PaymentTransactions,
-                        PreviousValue = previousMetrics.PaymentTransactions,
-                        PercentageChange = CalculatePercentageChange(previousMetrics.PaymentTransactions, currentMetrics.PaymentTransactions)
-                    },
-                    ActiveMarkets = new MetricChangeDto
-                    {
-                        CurrentValue = currentMetrics.ActiveMarkets,
-                        PreviousValue = previousMetrics.ActiveMarkets,
-                        PercentageChange = CalculatePercentageChange(previousMetrics.ActiveMarkets, currentMetrics.ActiveMarkets)
-                    }
-                };
-
-                return ResponseFactory.Success(response, "Daily metrics changes retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error calculating daily metrics changes");
-                return ResponseFactory.Fail<DashboardMetricsResponseDto>(ex, "An unexpected error occurred");
-            }
-        }
-
         private decimal CalculatePercentageChange(decimal previous, decimal current)
         {
             if (previous == 0) return 100;
             return ((current - previous) / previous) * 100;
         }
 
+        /*public async Task<BaseResponse<ChairmanResponseDto>> CreateChairman(CreateChairmanRequestDto chairmanDto)
+      {
+          try
+          {
+              var userId = _currentUser.GetUserId();
+              var validationResult = await _createChairmanValidator.ValidateAsync(chairmanDto);
+              if (!validationResult.IsValid)
+              {
+                  return ResponseFactory.Fail<ChairmanResponseDto>(
+                      new FluentValidation.ValidationException(validationResult.Errors),
+                      "Validation failed");
+              }
+
+              var existingChairman = await _repository.ChairmanRepository.ChairmanExistsAsync(userId, chairmanDto.MarketId);
+              if (existingChairman)
+              {
+                  return ResponseFactory.Fail<ChairmanResponseDto>(
+                      new BadRequestException("Chairman already exists"),
+                      "Chairman already exists");
+              }
+
+              var chairman = _mapper.Map<Chairman>(chairmanDto);
+              _repository.ChairmanRepository.CreateChairman(chairman);
+              await _repository.SaveChangesAsync();
+
+              var createdChairman = _mapper.Map<ChairmanResponseDto>(chairman);
+              return ResponseFactory.Success(createdChairman, "Chairman created successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error creating chairman");
+              return ResponseFactory.Fail<ChairmanResponseDto>(ex, "An unexpected error occurred");
+          }
+      }
+
+      public async Task<BaseResponse<bool>> UpdateChairmanProfile(string chairmanId, UpdateProfileDto profileDto)
+      {
+          try
+          {
+              var validationResult = await _updateProfileValidator.ValidateAsync(profileDto);
+              if (!validationResult.IsValid)
+              {
+                  return ResponseFactory.Fail<bool>(
+                      new FluentValidation.ValidationException(validationResult.Errors),
+                      "Validation failed");
+              }
+
+              var chairman = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, trackChanges: true);
+              if (chairman == null)
+              {
+                  return ResponseFactory.Fail<bool>(
+                      new NotFoundException("Chairman not found"),
+                      "Chairman not found");
+              }
+
+              _mapper.Map(profileDto, chairman);
+              await _repository.SaveChangesAsync();
+
+              return ResponseFactory.Success(true, "Chairman profile updated successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error updating chairman profile");
+              return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+          }
+      }
+
+      private DateRangeDto GetPreviousDateRange(DateRangeDto currentRange)
+      {
+          var daysDifference = (currentRange.EndDate - currentRange.StartDate).Days + 1;
+          return new DateRangeDto
+          {
+              StartDate = currentRange.StartDate.AddDays(-daysDifference),
+              EndDate = currentRange.StartDate.AddDays(-1),
+              DateRangeType = currentRange.DateRangeType
+          };
+      }
+
+      private MetricChangeDto CalculateMetricChange(int currentValue, int previousValue)
+      {
+          decimal percentageChange = previousValue == 0 ?
+              100 :
+              ((decimal)(currentValue - previousValue) / previousValue) * 100;
+
+          return new MetricChangeDto
+          {
+              CurrentValue = currentValue,
+              PreviousValue = previousValue,
+              PercentageChange = Math.Round(Math.Abs(percentageChange), 1),
+              ChangeDirection = percentageChange >= 0 ? "Up" : "Down"
+          };
+      }
+
+      public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets()
+      {
+          try
+          {
+              var markets = await _repository.MarketRepository.GetAllMarketForExport(trackChanges: false);
+              var marketDtos = _mapper.Map<IEnumerable<MarketResponseDto>>(markets);
+
+              return ResponseFactory.Success(marketDtos, "Markets retrieved successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error retrieving markets");
+              return ResponseFactory.Fail<IEnumerable<MarketResponseDto>>(ex, "An unexpected error occurred");
+          }
+      }
+
+      public async Task<BaseResponse<bool>> AssignCaretakerToMarket(string marketId, string caretakerId)
+      {
+          try
+          {
+              // Fetch the market by ID
+              var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, trackChanges: true);
+              if (market == null)
+              {
+                  return ResponseFactory.Fail<bool>(new NotFoundException("Market not found"), "Market not found");
+              }
+
+              // Fetch the caretaker by ID
+              var caretaker = await _repository.CaretakerRepository.GetCaretakerById(caretakerId, trackChanges: true);
+              if (caretaker == null)
+              {
+                  return ResponseFactory.Fail<bool>(new NotFoundException("Caretaker not found"), "Caretaker not found");
+              }
+
+              // Check if caretaker is already assigned to the market
+              if (market.Caretakers.Any(c => c.Id == caretakerId))
+              {
+                  return ResponseFactory.Fail<bool>(new InvalidOperationException("Caretaker is already assigned to this market"), "Caretaker already assigned");
+              }
+
+              // Assign the caretaker to the market
+              market.Caretakers.Add(caretaker);
+
+              // Save changes
+              await _repository.SaveChangesAsync();
+
+              return ResponseFactory.Success(true, "Caretaker assigned to market successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error assigning caretaker to market");
+              return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+          }
+      }
+
+      public async Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers()
+      {
+          try
+          {
+              var caretakers = await _repository.CaretakerRepository.GetAllCaretakers(trackChanges: false);
+              var caretakerDtos = _mapper.Map<IEnumerable<CaretakerResponseDto>>(caretakers);
+
+              return ResponseFactory.Success(caretakerDtos, "Caretakers retrieved successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error retrieving caretakers");
+              return ResponseFactory.Fail<IEnumerable<CaretakerResponseDto>>(ex, "An unexpected error occurred");
+          }
+      }
+
+      public async Task<BaseResponse<AssistantOfficerResponseDto>> GetAssistantOfficerById(string officerId)
+      {
+
+          try
+          {
+              var officer = await _repository.AssistCenterOfficerRepository.GetByIdAsync(officerId, trackChanges: false);
+              if (officer == null)
+              {
+                  return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                      new NotFoundException("Assistant Officer not found"),
+                      "Assistant Officer not found");
+              }
+
+              var officerDto = _mapper.Map<AssistantOfficerResponseDto>(officer);
+              return ResponseFactory.Success(officerDto, "Assistant Officer retrieved successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error retrieving Assistant Officer");
+              return ResponseFactory.Fail<AssistantOfficerResponseDto>(ex, "An unexpected error occurred");
+          }
+      }
+
+      public async Task<BaseResponse<AssistantOfficerResponseDto>> CreateAssistantOfficer(CreateAssistantOfficerRequestDto officerDto)
+      {
+          try
+          {
+              var validationResult = await _createAssistOfficerValidator.ValidateAsync(officerDto);
+              if (!validationResult.IsValid)
+              {
+                  return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                      new FluentValidation.ValidationException(validationResult.Errors),
+                      "Validation failed");
+              }
+
+              var officer = _mapper.Map<AssistCenterOfficer>(officerDto);
+              _repository.AssistCenterOfficerRepository.AddAssistCenterOfficer(officer);
+              await _repository.SaveChangesAsync();
+
+              var createdOfficer = _mapper.Map<AssistantOfficerResponseDto>(officer);
+              return ResponseFactory.Success(createdOfficer, "Assistant Officer created successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error creating Assistant Officer");
+              return ResponseFactory.Fail<AssistantOfficerResponseDto>(ex, "An unexpected error occurred");
+          }
+      }
+
+      public async Task<BaseResponse<bool>> UnblockAssistantOfficer(string officerId)
+      {
+          try
+          {
+              var officer = await _repository.AssistCenterOfficerRepository.GetByIdAsync(officerId, trackChanges: true);
+              if (officer == null)
+              {
+                  return ResponseFactory.Fail<bool>(
+                      new NotFoundException("Assistant Officer not found"),
+                      "Assistant Officer not found");
+              }
+
+              officer.IsBlocked = false;
+              await _repository.SaveChangesAsync();
+
+              return ResponseFactory.Success(true, "Assistant Officer unblocked successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error unblocking Assistant Officer");
+              return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+          }
+      }
+
+      public async Task<BaseResponse<bool>> BlockAssistantOfficer(string officerId)
+      {
+          try
+          {
+              var officer = await _repository.AssistCenterOfficerRepository.GetByIdAsync(officerId, trackChanges: true);
+              if (officer == null)
+              {
+                  return ResponseFactory.Fail<bool>(
+                      new NotFoundException("Assistant Officer not found"),
+                      "Assistant Officer not found");
+              }
+
+              officer.IsBlocked = true;
+              await _repository.SaveChangesAsync();
+
+              return ResponseFactory.Success(true, "Assistant Officer blocked successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error blocking Assistant Officer");
+              return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+          }
+      }
+      public async Task<BaseResponse<IEnumerable<ReportResponseDto>>> GetChairmanReports(string chairmanId)
+      {
+          try
+          {
+              var reports = await _repository.ChairmanRepository.GetReportsByChairmanIdAsync(chairmanId);
+              if (reports == null || !reports.Any())
+              {
+                  return ResponseFactory.Fail<IEnumerable<ReportResponseDto>>(
+                      new NotFoundException("No reports found"),
+                      "No reports available");
+              }
+
+              var reportDtos = _mapper.Map<IEnumerable<ReportResponseDto>>(reports);
+              return ResponseFactory.Success(reportDtos, "Reports retrieved successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error retrieving chairman reports");
+              return ResponseFactory.Fail<IEnumerable<ReportResponseDto>>(ex, "An unexpected error occurred");
+          }
+
+
+      }*/
+
+
+        /*  public async Task<BaseResponse<bool>> DeleteLevy(string levyId)
+          {
+              try
+              {
+                  var levy = await _repository.LevyPaymentRepository.GetPaymentById(levyId, trackChanges: true);
+                  if (levy == null)
+                  {
+                      return ResponseFactory.Fail<bool>(new NotFoundException("Levy not found"), "Levy not found.");
+                  }
+
+                  _repository.LevyPaymentRepository.DeleteLevyPayment(levy);
+                  await _repository.SaveChangesAsync();
+
+                  return ResponseFactory.Success(true, "Levy deleted successfully.");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Error deleting levy");
+                  return ResponseFactory.Fail<bool>(ex, "Error deleting levy");
+              }
+          }
+
+          public async Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId)
+          {
+              try
+              {
+                  // Fetch the levy payment from the repository
+                  var levy = await _repository.LevyPaymentRepository.GetPaymentById(levyId, trackChanges: false);
+
+                  // Check if levy exists
+                  if (levy == null)
+                  {
+                      return ResponseFactory.Fail<LevyResponseDto>(new NotFoundException("Levy not found"), "Levy not found.");
+                  }
+
+                  // Map the levy payment entity to response DTO
+                  var levyDto = _mapper.Map<LevyResponseDto>(levy);
+
+                  // Return a successful response
+                  return ResponseFactory.Success(levyDto, "Levy retrieved successfully.");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Error retrieving levy");
+                  return ResponseFactory.Fail<LevyResponseDto>(ex, "Error retrieving levy");
+              }
+          }
+
+          public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter)
+          {
+              try
+              {
+                  // Fetch paginated levy payments from the repository
+                  var levyPayments = await _repository.LevyPaymentRepository.GetLevyPaymentsAsync(chairmanId, filter, trackChanges: false);
+
+                  // Map the levy payment entities to response DTOs
+                  var levyDtos = _mapper.Map<IEnumerable<LevyResponseDto>>(levyPayments.PageItems);
+
+                  // Calculate the number of pages
+                  var numberOfPages = levyPayments.NumberOfPages;
+
+                  // Create the paginated result
+                  var paginatedResult = new PaginatorDto<IEnumerable<LevyResponseDto>>
+                  {
+                      PageItems = levyDtos,
+                      PageSize = filter.PageSize,
+                      CurrentPage = filter.PageNumber,
+                      NumberOfPages = numberOfPages
+                  };
+
+
+
+                  // Return a successful response
+                  return ResponseFactory.Success(paginatedResult, "Levies retrieved successfully.");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Error retrieving levies");
+                  return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyResponseDto>>>(ex, "Error retrieving levies");
+              }
+          }
+
+          // Market Management Implementations
+
+          public async Task<BaseResponse<bool>> DeleteMarket(string marketId)
+          {
+              try
+              {
+                  var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, trackChanges: true);
+                  if (market == null)
+                  {
+                      return ResponseFactory.Fail<bool>(new NotFoundException("Market not found"), "Market not found");
+                  }
+
+                  _repository.MarketRepository.DeleteMarket(market);
+                  await _repository.SaveChangesAsync();
+                  return ResponseFactory.Success(true, "Market deleted successfully");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Error deleting market");
+                  return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+              }
+          }*/
+
+
+        /*  public async Task<BaseResponse<ReportMetricsDto>> GetReportMetrics()
+          {
+              try
+              {
+                  string preset = DateRangePresets.ThisMonth;
+                  var dateRange = DateRangePresets.GetPresetRange(preset);
+                  var metrics = await _repository.ReportRepository.GetMetricsAsync(dateRange.StartDate, dateRange.EndDate);
+                  var metricsDto = _mapper.Map<ReportMetricsDto>(metrics);
+                  metricsDto.Period = dateRange.DateRangeType;
+                  return ResponseFactory.Success(metricsDto, "Report metrics retrieved successfully");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Error retrieving report metrics");
+                  return ResponseFactory.Fail<ReportMetricsDto>(ex, "An unexpected error occurred");
+              }
+          }
+
+          // Trader Management Implementations
+          public async Task<BaseResponse<PaginatorDto<IEnumerable<TraderResponseDto>>>> GetTraders(
+              string marketId, PaginationFilter filter)
+          {
+              try
+              {
+                  var tradersPage = await _repository.TraderRepository.GetTradersByMarketAsync(marketId, filter, trackChanges: false);
+                  var traderDtos = _mapper.Map<IEnumerable<TraderResponseDto>>(tradersPage.PageItems);
+
+                  var paginatedResult = new PaginatorDto<IEnumerable<TraderResponseDto>>
+                  {
+                      PageItems = traderDtos,
+                      CurrentPage = filter.PageNumber,
+                      PageSize = filter.PageSize,
+                      NumberOfPages = tradersPage.NumberOfPages
+                  };
+
+                  return ResponseFactory.Success(paginatedResult, "Traders retrieved successfully");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Error retrieving traders");
+                  return ResponseFactory.Fail<PaginatorDto<IEnumerable<TraderResponseDto>>>(ex, "An unexpected error occurred");
+              }
+          }
+
+          public async Task<BaseResponse<QRCodeResponseDto>> GenerateTraderQRCode(string traderId)
+          {
+              try
+              {
+                  // Get trader details
+                  var trader = await _repository.TraderRepository.GetTraderById(traderId, trackChanges: false);
+                  if (trader == null)
+                  {
+                      return ResponseFactory.Fail<QRCodeResponseDto>(
+                          new NotFoundException("Trader not found"),
+                          "Trader not found");
+                  }
+
+                  // Generate QR code content with trader information
+                  var qrData = GenerateTraderQRContent(trader);
+
+                  // Generate QR code image
+                  var qrCodeImage = QRCodeHelper.GenerateQRCode(qrData, 300, 300);
+
+                  var response = new QRCodeResponseDto
+                  {
+                      QRCodeImage = qrCodeImage,
+                      QRCodeData = qrData,
+                      TraderId = trader.Id,
+                      TraderName = trader.BusinessName,
+                      GeneratedAt = DateTime.UtcNow
+                  };
+
+                  return ResponseFactory.Success(response, "QR code generated successfully");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Error generating QR code for trader {TraderId}: {Error}", traderId, ex.Message);
+                  return ResponseFactory.Fail<QRCodeResponseDto>(ex, "An unexpected error occurred while generating QR code");
+              }
+          }
+
+          private string GenerateTraderQRContent(Trader trader)
+          {
+              // Create a more structured QR content
+              var qrContent = new
+              {
+                  Id = trader.Id,
+                  BusinessName = trader.BusinessName,
+                  MarketId = trader.MarketId,
+                  Timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss"),
+                  Prefix = "SABIMARKET-TRADER"
+              };
+
+              // Serialize to JSON for more structured data
+              return System.Text.Json.JsonSerializer.Serialize(qrContent);
+          }*/
+        /*
+                public async Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogDto>>>> GetAuditLogs(PaginationFilter filter)
+                {
+                    try
+                    {
+                        var auditLogs = await _repository.AuditLogRepository.GetPagedAuditLogs(filter);
+                        var auditLogDtos = _mapper.Map<IEnumerable<AuditLogDto>>(auditLogs.PageItems);
+
+                        var paginatedResult = new PaginatorDto<IEnumerable<AuditLogDto>>
+                        {
+                            PageItems = auditLogDtos,
+                            CurrentPage = filter.PageNumber,
+                            PageSize = filter.PageSize,
+                            NumberOfPages = auditLogs.NumberOfPages
+                        };
+
+                        return ResponseFactory.Success(paginatedResult, "Audit logs retrieved successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error retrieving audit logs");
+                        return ResponseFactory.Fail<PaginatorDto<IEnumerable<AuditLogDto>>>(ex, "An unexpected error occurred");
+                    }
+                }
+
+                // Report Generation Implementations
+                public async Task<BaseResponse<ReportMetricsDto>> GetReportMetrics(DateTime startDate, DateTime endDate)
+                {
+                    try
+                    {
+                        var metrics = await _repository.ReportRepository.GetMetricsAsync(startDate, endDate);
+                        var metricsDto = _mapper.Map<ReportMetricsDto>(metrics);
+                        return ResponseFactory.Success(metricsDto, "Report metrics retrieved successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error retrieving report metrics");
+                        return ResponseFactory.Fail<ReportMetricsDto>(ex, "An unexpected error occurred");
+                    }
+                }
+
+                public async Task<BaseResponse<DashboardMetricsResponseDto>> GetDailyMetricsChange()
+                {
+                    try
+                    {
+                        string preset = DateRangePresets.Today;
+                        var dateRange = DateRangePresets.GetPresetRange(preset);
+                        var previousDateRange = GetPreviousDateRange(dateRange);
+
+                        // Get current day metrics
+                        var currentMetrics = await _repository.ReportRepository.GetMetricsAsync(dateRange.StartDate, dateRange.EndDate);
+
+                        // Get previous day metrics
+                        var previousMetrics = await _repository.ReportRepository.GetMetricsAsync(previousDateRange.StartDate, previousDateRange.EndDate);
+
+                        var response = new DashboardMetricsResponseDto
+                        {
+                            Traders = CalculateMetricChange(currentMetrics.TotalTraders, previousMetrics.TotalTraders),
+                            Caretakers = CalculateMetricChange(currentMetrics.TotalCaretakers, previousMetrics.TotalCaretakers),
+                            Levies = CalculateMetricChange((int)currentMetrics.TotalRevenueGenerated, (int)previousMetrics.TotalRevenueGenerated),
+                            TimePeriod = dateRange.DateRangeType,
+                            ComplianceRate = new MetricChangeDto
+                            {
+                                CurrentValue = currentMetrics.ComplianceRate,
+                                PreviousValue = previousMetrics.ComplianceRate,
+                                PercentageChange = CalculatePercentageChange(previousMetrics.ComplianceRate, currentMetrics.ComplianceRate)
+                            },
+                            TransactionCount = new MetricChangeDto
+                            {
+                                CurrentValue = currentMetrics.PaymentTransactions,
+                                PreviousValue = previousMetrics.PaymentTransactions,
+                                PercentageChange = CalculatePercentageChange(previousMetrics.PaymentTransactions, currentMetrics.PaymentTransactions)
+                            },
+                            ActiveMarkets = new MetricChangeDto
+                            {
+                                CurrentValue = currentMetrics.ActiveMarkets,
+                                PreviousValue = previousMetrics.ActiveMarkets,
+                                PercentageChange = CalculatePercentageChange(previousMetrics.ActiveMarkets, currentMetrics.ActiveMarkets)
+                            }
+                        };
+
+                        return ResponseFactory.Success(response, "Daily metrics changes retrieved successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error calculating daily metrics changes");
+                        return ResponseFactory.Fail<DashboardMetricsResponseDto>(ex, "An unexpected error occurred");
+                    }
+                }*/
+
+        /* private decimal CalculatePercentageChange(decimal previous, decimal current)
+         {
+             if (previous == 0) return 100;
+             return ((current - previous) / previous) * 100;
+         }*/
+
         // Market Analytics Implementations
-        public async Task<BaseResponse<MarketComplianceDto>> GetMarketComplianceRates(string marketId)
+        /*public async Task<BaseResponse<MarketComplianceDto>> GetMarketComplianceRates(string marketId)
         {
             try
             {
@@ -2439,7 +2358,7 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<IEnumerable<MarketResponseDto>>(ex, "An unexpected error occurred");
             }
         }
-
+*/
     }
 
 }
