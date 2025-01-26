@@ -13,6 +13,11 @@ public class GoodBoy : BaseEntity
     public string CaretakerId { get; set; }
     public string MarketId {  get; set; }    
     public StatusEnum Status { get; set; }
+    public string? DeviceToken { get; set; } // For push notifications
+
+    // For statistics
+    public int TotalCollections { get; set; } = 0;  
+    public decimal? TotalAmountCollected { get; set; } = decimal.Zero;
     public virtual Market Market { get; set; }
     public virtual ApplicationUser User { get; set; }
     public virtual Caretaker Caretaker { get; set; }

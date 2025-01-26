@@ -78,6 +78,16 @@ namespace SabiMarket.Infrastructure.Services
             await _repository.SaveChangesAsync();
         }
 
+        public async Task<BaseResponse<DashboardStatsDto>> GetDashboardStats(string goodBoyId)
+        {
+            var stats = new DashboardStatsDto
+            {
+                TotalTraders = await _repository.GoodBoyRepository.CountTraders(),
+                TotalLevies = await _repository.LevyPaymentRepository.GetTotalAmount()
+            };
+            return ResponseFactory.Success(stats, "Stats retrieved successfully");
+        }
+
         public async Task<BaseResponse<GoodBoyResponseDto>> GetGoodBoyById(string goodBoyId)
         {
             try

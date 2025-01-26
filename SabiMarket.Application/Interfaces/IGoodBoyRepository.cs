@@ -12,5 +12,6 @@ namespace SabiMarket.Application.Interfaces
         Task<IEnumerable<GoodBoy>> GetGoodBoysByMarketId(string marketId, bool trackChanges = false);
         void DeleteGoodBoy(GoodBoy goodBoy);
         Task<bool> GoodBoyExists(string id);
+        Task<int> CountTraders();
     }
 }

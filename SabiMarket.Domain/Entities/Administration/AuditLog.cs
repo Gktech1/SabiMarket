@@ -34,6 +34,10 @@ namespace SabiMarket.Domain.Entities
         [MaxLength(50)]
         public string IpAddress { get; set; }
 
+        public string? DeviceInfo { get; set; }
+        public string? Location { get; set; }
+
+
         // Navigation property
         public virtual ApplicationUser User { get; set; }
 

@@ -22,6 +22,7 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto);
         Task<BaseResponse<bool>> VerifyTraderPaymentStatus(string traderId);
         Task<BaseResponse<bool>> UpdateTraderPayment(string traderId, ProcessLevyPaymentDto paymentDto);
+        Task<BaseResponse<DashboardStatsDto>> GetDashboardStats(string goodBoyId);
     }
 
 }

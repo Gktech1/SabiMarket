@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.Interfaces;
+using SabiMarket.Domain.Enum;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Repositories;
 public class GoodBoyRepository : GeneralRepository<GoodBoy>, IGoodBoyRepository
@@ -32,6 +33,13 @@ public class GoodBoyRepository : GeneralRepository<GoodBoy>, IGoodBoyRepository
     public async Task<IEnumerable<GoodBoy>> GetGoodBoysByMarketId(string marketId, bool trackChanges = false) =>
         await FindByCondition(g => g.MarketId == marketId, trackChanges)
             .ToListAsync();
+
+    public async Task<int> CountTraders()
+    {
+        return await _context.GoodBoys
+            .Where(g => g.Status == StatusEnum.Unlocked)
+            .CountAsync();
+    }
 
     public void DeleteGoodBoy(GoodBoy goodBoy) => Delete(goodBoy);
 

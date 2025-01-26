@@ -111,16 +111,39 @@ namespace SabiMarket.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        // Added method to get all configurations for a market
-   /*     public async Task<IEnumerable<LevyPayment>> GetMarketLevySetups(string marketId)
+        public async Task<decimal> GetTotalAmount()
         {
             return await _context.LevyPayments
-                .Where(lp => lp.MarketId == marketId)
-                .GroupBy(lp => lp.Period)
-                .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
-                .OrderBy(lp => lp.Period)
-                .ToListAsync();
-        }*/
+                .Where(l => l.PaymentStatus == PaymentStatusEnum.Paid)
+                .SumAsync(l => l.Amount);
+        }
+
+        public async Task<decimal> GetMonthlyCollection()
+        {
+            var startDate = DateTime.UtcNow.Date.AddDays(-30);
+            return await _context.LevyPayments
+                .Where(l => l.PaymentDate >= startDate && l.PaymentStatus == PaymentStatusEnum.Paid)
+                .SumAsync(l => l.Amount);
+        }
+
+        public async Task<decimal> GetDailyCollection()
+        {
+            var today = DateTime.UtcNow.Date;
+            return await _context.LevyPayments
+                .Where(l => l.PaymentDate.Date == today && l.PaymentStatus == PaymentStatusEnum.Paid)
+                .SumAsync(l => l.Amount);
+        }
+
+        // Added method to get all configurations for a market
+        /*     public async Task<IEnumerable<LevyPayment>> GetMarketLevySetups(string marketId)
+             {
+                 return await _context.LevyPayments
+                     .Where(lp => lp.MarketId == marketId)
+                     .GroupBy(lp => lp.Period)
+                     .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
+                     .OrderBy(lp => lp.Period)
+                     .ToListAsync();
+             }*/
 
         public async Task<IQueryable<LevyPayment>> GetMarketLevySetups(string marketId)
         {
