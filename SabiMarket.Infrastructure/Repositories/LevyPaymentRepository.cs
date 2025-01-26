@@ -75,6 +75,19 @@ namespace SabiMarket.Infrastructure.Repositories
             );
         }
 
+        public async Task<int> GetCompliantTraderCount(IEnumerable<string> traderIds)
+        {
+            var twoDaysAgo = DateTime.UtcNow.AddDays(-2);
+
+            return await _context.LevyPayments
+                .Where(p => traderIds.Contains(p.TraderId) &&
+                           p.PaymentStatus == PaymentStatusEnum.Paid &&
+                           p.PaymentDate >= twoDaysAgo)
+                .Select(p => p.TraderId)
+                .Distinct()
+                .CountAsync();
+        }
+
         public async Task<PaginatorDto<IEnumerable<LevyPayment>>> SearchPayment(
             string searchString,
             PaginationFilter paginationFilter)
@@ -122,7 +135,9 @@ namespace SabiMarket.Infrastructure.Repositories
         {
             var startDate = DateTime.UtcNow.Date.AddDays(-30);
             return await _context.LevyPayments
-                .Where(l => l.PaymentDate >= startDate && l.PaymentStatus == PaymentStatusEnum.Paid)
+                .Where(l => 
+                l.PaymentDate >= startDate &&
+                l.PaymentStatus == PaymentStatusEnum.Paid)
                 .SumAsync(l => l.Amount);
         }
 
@@ -134,16 +149,34 @@ namespace SabiMarket.Infrastructure.Repositories
                 .SumAsync(l => l.Amount);
         }
 
-        // Added method to get all configurations for a market
-        /*     public async Task<IEnumerable<LevyPayment>> GetMarketLevySetups(string marketId)
-             {
-                 return await _context.LevyPayments
-                     .Where(lp => lp.MarketId == marketId)
-                     .GroupBy(lp => lp.Period)
-                     .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
-                     .OrderBy(lp => lp.Period)
-                     .ToListAsync();
-             }*/
+        public async Task<int> CountPendingPayments()
+        {
+            return await _context.LevyPayments
+                .Where(p => p.PaymentStatus == PaymentStatusEnum.Pending)
+                .CountAsync();
+        }
+
+        public async Task<List<TodayLevyDto>> GetTodayLevies(string goodBoyId)
+        {
+            var today = DateTime.UtcNow.Date;
+            return await _context.LevyPayments
+                .Where(p => p.PaymentDate.Date == today && p.GoodBoyId == goodBoyId)
+                .Include(p => p.Trader)
+                    .ThenInclude(t => t.User)
+                .OrderByDescending(p => p.PaymentDate)
+                .Select(p => new TodayLevyDto
+                {
+                    TraderName = $"{p.Trader.User.FirstName} {p.Trader.User.LastName}",
+                    Amount = p.Amount,
+                    Time = p.PaymentDate.ToString("h:mm tt")
+                })
+                .ToListAsync();
+        }
+
+        public async Task<decimal> GetTotalLevies(string goodBoyId) =>
+            await _context.LevyPayments
+                .Where(p => p.GoodBoyId == goodBoyId)
+                .SumAsync(p => p.Amount);
 
         public async Task<IQueryable<LevyPayment>> GetMarketLevySetups(string marketId)
         {

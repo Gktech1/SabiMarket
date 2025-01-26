@@ -13,15 +13,13 @@ using SabiMarket.Domain.Entities;
 using SabiMarket.Domain.Enum;
 using SabiMarket.Domain.Exceptions;
 using SabiMarket.Infrastructure.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using SabiMarket.Infrastructure.Utilities;
 using System.Text.Json;
 using SabiMarket.Application.Interfaces;
 using ValidationException = FluentValidation.ValidationException;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using SabiMarket.Infrastructure.Configuration;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -35,6 +33,9 @@ namespace SabiMarket.Infrastructure.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IValidator<CreateGoodBoyRequestDto> _createGoodBoyValidator;
         private readonly IValidator<UpdateGoodBoyProfileDto> _updateProfileValidator;
+        private readonly IConfiguration _configuration;
+
+        public IConfiguration Configuration { get; }
 
         public GoodBoysService(
             IRepositoryManager repository,
@@ -44,7 +45,7 @@ namespace SabiMarket.Infrastructure.Services
             ICurrentUserService currentUser,
             IHttpContextAccessor httpContextAccessor,
             IValidator<CreateGoodBoyRequestDto> createGoodBoyValidator,
-            IValidator<UpdateGoodBoyProfileDto> updateProfileValidator)
+            IValidator<UpdateGoodBoyProfileDto> updateProfileValidator, IConfiguration configuration)
         {
             _repository = repository;
             _logger = logger;
@@ -54,6 +55,7 @@ namespace SabiMarket.Infrastructure.Services
             _httpContextAccessor = httpContextAccessor;
             _createGoodBoyValidator = createGoodBoyValidator;
             _updateProfileValidator = updateProfileValidator;
+            _configuration = configuration;
         }
 
         private string GetCurrentIpAddress()
@@ -80,13 +82,50 @@ namespace SabiMarket.Infrastructure.Services
 
         public async Task<BaseResponse<DashboardStatsDto>> GetDashboardStats(string goodBoyId)
         {
-            var stats = new DashboardStatsDto
+            try
             {
-                TotalTraders = await _repository.GoodBoyRepository.CountTraders(),
-                TotalLevies = await _repository.LevyPaymentRepository.GetTotalAmount()
-            };
-            return ResponseFactory.Success(stats, "Stats retrieved successfully");
+                var today = DateTime.UtcNow.Date;
+                var todayLevies = await _repository.LevyPaymentRepository.GetTodayLevies(goodBoyId);
+
+                var stats = new DashboardStatsDto
+                {
+                    TotalTraders = await _repository.TraderRepository.CountTraders(),
+                    TotalLevies = await _repository.LevyPaymentRepository.GetTotalLevies(goodBoyId),
+                    TodayLevies = todayLevies
+                };
+
+                return ResponseFactory.Success(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving dashboard stats");
+                return ResponseFactory.Fail<DashboardStatsDto>(ex);
+            }
         }
+        /*  public async Task<BaseResponse<DashboardStatsDto>> GetDashboardStats(string goodBoyId)
+          {
+              try
+              {
+                  var stats = new DashboardStatsDto
+                  {
+                      TotalTraders = await _repository.GoodBoyRepository.CountTraders(),
+                      TotalLevies = await _repository.LevyPaymentRepository.GetTotalAmount(),
+                      PendingPayments = await _repository.LevyPaymentRepository.CountPendingPayments(),
+                      MonthlyCollection = await _repository.LevyPaymentRepository.GetMonthlyCollection(),
+                      DailyCollection = await _repository.LevyPaymentRepository.GetDailyCollection(),
+                      ActiveGoodBoys = await _repository.GoodBoyRepository.CountActiveGoodBoys(),
+                      RecentActivities = await _repository.AuditLogRepository.GetRecentActivities(),
+                      MarketPerformance = await _repository.MarketRepository.GetMarketPerformance()
+                  };
+
+                  return ResponseFactory.Success(stats, "Stats retrieved successfully");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Error retrieving dashboard stats");
+                  return ResponseFactory.Fail<DashboardStatsDto>(ex, "An unexpected error occurred");
+              }
+          }*/
 
         public async Task<BaseResponse<GoodBoyResponseDto>> GetGoodBoyById(string goodBoyId)
         {
@@ -360,8 +399,14 @@ namespace SabiMarket.Infrastructure.Services
         {
             try
             {
-                var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyById(traderId, trackChanges: false);
-                if (goodBoy == null)
+                var trader = await _repository.TraderRepository
+                    .FindByCondition(t => t.Id == traderId, false)
+                    .Include(t => t.User)
+                    .Include(t => t.Market)
+                    .Include(t => t.LevyPayments)
+                    .FirstOrDefaultAsync();
+
+                if (trader == null)
                 {
                     await CreateAuditLog(
                         "Trader Details Lookup Failed",
@@ -373,7 +418,35 @@ namespace SabiMarket.Infrastructure.Services
                         "Trader not found");
                 }
 
-                var traderDetails = _mapper.Map<TraderDetailsDto>(goodBoy);
+                var paymentConfig = _configuration
+                    .GetSection($"PaymentConfiguration:Market:MarketSpecific")
+                    .Get<List<MarketSpecificConfig>>()
+                    ?.FirstOrDefault(m => m.MarketId == trader.MarketId)?
+                    .BusinessTypes?
+                    .FirstOrDefault(b => b.Type == trader.BusinessType);
+
+                if (paymentConfig == null)
+                {
+                    paymentConfig = new BusinessTypeConfig
+                    {
+                        FrequencyInDays = _configuration.GetValue<int>("PaymentConfiguration:Market:DefaultFrequencyInDays"),
+                        Amount = _configuration.GetValue<decimal>("PaymentConfiguration:Market:DefaultAmount")
+                    };
+                }
+
+                var lastPayment = trader.LevyPayments
+                    .OrderByDescending(p => p.PaymentDate)
+                    .FirstOrDefault();
+
+                var traderDetails = new TraderDetailsDto
+                {
+                    TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
+                    TraderOccupancy = trader.BusinessType,
+                    TraderIdentityNumber = trader.TIN ?? $"OSH/LAG/{trader.Id}",
+                    PaymentFrequency = $"{paymentConfig.FrequencyInDays} days - N{paymentConfig.Amount}",
+                    LastPaymentDate = lastPayment?.PaymentDate.ToString("MMM d, yyyy"),
+                    UpdatePaymentUrl = $"https://api.sabimarket.com/payments/{trader.Id}"
+                };
 
                 await CreateAuditLog(
                     "Trader Details Lookup",
@@ -531,5 +604,17 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
+        /*private async Task<decimal> CalculateComplianceRate(string goodBoyId)
+        {
+            var traders = await _repository.GoodBoyRepository
+                .GetGoodBoysByMarketId(goodBoyId);
+
+            var compliantTraders = await _repository.LevyPaymentRepository
+                .GetCompliantTraderCount(traders.Select(t => t.Id));
+
+            return traders.Any()
+                ? (decimal)compliantTraders / traders.Count() * 100
+                : 0;
+        }*/
     }
 }

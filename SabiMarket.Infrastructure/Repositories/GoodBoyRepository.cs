@@ -45,4 +45,12 @@ public class GoodBoyRepository : GeneralRepository<GoodBoy>, IGoodBoyRepository
 
     public async Task<bool> GoodBoyExists(string id) =>
         await FindByCondition(g => g.Id == id, false).AnyAsync();
+
+    public async Task<int> CountActiveGoodBoys()
+    {
+        return await _context.GoodBoys
+            .Where(g => g.Status == StatusEnum.Unlocked &&
+                       g.TotalCollections > 0)
+            .CountAsync();
+    }
 }

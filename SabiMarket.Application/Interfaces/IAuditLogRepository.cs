@@ -12,4 +12,5 @@ public interface IAuditLogRepository : IGeneralRepository<AuditLog>
     Task<PaginatorDto<IEnumerable<AuditLog>>> GetPagedAuditLogs(PaginationFilter paginationFilter);
     Task<PaginatorDto<IEnumerable<AuditLog>>> SearchAuditLogs(string searchString, PaginationFilter paginationFilter);
     Task<IEnumerable<AuditLog>> GetUserActivity(string userId, DateTime startDate, DateTime endDate);
+    Task<ICollection<RecentActivityDto>> GetRecentActivities();
 }

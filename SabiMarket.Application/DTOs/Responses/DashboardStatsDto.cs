@@ -1,4 +1,4 @@
-﻿public class DashboardStatsDto
+﻿/*public class DashboardStatsDto
 {
     public int TotalTraders { get; set; }
     public decimal TotalLevies { get; set; }
@@ -8,6 +8,20 @@
     public int ActiveGoodBoys { get; set; }
     public ICollection<RecentActivityDto> RecentActivities { get; set; }
     public ICollection<MarketPerformanceDto> MarketPerformance { get; set; }
+}*/
+
+public class DashboardStatsDto
+{
+    public int TotalTraders { get; set; }
+    public decimal TotalLevies { get; set; }
+    public List<TodayLevyDto> TodayLevies { get; set; }
+}
+
+public class TodayLevyDto
+{
+    public string TraderName { get; set; }
+    public decimal Amount { get; set; }
+    public string Time { get; set; }
 }
 
 public class RecentActivityDto

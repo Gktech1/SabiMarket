@@ -109,7 +109,19 @@ namespace SabiMarket.Infrastructure.Repositories
             
         }
 
-
+        public async Task<ICollection<MarketPerformanceDto>> GetMarketPerformance()
+        {
+            return await _context.Markets
+                .Select(m => new MarketPerformanceDto
+                {
+                    MarketId = m.Id,
+                    MarketName = m.MarketName,
+                    TotalCollection = m.TotalRevenue,
+                    TotalTraders = m.TotalTraders,
+                    CollectionRate = m.ComplianceRate
+                })
+                .ToListAsync();
+        }
         public async Task<Market> GetComplianceRatesAsync(string marketId)
         {
             var market = await FindByCondition(m => m.Id == marketId, trackChanges: false)

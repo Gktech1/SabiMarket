@@ -21,8 +21,8 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public void UpdateTrader(Trader trader) => Update(trader);
 
-       /* public async Task<IEnumerable<Trader>> GetAllAssistCenterOfficer(bool trackChanges) =>
-            await FindAll(trackChanges).ToListAsync();*/
+        /* public async Task<IEnumerable<Trader>> GetAllAssistCenterOfficer(bool trackChanges) =>
+             await FindAll(trackChanges).ToListAsync();*/
 
         public async Task<Trader> GetTraderById(string traderId, bool trackChanges) =>
             await FindByCondition(t => t.Id == traderId, trackChanges)
@@ -66,5 +66,9 @@ namespace SabiMarket.Infrastructure.Repositories
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
         }
+
+        public async Task<int> CountTraders() =>
+            await _context.Traders.CountAsync();
+
     }
 }

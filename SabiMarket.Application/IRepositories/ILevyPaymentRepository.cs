@@ -19,5 +19,10 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     Task<decimal> GetDailyCollection();
     Task<decimal> GetTotalAmount();
     Task<decimal> GetMonthlyCollection();
+    Task<int> CountPendingPayments();
+    Task<int> GetCompliantTraderCount(IEnumerable<string> traderIds);
+    Task<decimal> GetTotalLevies(string goodBoyId);
+    Task<List<TodayLevyDto>> GetTodayLevies(string goodBoyId);
+
 
 }

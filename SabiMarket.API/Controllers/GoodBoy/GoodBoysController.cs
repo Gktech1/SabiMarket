@@ -32,6 +32,16 @@ public class GoodBoysController : ControllerBase
         return !response.IsSuccessful ? BadRequest(response) : CreatedAtAction(nameof(GetGoodBoyById), new { goodBoyId = response.Data.Id }, response);
     }
 
+    [HttpGet("dashboard-stats")]
+    [ProducesResponseType(typeof(BaseResponse<DashboardStatsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<DashboardStatsDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<DashboardStatsDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetDashboardStats(string goodBoyId)
+    {
+        var response = await _goodBoysService.GetDashboardStats(goodBoyId);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
     [HttpGet("{goodBoyId}")]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status404NotFound)]

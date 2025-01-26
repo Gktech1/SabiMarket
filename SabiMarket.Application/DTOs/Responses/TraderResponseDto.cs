@@ -17,12 +17,12 @@
 
     public class TraderDetailsDto : TraderResponseDto
     {
-        public string Address { get; set; }
-        public string BusinessType { get; set; }
-        public decimal TotalLeviesPaid { get; set; }
-        public DateTime LastLevyPayment { get; set; }
-        public string PaymentStatus { get; set; }
-        public ICollection<LevyResponseDto> RecentPayments { get; set; }
+        public string TraderName { get; set; }
+        public string TraderOccupancy { get; set; }
+        public string TraderIdentityNumber { get; set; }
+        public string PaymentFrequency { get; set; }
+        public string LastPaymentDate { get; set; }
+        public string UpdatePaymentUrl { get; set; }
     }
 }
 

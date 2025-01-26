@@ -13,5 +13,6 @@ namespace SabiMarket.Application.Interfaces
         void DeleteGoodBoy(GoodBoy goodBoy);
         Task<bool> GoodBoyExists(string id);
         Task<int> CountTraders();
+        Task<int> CountActiveGoodBoys();
     }
 }

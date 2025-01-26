@@ -11,4 +11,5 @@ public interface ITraderRepository : IGeneralRepository<Trader>
     Task<int> GetTraderCountAsync(DateTime startDate, DateTime endDate);
     Task<PaginatorDto<IEnumerable<Trader>>> GetTradersByMarketAsync(string marketId, PaginationFilter paginationFilter, bool trackChanges = false);
     Task<IEnumerable<Trader>> GetAllTradersByMarketAsync(string marketId, bool trackChanges = false);
+    Task<int> CountTraders();
 }
