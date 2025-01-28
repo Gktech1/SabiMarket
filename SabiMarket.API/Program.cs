@@ -1,6 +1,8 @@
+using AspNetCoreRateLimit;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.API.Extensions;
 using SabiMarket.API.Middlewares;
+using SabiMarket.API.Middlewares.SabiMarket.API.ServiceExtensions;
 using SabiMarket.Infrastructure.Data;
 
 public class Program
@@ -20,6 +22,7 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerWithJWT();
         builder.Services.AddCustomAuthorization();
+        builder.Services.AddRateLimitingServices(builder.Configuration);
 
         var app = builder.Build();
 
@@ -46,7 +49,11 @@ public class Program
             app.UseSwagger();
             app.UseSwaggerUI();
         //}
+        app.UseCors("AllowAll");  // CORS first
 
+        // Rate limiting middleware
+        app.UseIpRateLimiting();  // Built-in rate limiting
+        app.UseMiddleware<CustomRateLimitMiddleware>();  // Custom middleware
         app.UseMiddleware<RequestTimeLoggingMiddleware>();
         app.UseHttpsRedirection();
         app.UseCors("AllowAll");

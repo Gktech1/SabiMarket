@@ -23,7 +23,7 @@ namespace SabiMarket.Application.DTOs
 
     public class PaymentHistoryDto
     {
-        public string PaymentType { get; set; }
+        public int PaymentType { get; set; }
         public DateTime PaymentDate { get; set; }
         public decimal Amount { get; set; }
     }

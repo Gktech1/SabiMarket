@@ -15,6 +15,8 @@ using SabiMarket.Infrastructure.Repositories;
 using SabiMarket.Infrastructure.Services;
 using SabiMarket.Infrastructure.Helpers;
 using SabiMarket.API.ServiceExtensions;
+using AspNetCoreRateLimit;
+using SabiMarket.Infrastructure.Validators;
 
 public static class ServiceCollectionExtensions
 {
@@ -60,6 +62,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordValidator>();
         services.AddScoped<IValidator<CreateGoodBoyDto>, CreateGoodBoyValidator>();
         services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordValidator>();
+        services.AddScoped<IValidator<CreateTraderRequestDto>, CreateTraderValidator>();
+        services.AddScoped<IValidator<UpdateTraderProfileDto>, UpdateTraderProfileValidator>();
+        services.AddScoped<IValidator<TraderFilterRequestDto>, TraderFilterValidator>();
         // Current approach - easily replaceable
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
@@ -71,6 +76,21 @@ public static class ServiceCollectionExtensions
         {
             AuthorizationConfiguration.ConfigureAuthorization(options);
         });
+
+        return services;
+    }
+
+    public static IServiceCollection AddRateLimitingServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddMemoryCache();
+        services.AddInMemoryRateLimiting();
+
+        services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+        services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+        services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+        services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+
+        CustomRateLimitConfiguration.ConfigureRateLimiting(services, configuration);
 
         return services;
     }
