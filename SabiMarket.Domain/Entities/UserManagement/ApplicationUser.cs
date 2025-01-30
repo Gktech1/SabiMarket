@@ -4,6 +4,7 @@ using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
+using SabiMarket.Domain.Enum;
 
 namespace SabiMarket.Domain.Entities.UserManagement
 {
@@ -20,7 +21,7 @@ namespace SabiMarket.Domain.Entities.UserManagement
         public string? Address { get; set; }
         public string ProfileImageUrl { get; set; }
         public bool IsBlocked { get; set; }  = false;  
-        public string? Gender { get; set; }
+        public GenderEnum Gender { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? LastLoginAt { get; set; }

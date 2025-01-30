@@ -5,6 +5,7 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.Interfaces;
+using TraderDetailsDto = SabiMarket.Application.DTOs.Requests.TraderDetailsDto;
 
 namespace SabiMarket.API.Controllers
 {
@@ -25,10 +26,10 @@ namespace SabiMarket.API.Controllers
 
         [HttpPost]
         [Authorize(Policy = PolicyNames.RequireMarketManagement)]
-        [ProducesResponseType(typeof(BaseResponse<TraderResponseDto>), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(BaseResponse<TraderResponseDto>), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(BaseResponse<TraderResponseDto>), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CreateTrader([FromBody] CreateTraderRequestDto request)
+        [ProducesResponseType(typeof(BaseResponse<TraderDto>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(BaseResponse<TraderDto>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(BaseResponse<TraderDto>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CreateTrader([FromBody] CreateTraderDto request)
         {
             var response = await _traderService.CreateTrader(request);
             return !response.IsSuccessful ? BadRequest(response) :
@@ -46,13 +47,25 @@ namespace SabiMarket.API.Controllers
         }
 
         [HttpGet("{traderId}")]
-        [ProducesResponseType(typeof(BaseResponse<TraderResponseDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(BaseResponse<TraderResponseDto>), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(BaseResponse<TraderResponseDto>), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(BaseResponse<TraderDetailsDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<TraderDetailsDto>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BaseResponse<TraderDetailsDto>), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetTraderById(string traderId)
         {
-            var response = await _traderService.GetTraderById(traderId);
+            var response = await _traderService.GetTraderDetails(traderId);
             return !response.IsSuccessful ? NotFound(response) : Ok(response);
+        }
+
+        [HttpPut("{traderId}")]
+        [Authorize(Policy = PolicyNames.RequireMarketManagement)]
+        [ProducesResponseType(typeof(BaseResponse<TraderDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<TraderDto>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(BaseResponse<TraderDto>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BaseResponse<TraderDto>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateTrader(string traderId, [FromBody] UpdateTraderDto request)
+        {
+            var response = await _traderService.UpdateTrader(traderId, request);
+            return !response.IsSuccessful ? BadRequest(response) : Ok(response);
         }
 
         [HttpPut("{traderId}/profile")]
@@ -68,12 +81,23 @@ namespace SabiMarket.API.Controllers
 
         [HttpGet]
         [Authorize(Policy = PolicyNames.RequireMarketManagement)]
-        [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<TraderResponseDto>>>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<TraderResponseDto>>>), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetTraders([FromQuery] TraderFilterRequestDto filter, [FromQuery] PaginationFilter pagination)
+        [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<TraderDto>>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<TraderDto>>>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetTraders([FromQuery] string searchTerm, [FromQuery] PaginationFilter pagination)
         {
-            var response = await _traderService.GetTraders(filter, pagination);
+            var response = await _traderService.GetTraders(searchTerm, pagination);
             return Ok(response);
+        }
+
+        [HttpDelete("{traderId}")]
+        [Authorize(Policy = PolicyNames.RequireMarketManagement)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteTrader(string traderId)
+        {
+            var response = await _traderService.DeleteTrader(traderId);
+            return !response.IsSuccessful ? NotFound(response) : Ok(response);
         }
     }
 }

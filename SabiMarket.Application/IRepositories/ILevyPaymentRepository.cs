@@ -23,6 +23,7 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     Task<int> GetCompliantTraderCount(IEnumerable<string> traderIds);
     Task<decimal> GetTotalLevies(string goodBoyId);
     Task<List<TodayLevyDto>> GetTodayLevies(string goodBoyId);
+    Task<decimal> CalculateOutstandingDebt(string traderId);
 
 
 }

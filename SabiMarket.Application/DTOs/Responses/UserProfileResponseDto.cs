@@ -1,4 +1,6 @@
-﻿namespace SabiMarket.Application.DTOs.Responses
+﻿using SabiMarket.Domain.Enum;
+
+namespace SabiMarket.Application.DTOs.Responses
 {
     public class UserDetailsResponseDto
     {
@@ -7,7 +9,7 @@
         public string FullName { get; set; }
         public string PhoneNumber { get; set; }
         public string EmailAddress { get; set; }
-        public string Gender { get; set; }
+        public GenderEnum Gender { get; set; }
         public string Market { get; set; }
         public string LGA { get; set; }
         public string Address { get; set; }

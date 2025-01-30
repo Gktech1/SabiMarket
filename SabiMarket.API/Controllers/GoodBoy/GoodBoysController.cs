@@ -5,6 +5,7 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.Interfaces;
+using TraderDetailsDto = SabiMarket.Application.DTOs.Requests.TraderDetailsDto;
 
 [Route("api/[controller]")]
 [ApiController]

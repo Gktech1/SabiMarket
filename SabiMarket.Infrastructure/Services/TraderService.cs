@@ -18,6 +18,8 @@ using SabiMarket.Domain.Entities;
 using SabiMarket.Infrastructure.Utilities;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Infrastructure.Helpers;
+using SabiMarket.Domain.Enum;
+using TraderDetailsDto = SabiMarket.Application.DTOs.Requests.TraderDetailsDto;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -230,74 +232,257 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<TraderResponseDto>> CreateTrader(CreateTraderRequestDto traderDto)
+        public async Task<BaseResponse<TraderDto>> CreateTrader(CreateTraderDto createDto)
         {
             try
             {
-                var validationResult = await _createTraderValidator.ValidateAsync(traderDto);
-                if (!validationResult.IsValid)
-                {
-                    await CreateAuditLog(
-                        "Trader Creation Failed",
-                        $"Validation failed for new trader creation with email: {traderDto.Email}",
-                        "Trader Creation"
-                    );
-                    return ResponseFactory.Fail<TraderResponseDto>(new FluentValidation.ValidationException(validationResult.Errors));
-                }
+                // Split TraderName into FirstName and LastName
+                var nameParts = createDto.TraderName.Trim().Split(' ', 2);
+                var firstName = nameParts[0];
+                var lastName = nameParts.Length > 1 ? nameParts[1] : "";
 
-                var existingUser = await _userManager.FindByEmailAsync(traderDto.Email);
+                // Check if user with phone number already exists
+                var existingUser = await _userManager.Users
+                    .FirstOrDefaultAsync(u => u.PhoneNumber == createDto.PhoneNumber);
                 if (existingUser != null)
                 {
-                    await CreateAuditLog(
-                        "Trader Creation Failed",
-                        $"Email already exists: {traderDto.Email}",
-                        "Trader Creation"
-                    );
-                    return ResponseFactory.Fail<TraderResponseDto>("Email already exists");
+                    return ResponseFactory.Fail<TraderDto>("Phone number already exists");
                 }
 
-                var user = _mapper.Map<ApplicationUser>(traderDto);
+                // Create user account
+                var user = new ApplicationUser
+                {
+                    FirstName = firstName,
+                    LastName = lastName,
+                    PhoneNumber = createDto.PhoneNumber,
+                    UserName = createDto.PhoneNumber,
+                    ProfileImageUrl = createDto.PhotoUrl,
+                    Gender = createDto.Gender
+                };
+
                 var createUserResult = await _userManager.CreateAsync(user);
                 if (!createUserResult.Succeeded)
                 {
-                    await CreateAuditLog(
-                        "Trader Creation Failed",
-                        $"Failed to create user account for: {traderDto.Email}",
-                        "Trader Creation"
-                    );
-                    return ResponseFactory.Fail<TraderResponseDto>("Failed to create user");
+                    return ResponseFactory.Fail<TraderDto>("Failed to create user account");
                 }
 
+                // Create trader profile
                 var trader = new Trader
                 {
+                    Id = Guid.NewGuid().ToString(),
                     UserId = user.Id,
-                    MarketId = traderDto.MarketId,
-                    CaretakerId = traderDto.CaretakerId,
-                    BusinessName = traderDto.BusinessName,
-                    BusinessType = traderDto.BusinessType,
-                    TIN = $"OSH/LAG/{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}"
+                    MarketId = createDto.MarketId,
+                    BusinessType = createDto.Occupancy,
+                    PaymentFrequency = createDto.PaymentFrequency,
+                    Status = TraderStatusEnum.Active,
+                    TIN = $"OSH/LAG/{Guid.NewGuid().ToString().Substring(0, 5)}"
                 };
 
-                _repository.TraderRepository.AddTrader(trader);
+                _repository.TraderRepository.Create(trader);
                 await _repository.SaveChangesAsync();
+
                 await _userManager.AddToRoleAsync(user, UserRoles.Trader);
 
-                await CreateAuditLog(
-                    "Created Trader Account",
-                    $"Created trader account for {user.Email} ({user.FirstName} {user.LastName})",
-                    "Trader Creation"
-                );
-
-                var response = _mapper.Map<TraderResponseDto>(trader);
-                return ResponseFactory.Success(response);
+                var traderDto = _mapper.Map<TraderDto>(trader);
+                return ResponseFactory.Success(traderDto, "Trader created successfully");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating trader");
-                return ResponseFactory.Fail<TraderResponseDto>(ex);
+                return ResponseFactory.Fail<TraderDto>(ex);
             }
         }
 
+        public async Task<BaseResponse<TraderDto>> UpdateTrader(string traderId, UpdateTraderDto updateDto)
+        {
+            try
+            {
+                var trader = await _repository.TraderRepository
+                    .FindByCondition(t => t.Id == traderId, true)
+                    .Include(t => t.User)
+                    .FirstOrDefaultAsync();
+
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<TraderDto>(
+                        new NotFoundException("Trader not found"));
+                }
+
+                // Check if phone number is being changed and if it's already in use
+                if (trader.User.PhoneNumber != updateDto.PhoneNumber)
+                {
+                    var existingUser = await _userManager.Users
+                        .FirstOrDefaultAsync(u =>
+                        u.PhoneNumber == updateDto.PhoneNumber && u.Id != trader.UserId);
+
+                    if (existingUser != null)
+                    {
+                        return ResponseFactory.Fail<TraderDto>("Phone number already exists");
+                    }
+                }
+
+                // Split TraderName into FirstName and LastName
+                var nameParts = updateDto.TraderName.Trim().Split(' ', 2);
+                var firstName = nameParts[0];
+                var lastName = nameParts.Length > 1 ? nameParts[1] : "";
+
+                // Update user details
+                var user = trader.User;
+                user.FirstName = firstName;
+                user.LastName = lastName;
+                user.PhoneNumber = updateDto.PhoneNumber;
+                user.UserName = updateDto.PhoneNumber;
+                user.ProfileImageUrl = updateDto.PhotoUrl;
+                user.Gender = updateDto.Gender;
+
+                var updateUserResult = await _userManager.UpdateAsync(user);
+                if (!updateUserResult.Succeeded)
+                {
+                    return ResponseFactory.Fail<TraderDto>("Failed to update user details");
+                }
+
+                // Update trader details
+                trader.BusinessType = updateDto.Occupancy;
+                trader.MarketId = updateDto.MarketId;
+                trader.PaymentFrequency = updateDto.PaymentFrequency;
+
+                _repository.TraderRepository.Update(trader);
+                await _repository.SaveChangesAsync();
+
+                var traderDto = _mapper.Map<TraderDto>(trader);
+                return ResponseFactory.Success(traderDto, "Trader updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating trader");
+                return ResponseFactory.Fail<TraderDto>(ex);
+            }
+        }
+
+        public async Task<BaseResponse<TraderDetailsDto>> GetTraderDetails(string traderId)
+        {
+            try
+            {
+                var trader = await _repository.TraderRepository
+                    .FindByCondition(t => t.Id == traderId, false)
+                    .Include(t => t.User)
+                    .Include(t => t.Market)
+                    .Include(t => t.LevyPayments)
+                    .FirstOrDefaultAsync();
+
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<TraderDetailsDto>(
+                        new NotFoundException("Trader not found"));
+                }
+
+                // Calculate outstanding debt
+                var outstandingDebt = await _repository.LevyPaymentRepository
+                    .CalculateOutstandingDebt(traderId);
+
+                var traderDetails = new TraderDetailsDto
+                {
+                    TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
+                    PhoneNumber = trader.User.PhoneNumber,
+                    Gender = trader.User.Gender,
+                    Occupancy = trader.BusinessType,
+                    Market = trader.Market.MarketName,
+                    DateAdded = trader.CreatedAt,
+                    PaymentFrequency = trader.PaymentFrequency, // Just assign the enum directly
+                    PaymentAmount = trader.PaymentAmount, // Add this if you want to show the amount separately
+                    TraderIdentityNumber = trader.TIN,
+                    OutstandingDebt = outstandingDebt,
+                    PhotoUrl = trader.User.ProfileImageUrl,
+                    QRCode = trader.QRCode
+                };
+
+                return ResponseFactory.Success(traderDetails);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving trader details");
+                return ResponseFactory.Fail<TraderDetailsDto>(ex);
+            }
+        }
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<TraderDto>>>> GetTraders(
+        string searchTerm,
+        PaginationFilter paginationFilter)
+        {
+            try
+            {
+                IQueryable<Trader> query = _repository.TraderRepository.FindAll(false);
+
+                // Apply includes
+                query = query.Include(t => t.User)
+                            .Include(t => t.Market);
+
+                // Apply search filter
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    searchTerm = searchTerm.ToLower();
+                    query = query.Where(t =>
+                        (t.User.FirstName + " " + t.User.LastName).Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase) ||
+                        t.User.PhoneNumber.Contains(searchTerm));
+                }
+
+                var paginatedTraders = await query.Paginate(paginationFilter);
+                var traderDtos = paginatedTraders.PageItems.Select(t => new TraderDto
+                {
+                    Id = t.Id,
+                    TraderName = $"{t.User.FirstName} {t.User.LastName}",
+                    Market = t.Market.Name
+                });
+
+                var result = new PaginatorDto<IEnumerable<TraderDto>>
+                {
+                    PageItems = traderDtos,
+                    PageSize = paginatedTraders.PageSize,
+                    CurrentPage = paginatedTraders.CurrentPage,
+                    NumberOfPages = paginatedTraders.NumberOfPages
+                };
+
+                return ResponseFactory.Success(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving traders");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<TraderDto>>>(ex);
+            }
+        }
+        public async Task<BaseResponse<bool>> DeleteTrader(string traderId)
+        {
+            try
+            {
+                var trader = await _repository.TraderRepository
+                    .FindByCondition(t => t.Id == traderId, true)
+                    .Include(t => t.User)
+                    .FirstOrDefaultAsync();
+
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Trader not found"));
+                }
+
+                // Soft delete by updating status
+                trader.Status = TraderStatusEnum.Inactive;
+                _repository.TraderRepository.Update(trader);
+
+                await CreateAuditLog(
+                    "Trader Deleted",
+                    $"Deactivated trader account for {trader.User.Email}",
+                    "Trader Management"
+                );
+
+                await _repository.SaveChangesAsync();
+                return ResponseFactory.Success(true, "Trader deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting trader");
+                return ResponseFactory.Fail<bool>(ex);
+            }
+        }
         public async Task<BaseResponse<bool>> UpdateTraderProfile(string traderId, UpdateTraderProfileDto profileDto)
         {
             try

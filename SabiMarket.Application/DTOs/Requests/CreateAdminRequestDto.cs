@@ -1,4 +1,6 @@
-﻿namespace SabiMarket.Application.DTOs.Requests
+﻿using SabiMarket.Domain.Enum;
+
+namespace SabiMarket.Application.DTOs.Requests
 {
     public class CreateAdminRequestDto
     {
@@ -9,7 +11,7 @@
         public string Position { get; set; }
         public string Department { get; set; }
         public string AdminLevel { get; set; }
-        public string Gender { get; set; }
+        public GenderEnum Gender { get; set; }
         public string ProfileImageUrl { get; set; }
         public bool HasDashboardAccess { get; set; }
         public bool HasRoleManagementAccess { get; set; }

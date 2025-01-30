@@ -1,6 +1,7 @@
 ﻿using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
+using TraderDetailsDto = SabiMarket.Application.DTOs.Responses.TraderDetailsDto;
 
 namespace SabiMarket.Application.Interfaces
 {

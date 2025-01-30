@@ -28,6 +28,7 @@ namespace SabiMarket.Domain.Entities.LevyManagement
         public string GoodBoyId { get; set; }
         public DateTime CollectionDate { get; set; }
         public string QRCodeScanned { get; set; }
+        public string CollectedBy { get; set; } 
         public virtual GoodBoy GoodBoy { get; set; }
         public virtual Chairman Chairman { get; set; }  
 

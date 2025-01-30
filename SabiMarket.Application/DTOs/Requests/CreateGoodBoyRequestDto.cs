@@ -31,6 +31,7 @@ namespace SabiMarket.Application.DTOs.Requests
 
     public class ProcessLevyPaymentDto
     {
+        public string? TraderId { get; set; }    
         public decimal Amount { get; set; }
     }
 }

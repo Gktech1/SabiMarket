@@ -1,6 +1,7 @@
 ﻿using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
+using TraderDetailsDto = SabiMarket.Application.DTOs.Responses.TraderDetailsDto;
 
 namespace SabiMarket.Application.IServices
 {
@@ -50,6 +51,7 @@ namespace SabiMarket.Application.IServices
 
         // New levy management methods
         Task<BaseResponse<LevyResponseDto>> CreateLevy(CreateLevyRequestDto request);
+        Task<BaseResponse<LevyPaymentResponseDto>> UpdateLevyPayment(string paymentId, UpdateLevyPaymentDto updateDto);
         Task<BaseResponse<bool>> UpdateLevy(string levyId, UpdateLevyRequestDto request);
         Task<BaseResponse<bool>> DeleteLevy(string levyId);
         Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId);

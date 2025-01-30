@@ -23,6 +23,7 @@
         public string PaymentFrequency { get; set; }
         public string LastPaymentDate { get; set; }
         public string UpdatePaymentUrl { get; set; }
+        public int PaymentStatus {  get; set; } 
     }
 }
 

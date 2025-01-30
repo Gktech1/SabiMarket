@@ -20,6 +20,7 @@ using ValidationException = FluentValidation.ValidationException;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using SabiMarket.Infrastructure.Configuration;
+using TraderDetailsDto = SabiMarket.Application.DTOs.Responses.TraderDetailsDto;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -102,30 +103,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<DashboardStatsDto>(ex);
             }
         }
-        /*  public async Task<BaseResponse<DashboardStatsDto>> GetDashboardStats(string goodBoyId)
-          {
-              try
-              {
-                  var stats = new DashboardStatsDto
-                  {
-                      TotalTraders = await _repository.GoodBoyRepository.CountTraders(),
-                      TotalLevies = await _repository.LevyPaymentRepository.GetTotalAmount(),
-                      PendingPayments = await _repository.LevyPaymentRepository.CountPendingPayments(),
-                      MonthlyCollection = await _repository.LevyPaymentRepository.GetMonthlyCollection(),
-                      DailyCollection = await _repository.LevyPaymentRepository.GetDailyCollection(),
-                      ActiveGoodBoys = await _repository.GoodBoyRepository.CountActiveGoodBoys(),
-                      RecentActivities = await _repository.AuditLogRepository.GetRecentActivities(),
-                      MarketPerformance = await _repository.MarketRepository.GetMarketPerformance()
-                  };
-
-                  return ResponseFactory.Success(stats, "Stats retrieved successfully");
-              }
-              catch (Exception ex)
-              {
-                  _logger.LogError(ex, "Error retrieving dashboard stats");
-                  return ResponseFactory.Fail<DashboardStatsDto>(ex, "An unexpected error occurred");
-              }
-          }*/
 
         public async Task<BaseResponse<GoodBoyResponseDto>> GetGoodBoyById(string goodBoyId)
         {
@@ -604,17 +581,5 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
-        /*private async Task<decimal> CalculateComplianceRate(string goodBoyId)
-        {
-            var traders = await _repository.GoodBoyRepository
-                .GetGoodBoysByMarketId(goodBoyId);
-
-            var compliantTraders = await _repository.LevyPaymentRepository
-                .GetCompliantTraderCount(traders.Select(t => t.Id));
-
-            return traders.Any()
-                ? (decimal)compliantTraders / traders.Count() * 100
-                : 0;
-        }*/
     }
 }

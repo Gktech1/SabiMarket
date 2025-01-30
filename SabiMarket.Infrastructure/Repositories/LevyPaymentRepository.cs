@@ -135,7 +135,7 @@ namespace SabiMarket.Infrastructure.Repositories
         {
             var startDate = DateTime.UtcNow.Date.AddDays(-30);
             return await _context.LevyPayments
-                .Where(l => 
+                .Where(l =>
                 l.PaymentDate >= startDate &&
                 l.PaymentStatus == PaymentStatusEnum.Paid)
                 .SumAsync(l => l.Amount);
@@ -186,6 +186,42 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
                 .OrderBy(lp => lp.Period)
                 .AsQueryable();
+        }
+
+        public async Task<decimal> CalculateOutstandingDebt(string traderId)
+        {
+            // Get the trader with their payment frequency and amount
+            var trader = await _context.Traders
+                .Include(t => t.LevyPayments)
+                .FirstOrDefaultAsync(t => t.Id == traderId);
+
+            if (trader == null)
+                return 0;
+
+            var today = DateTime.UtcNow.Date;
+            var lastPayment = trader.LevyPayments
+                .OrderByDescending(p => p.PaymentDate)
+                .FirstOrDefault();
+
+            if (lastPayment == null)
+            {
+                // If no payment has ever been made, calculate debt from trader creation date
+                var daysSinceCreation = (today - trader.CreatedAt.Date).Days;
+                var expectedPayments = daysSinceCreation / (int)trader.PaymentFrequency;
+                return expectedPayments * trader.PaymentAmount;
+            }
+
+            // Calculate days since last payment
+            var daysSinceLastPayment = (today - lastPayment.PaymentDate.Date).Days;
+
+            // Calculate number of missed payments
+            var missedPayments = daysSinceLastPayment / (int)trader.PaymentFrequency;
+
+            // Calculate total outstanding debt
+            var outstandingDebt = missedPayments * trader.PaymentAmount;
+
+            return outstandingDebt;
+
         }
     }
 }

@@ -5,6 +5,7 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
+using TraderDetailsDto = SabiMarket.Application.DTOs.Requests.TraderDetailsDto;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -42,6 +43,30 @@ public class ChairmanController : ControllerBase
     {
         var response = await _chairmanService.UpdateMarket(marketId, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+    [HttpPut("{paymentId}")]
+    [ProducesResponseType(typeof(BaseResponse<LevyPaymentResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<LevyPaymentResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<LevyPaymentResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<LevyPaymentResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateLevyPayment(
+    string paymentId,
+    [FromBody] UpdateLevyPaymentDto updateDto)
+    {
+
+        var response = await _chairmanService.UpdateLevyPayment(paymentId, updateDto);
+
+        if (!response.IsSuccessful)
+        {
+            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(response);
+            }
+            return BadRequest(response);
+        }
+
+        return Ok(response);
     }
 
     [HttpGet("markets/{marketId}/traders")]
