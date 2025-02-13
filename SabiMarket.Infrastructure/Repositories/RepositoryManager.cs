@@ -1,6 +1,8 @@
 ﻿using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories;
+using SabiMarket.Application.IRepositories.SowFoodIRepositories;
 using SabiMarket.Infrastructure.Data;
+using SabiMarket.Infrastructure.Repositories.SowFoodLinkedRepositories;
 
 namespace SabiMarket.Infrastructure.Repositories
 {
@@ -22,6 +24,7 @@ namespace SabiMarket.Infrastructure.Repositories
         private readonly Lazy<IAuditLogRepository> _auditlogRepository;
         private readonly Lazy<IReportRepository> _reportRepository;
         private readonly Lazy<IAdminRepository> _adminRepository;
+        private readonly Lazy<ISowFoodStaffRepository> _staffRepository;
 
 
         public RepositoryManager(ApplicationDbContext context)
@@ -42,6 +45,7 @@ namespace SabiMarket.Infrastructure.Repositories
             _auditlogRepository = new Lazy<IAuditLogRepository>(() => new AuditLogRepository(_context));
             _reportRepository = new Lazy<IReportRepository>(() => new ReportRepository(_context));
             _adminRepository = new Lazy<IAdminRepository>(() => new AdminRepository(_context));
+            _staffRepository = new Lazy<ISowFoodStaffRepository>(() => new SowFoodStaffRepository(_context));
         }
 
         public ILevyPaymentRepository LevyPaymentRepository => _levyPaymentRepository.Value;
@@ -67,6 +71,7 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public IReportRepository ReportRepository => _reportRepository.Value;
         public IAdminRepository AdminRepository => _adminRepository.Value;
+        public ISowFoodStaffRepository StaffRepository => _staffRepository.Value;
 
         public Task SaveChangesAsync() => _context.SaveChangesAsync();
     }

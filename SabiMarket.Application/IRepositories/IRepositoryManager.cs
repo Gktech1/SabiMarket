@@ -1,4 +1,5 @@
 ﻿using SabiMarket.Application.Interfaces;
+using SabiMarket.Application.IRepositories.SowFoodIRepositories;
 using SabiMarket.Infrastructure.Repositories;
 
 namespace SabiMarket.Application.IRepositories
@@ -28,6 +29,7 @@ namespace SabiMarket.Application.IRepositories
         public IReportRepository ReportRepository { get; }
 
         public IAdminRepository AdminRepository { get; }
+        public ISowFoodStaffRepository StaffRepository { get; }
 
         Task SaveChangesAsync();
     }
