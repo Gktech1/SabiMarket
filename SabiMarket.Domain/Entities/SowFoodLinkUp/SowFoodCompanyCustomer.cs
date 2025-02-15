@@ -7,7 +7,7 @@
         public string PhoneNumber { get; set; }
         public string EmailAddress { get; set; }
         public string RegisteredBy { get; set; }
-        public ICollection<SowFoodCompanySalesRecord> SowFoodCompanySalesRecords { get; set; }
-        public ICollection<SowFoodCompany> SowFoodCompany { get; set; }
+        public virtual ICollection<SowFoodCompanySalesRecord> SowFoodCompanySalesRecords { get; set; } = new List<SowFoodCompanySalesRecord>();
+        public virtual SowFoodCompany SowFoodCompany { get; set; }
     }
 }

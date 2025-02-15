@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ namespace SabiMarket.Domain.Entities.SowFoodLinkUp
 {
     public class SowFoodCompanyStaffAttendance
     {
+        [Key]
         public string SowFoodCompanyStaffId { get; set; }
         public DateTime LogonTime { get; set; } = DateTime.Now;
         public DateTime LogoutTime { get; set; } = DateTime.Now;

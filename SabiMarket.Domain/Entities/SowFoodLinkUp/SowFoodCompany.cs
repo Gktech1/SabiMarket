@@ -3,10 +3,10 @@
     public class SowFoodCompany : BaseEntity
     {
         public string CompanyName { get; set; }
-        public ICollection<SowFoodCompanyStaff> Staff { get; set; } = new List<SowFoodCompanyStaff>();
-        public ICollection<SowFoodCompanyProductionItem> SowFoodProducts { get; set; } = new List<SowFoodCompanyProductionItem>();
-        public ICollection<SowFoodCompanySalesRecord> SowFoodSalesRecords { get; set; } = new List<SowFoodCompanySalesRecord>();
-        public ICollection<SowFoodCompanyShelfItem> SowFoodShelfItems { get; set; } = new List<SowFoodCompanyShelfItem>();
-        public ICollection<SowFoodCompanyCustomer> SowFoodCustomers { get; set; } = new List<SowFoodCompanyCustomer>();
+        public virtual ICollection<SowFoodCompanyStaff> Staff { get; set; } = new List<SowFoodCompanyStaff>();
+        public virtual ICollection<SowFoodCompanyProductionItem> SowFoodProducts { get; set; } = new List<SowFoodCompanyProductionItem>();
+        public virtual ICollection<SowFoodCompanySalesRecord> SowFoodSalesRecords { get; set; } = new List<SowFoodCompanySalesRecord>();
+        public virtual ICollection<SowFoodCompanyShelfItem> SowFoodShelfItems { get; set; } = new List<SowFoodCompanyShelfItem>();
+        public virtual ICollection<SowFoodCompanyCustomer> Customers { get; set; } = new List<SowFoodCompanyCustomer>();
     }
 }
