@@ -15,16 +15,19 @@ namespace SabiMarket.Domain.Entities.Administration
         public int ActiveChairmen { get; set; }
         public decimal TotalRevenue { get; set; }
 
+        // Advertisement Management
+        public bool HasAdvertManagementAccess { get; set; } = true;
+        public virtual ICollection<Advertisement> Advertisements { get; set; }
+
         // Admin Portal Specific Data
         [MaxLength(100)]
-        public string AdminLevel { get; set; }  // For different levels of admin access
-
+        public string AdminLevel { get; set; }
         [MaxLength(100)]
         public string Department { get; set; }
-
         [MaxLength(100)]
         public string Position { get; set; }
 
+        // Access Controls
         public bool HasDashboardAccess { get; set; } = true;
         public bool HasRoleManagementAccess { get; set; } = true;
         public bool HasTeamManagementAccess { get; set; } = true;
@@ -40,4 +43,41 @@ namespace SabiMarket.Domain.Entities.Administration
         // Stats Last Updated
         public DateTime StatsLastUpdatedAt { get; set; } = DateTime.UtcNow;
     }
+
+    /*  [Table("Admins")]
+      public class Admin : BaseEntity
+      {
+          [Required]
+          public string UserId { get; set; }
+
+          // Dashboard Stats Tracking
+          public int RegisteredLGAs { get; set; }
+          public int ActiveChairmen { get; set; }
+          public decimal TotalRevenue { get; set; }
+
+          // Admin Portal Specific Data
+          [MaxLength(100)]
+          public string AdminLevel { get; set; }  // For different levels of admin access
+
+          [MaxLength(100)]
+          public string Department { get; set; }
+
+          [MaxLength(100)]
+          public string Position { get; set; }
+
+          public bool HasDashboardAccess { get; set; } = true;
+          public bool HasRoleManagementAccess { get; set; } = true;
+          public bool HasTeamManagementAccess { get; set; } = true;
+          public bool HasAuditLogAccess { get; set; } = true;
+
+          // Last Dashboard Access
+          public DateTime? LastDashboardAccess { get; set; }
+
+          // Navigation Properties
+          public virtual ApplicationUser User { get; set; }
+          public virtual ICollection<AuditLog> AdminAuditLogs { get; set; }
+
+          // Stats Last Updated
+          public DateTime StatsLastUpdatedAt { get; set; } = DateTime.UtcNow;
+      }*/
 }

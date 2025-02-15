@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SabiMarket.Domain.Entities.UserManagement;
+using SabiMarket.Domain.Entities;
 
-namespace SabiMarket.Domain.Entities.SowFoodLinkUp
+public class SowFoodCompanyStaffAppraiser : BaseEntity
 {
-    public class SowFoodCompanyStaffAppraiser
-    {
-        [Key]
-        public string SowFoodCompanyStaffId { get; set; }
-        public string Remark { get; set; }
-        public SowFoodCompanyStaff SowFoodCompanyStaff { get; set; }
-    }
+    public string SowFoodCompanyStaffId { get; set; }
+    public string? UserId { get; set; }  // Appraiser's user ID
+    public string Remark { get; set; }
+
+    // Navigation properties
+    public virtual ApplicationUser User { get; set; }
+    public virtual SowFoodCompanyStaff SowFoodCompanyStaff { get; set; }
 }

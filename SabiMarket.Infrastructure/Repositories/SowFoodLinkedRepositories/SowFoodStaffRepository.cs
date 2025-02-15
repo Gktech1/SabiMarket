@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
-using SabiMarket.Application.IRepositories;
 using SabiMarket.Application.IRepositories.SowFoodIRepositories;
-using SabiMarket.Domain.Entities.SowFoodLinkUp;
-using SabiMarket.Domain.Entities.WaiveMarketModule;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
 
@@ -30,14 +22,14 @@ namespace SabiMarket.Infrastructure.Repositories.SowFoodLinkedRepositories
                        .Paginate(paginationFilter);
         }
 
-        public async Task<PaginatorDto<IEnumerable<SowFoodCompanyStaff>>> SearchStaff(string searchString, PaginationFilter paginationFilter)
+      /*  public async Task<PaginatorDto<IEnumerable<SowFoodCompanyStaff>>> SearchStaff(string searchString, PaginationFilter paginationFilter)
         {
             return await FindAll(false)
-                           .Where(a => a.FullName.Contains(searchString) ||
+                           .Where(a => aFullName.Contains(searchString) ||
                            a.EmailAddress.Contains(searchString))
                            .Paginate(paginationFilter);
         }
-
+        */
         public void UpdateStaff(SowFoodCompanyStaff staff) =>
            Update(staff);
 

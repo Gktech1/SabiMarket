@@ -7,7 +7,6 @@ using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Entities.OrdersAndFeedback;
-using SabiMarket.Domain.Entities.SowFoodLinkUp;
 using SabiMarket.Domain.Entities.Supporting;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
@@ -405,19 +404,75 @@ namespace SabiMarket.Infrastructure.Data
                 entity.Property(e => e.StatsLastUpdatedAt)
                       .HasDefaultValueSql("GETDATE()");
 
-                // Default values for access flags
-                entity.Property(e => e.HasDashboardAccess).HasDefaultValue(true);
-                entity.Property(e => e.HasRoleManagementAccess).HasDefaultValue(true);
-                entity.Property(e => e.HasTeamManagementAccess).HasDefaultValue(true);
-                entity.Property(e => e.HasAuditLogAccess).HasDefaultValue(true);
+                // Access Control Properties with Default Values
+                entity.Property(e => e.HasDashboardAccess)
+                      .HasDefaultValue(true);
 
-                // Configure User relationship (inverse side)
+                entity.Property(e => e.HasRoleManagementAccess)
+                      .HasDefaultValue(true);
+
+                entity.Property(e => e.HasTeamManagementAccess)
+                      .HasDefaultValue(true);
+
+                entity.Property(e => e.HasAuditLogAccess)
+                      .HasDefaultValue(true);
+
+                entity.Property(e => e.HasAdvertManagementAccess)
+                      .HasDefaultValue(true);
+
+                // Relationships
                 entity.HasOne(a => a.User)
                       .WithOne(u => u.Admin)
                       .HasForeignKey<Admin>(a => a.UserId)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(a => a.Advertisements)
+                      .WithOne(ad => ad.Admin)
+                      .HasForeignKey(ad => ad.AdminId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(a => a.AdminAuditLogs)
+                      .WithOne()
+                      .HasForeignKey("AdminId")
+                      .OnDelete(DeleteBehavior.Restrict);
             });
             #endregion
+
+            /*    #region Admin Configuration
+                builder.Entity<Admin>(entity =>
+                {
+                    entity.ToTable("Admins");
+
+                    // Properties
+                    entity.Property(e => e.AdminLevel)
+                          .IsRequired()
+                          .HasMaxLength(100);
+
+                    entity.Property(e => e.Department)
+                          .HasMaxLength(100);
+
+                    entity.Property(e => e.Position)
+                          .HasMaxLength(100);
+
+                    entity.Property(e => e.TotalRevenue)
+                          .HasPrecision(18, 2);
+
+                    entity.Property(e => e.StatsLastUpdatedAt)
+                          .HasDefaultValueSql("GETDATE()");
+
+                    // Default values for access flags
+                    entity.Property(e => e.HasDashboardAccess).HasDefaultValue(true);
+                    entity.Property(e => e.HasRoleManagementAccess).HasDefaultValue(true);
+                    entity.Property(e => e.HasTeamManagementAccess).HasDefaultValue(true);
+                    entity.Property(e => e.HasAuditLogAccess).HasDefaultValue(true);
+
+                    // Configure User relationship (inverse side)
+                    entity.HasOne(a => a.User)
+                          .WithOne(u => u.Admin)
+                          .HasForeignKey<Admin>(a => a.UserId)
+                          .OnDelete(DeleteBehavior.Restrict);
+                });
+                #endregion*/
 
             #region AuditLog Configuration
             builder.Entity<AuditLog>(entity =>
@@ -492,23 +547,196 @@ namespace SabiMarket.Infrastructure.Data
                 entity.HasIndex(e => e.SGId);
             });
             #endregion
+           
+            #region Advertisement Configuration
+
+            builder.Entity<Advertisement>(entity =>
+            {
+                entity.ToTable("Advertisements");
+
+                // Properties
+                entity.Property(e => e.Title)
+                      .IsRequired()
+                      .HasMaxLength(200);
+
+                entity.Property(e => e.Description)
+                      .IsRequired()
+                      .HasMaxLength(500);
+
+                entity.Property(e => e.ImageUrl)
+                      .HasMaxLength(500);
+
+                entity.Property(e => e.TargetUrl)
+                      .HasMaxLength(500);
+
+                entity.Property(e => e.AdvertId)
+                      .HasMaxLength(20);
+
+                entity.Property(e => e.Language)
+                      .IsRequired()
+                      .HasMaxLength(50);
+
+                entity.Property(e => e.Location)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.AdvertPlacement)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.Price)
+                      .HasPrecision(18, 2);
+
+                entity.Property(e => e.PaymentStatus)
+                      .HasMaxLength(50);
+
+                entity.Property(e => e.PaymentProofUrl)
+                      .HasMaxLength(500);
+
+                entity.Property(e => e.BankTransferReference)
+                      .HasMaxLength(100);
+
+                // Relationships
+                entity.HasOne(a => a.Vendor)
+                      .WithMany()
+                      .HasForeignKey(a => a.VendorId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(a => a.Views)
+                      .WithOne(v => v.Advertisement)
+                      .HasForeignKey(v => v.AdvertisementId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(a => a.Translations)
+                      .WithOne(t => t.Advertisement)
+                      .HasForeignKey(t => t.AdvertisementId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(a => a.Payment)
+                      .WithOne(p => p.Advertisement)
+                      .HasForeignKey<AdvertPayment>(p => p.AdvertisementId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<AdvertisementView>(entity =>
+            {
+                entity.ToTable("AdvertisementViews");
+
+                // Properties
+                entity.Property(e => e.IPAddress)
+                      .IsRequired()
+                      .HasMaxLength(50);
+
+                entity.Property(e => e.ViewedAt)
+                      .IsRequired();
+
+                // Relationships
+                entity.HasOne(v => v.Advertisement)
+                      .WithMany(a => a.Views)
+                      .HasForeignKey(v => v.AdvertisementId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(v => v.User)
+                      .WithMany()
+                      .HasForeignKey(v => v.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<AdvertisementLanguage>(entity =>
+            {
+                entity.ToTable("AdvertisementLanguages");
+
+                // Properties
+                entity.Property(e => e.Language)
+                      .IsRequired()
+                      .HasMaxLength(50);
+
+                entity.Property(e => e.Title)
+                      .IsRequired()
+                      .HasMaxLength(200);
+
+                entity.Property(e => e.Description)
+                      .IsRequired()
+                      .HasMaxLength(500);
+
+                // Relationships
+                entity.HasOne(l => l.Advertisement)
+                      .WithMany(a => a.Translations)
+                      .HasForeignKey(l => l.AdvertisementId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<AdvertPayment>(entity =>
+            {
+                entity.ToTable("AdvertPayments");
+
+                // Properties
+                entity.Property(e => e.Amount)
+                      .HasPrecision(18, 2);
+
+                entity.Property(e => e.PaymentMethod)
+                      .IsRequired()
+                      .HasMaxLength(50);
+
+                entity.Property(e => e.BankName)
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.AccountNumber)
+                      .HasMaxLength(20);
+
+                entity.Property(e => e.AccountName)
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.Status)
+                      .HasMaxLength(50);
+
+                entity.Property(e => e.ProofOfPaymentUrl)
+                      .HasMaxLength(500);
+
+                // Relationships
+                entity.HasOne(p => p.Advertisement)
+                      .WithOne(a => a.Payment)
+                      .HasForeignKey<AdvertPayment>(p => p.AdvertisementId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            #endregion
+
             #region SowFood Configuration
+
             builder.Entity<SowFoodCompany>(entity =>
             {
                 entity.ToTable("SowFoodCompanies");
-                entity.Property(e => e.CompanyName).IsRequired().HasMaxLength(200);
+
+                // Properties
+                entity.Property(e => e.CompanyName)
+                      .IsRequired()
+                      .HasMaxLength(200);
+
+                // Relationships - Remove two-way navigation with User
+                entity.HasOne(s => s.User)
+                      .WithMany()
+                      .HasForeignKey(s => s.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<SowFoodCompanyCustomer>(entity =>
             {
                 entity.ToTable("SowFoodCompanyCustomers");
 
-                entity.Property(e => e.FullName).IsRequired().HasMaxLength(200);
-                entity.Property(e => e.PhoneNumber).HasMaxLength(20);
-                entity.Property(e => e.EmailAddress).HasMaxLength(100);
+                // Properties
+                entity.Property(e => e.RegisteredBy)
+                      .IsRequired()
+                      .HasMaxLength(450);
+
+                // Relationships - Remove two-way navigation with User
+                entity.HasOne(sc => sc.User)
+                      .WithMany()
+                      .HasForeignKey(sc => sc.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(sc => sc.SowFoodCompany)
-                      .WithMany(s => s.SowFoodCustomers)
+                      .WithMany(s => s.Customers)
                       .HasForeignKey(sc => sc.SowFoodCompanyId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
@@ -517,9 +745,18 @@ namespace SabiMarket.Infrastructure.Data
             {
                 entity.ToTable("SowFoodCompanyProductionItems");
 
-                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
-                entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
+                // Properties
+                entity.Property(e => e.Name)
+                      .IsRequired()
+                      .HasMaxLength(200);
 
+                entity.Property(e => e.UnitPrice)
+                      .HasPrecision(18, 2);
+
+                entity.Property(e => e.ImageUrl)
+                      .HasMaxLength(500);
+
+                // Relationships
                 entity.HasOne(p => p.SowFoodCompany)
                       .WithMany(s => s.SowFoodProducts)
                       .HasForeignKey(p => p.SowFoodCompanyId)
@@ -530,12 +767,45 @@ namespace SabiMarket.Infrastructure.Data
             {
                 entity.ToTable("SowFoodCompanyShelfItems");
 
-                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
-                entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
+                // Properties
+                entity.Property(e => e.Name)
+                      .IsRequired()
+                      .HasMaxLength(200);
 
+                entity.Property(e => e.UnitPrice)
+                      .HasPrecision(18, 2);
+
+                entity.Property(e => e.ImageUrl)
+                      .HasMaxLength(500);
+
+                // Relationships
                 entity.HasOne(p => p.SowFoodCompany)
                       .WithMany(s => s.SowFoodShelfItems)
                       .HasForeignKey(p => p.SowFoodCompanyId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<SowFoodCompanyStaff>(entity =>
+            {
+                entity.ToTable("SowFoodCompanyStaff");
+
+                // Properties
+                entity.Property(e => e.StaffId)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.ImageUrl)
+                      .HasMaxLength(500);
+
+                // Relationships - Remove two-way navigation with User
+                entity.HasOne(s => s.User)
+                      .WithMany()
+                      .HasForeignKey(s => s.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(s => s.SowFoodCompany)
+                      .WithMany(c => c.Staff)
+                      .HasForeignKey(s => s.SowFoodCompanyId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -543,9 +813,13 @@ namespace SabiMarket.Infrastructure.Data
             {
                 entity.ToTable("SowFoodCompanySalesRecords");
 
-                entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
-                entity.Ignore(e => e.TotalPrice); // This is a computed property
+                // Properties
+                entity.Property(e => e.UnitPrice)
+                      .HasPrecision(18, 2);
 
+                entity.Ignore(e => e.TotalPrice);
+
+                // Relationships
                 entity.HasOne(sr => sr.SowFoodCompanyCustomer)
                       .WithMany(c => c.SowFoodCompanySalesRecords)
                       .HasForeignKey(sr => sr.SowFoodCompanyCustomerId)
@@ -560,20 +834,10 @@ namespace SabiMarket.Infrastructure.Data
                       .WithMany()
                       .HasForeignKey(sr => sr.SowFoodCompanyShelfItemId)
                       .OnDelete(DeleteBehavior.Restrict);
-            });
 
-            builder.Entity<SowFoodCompanyStaff>(entity =>
-            {
-                entity.ToTable("SowFoodCompanyStaff");
-
-                entity.Property(e => e.FullName).IsRequired().HasMaxLength(200);
-                entity.Property(e => e.PhoneNumber).HasMaxLength(20);
-                entity.Property(e => e.EmailAddress).HasMaxLength(100);
-                entity.Property(e => e.Role).HasMaxLength(50);
-
-                entity.HasOne(s => s.SowFoodCompany)
-                      .WithMany(c => c.Staff)
-                      .HasForeignKey(s => s.SowFoodCompanyId)
+                entity.HasOne(sr => sr.SowFoodCompanyStaff)
+                      .WithMany(s => s.SowFoodCompanySalesRecords)
+                      .HasForeignKey(sr => sr.SowFoodCompanyStaffId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -581,32 +845,46 @@ namespace SabiMarket.Infrastructure.Data
             {
                 entity.ToTable("SowFoodCompanyStaffAppraisers");
 
-                // Configure primary key
-                entity.HasKey(e => e.SowFoodCompanyStaffId);
+                // Properties
+                entity.Property(e => e.Remark)
+                      .IsRequired()
+                      .HasMaxLength(500);
 
-                entity.Property(e => e.Remark).IsRequired().HasMaxLength(500);
+                // Relationships - Remove two-way navigation with User
+                entity.HasOne(a => a.User)
+                      .WithMany()
+                      .HasForeignKey(a => a.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(a => a.SowFoodCompanyStaff)
-                      .WithOne()
-                      .HasForeignKey<SowFoodCompanyStaffAppraiser>(a => a.SowFoodCompanyStaffId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .WithMany()
+                      .HasForeignKey(a => a.SowFoodCompanyStaffId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<SowFoodCompanyStaffAttendance>(entity =>
             {
                 entity.ToTable("SowFoodCompanyStaffAttendances");
 
-                // Configure composite primary key
-                entity.HasKey(e => new { e.SowFoodCompanyStaffId, e.LogonTime });
+                // Properties
+                entity.Property(e => e.LogonTime)
+                      .IsRequired();
 
-                entity.Property(e => e.LogonTime).IsRequired();
-                entity.Property(e => e.LogoutTime).IsRequired();
+                entity.Property(e => e.LogoutTime)
+                      .IsRequired();
+
+                // Relationships - Remove two-way navigation with User
+                entity.HasOne(a => a.ConfirmedByUser)
+                      .WithMany()
+                      .HasForeignKey(a => a.ConfirmedByUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(a => a.SowFoodCompanyStaff)
                       .WithMany(s => s.SowFoodCompanyStaffAttendances)
                       .HasForeignKey(a => a.SowFoodCompanyStaffId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
             });
+
             #endregion
 
         }
