@@ -5,6 +5,7 @@ namespace SabiMarket.Application.IRepositories
 {
     public interface IMarketRepository
     {
+        IQueryable<Market> GetMarketsQuery();
         void AddMarket(Market market);
         void DeleteMarket(Market market);
         Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges);

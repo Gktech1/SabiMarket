@@ -1,4 +1,5 @@
 ﻿using iText.Commons.Actions.Contexts;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using SabiMarket.Application.DTOs;
@@ -149,5 +150,92 @@ public class AdminRepository : GeneralRepository<Admin>, IAdminRepository
         // Return ordered query with include
         return query.OrderByDescending(a => a.User.CreatedAt)
                    .Include(a => a.User);
+    }
+
+    public async Task<ApplicationRole> GetRoleByIdAsync(string roleId, bool trackChanges = false)
+    {
+        var query = _dbContext.Roles
+            .Include(r => r.Permissions)
+            .Where(r => r.Id == roleId);
+
+        return trackChanges
+            ? await query.FirstOrDefaultAsync()
+            : await query.AsNoTracking().FirstOrDefaultAsync();
+    }
+
+    public IQueryable<ApplicationRole> GetFilteredRolesQuery(RoleFilterRequestDto filterDto)
+    {
+        var query = _dbContext.Roles
+            .Include(r => r.Permissions)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(filterDto.SearchTerm))
+        {
+            var searchTerm = filterDto.SearchTerm.ToLower();
+            query = query.Where(r =>
+                r.Name.ToLower().Contains(searchTerm) ||
+                r.Description.ToLower().Contains(searchTerm));
+        }
+
+        return query.OrderBy(r => r.Name);
+    }
+
+    public async Task<bool> RoleExistsAsync(string roleName, string excludeRoleId = null)
+    {
+        var query = _dbContext.Roles.Where(r => r.NormalizedName == roleName.ToUpper());
+
+        if (!string.IsNullOrEmpty(excludeRoleId))
+        {
+            query = query.Where(r => r.Id != excludeRoleId);
+        }
+
+        return await query.AnyAsync();
+    }
+
+    public async Task CreateRoleAsync(ApplicationRole role)
+    {
+        await _dbContext.Roles.AddAsync(role);
+    }
+
+    public void UpdateRole(ApplicationRole role)
+    {
+        _dbContext.Roles.Update(role);
+    }
+
+    public void DeleteRole(ApplicationRole role)
+    {
+        _dbContext.Roles.Remove(role);
+    }
+
+    public async Task AddAdminToRolesAsync(string adminId, IEnumerable<string> roleIds)
+    {
+        var userRoles = roleIds.Select(roleId => new IdentityUserRole<string>
+        {
+            UserId = adminId,
+            RoleId = roleId
+        });
+
+        await _dbContext.UserRoles.AddRangeAsync(userRoles);
+    }
+
+    public async Task RemoveAdminFromRolesAsync(string adminId, IEnumerable<string> roleIds)
+    {
+        var userRoles = await _dbContext.UserRoles
+            .Where(ur => ur.UserId == adminId && roleIds.Contains(ur.RoleId))
+            .ToListAsync();
+
+        _dbContext.UserRoles.RemoveRange(userRoles);
+    }
+
+    public async Task<IEnumerable<ApplicationRole>> GetAdminRolesAsync(string adminId)
+    {
+        return await _dbContext.UserRoles
+            .Where(ur => ur.UserId == adminId)
+            .Join(_dbContext.Roles,
+                ur => ur.RoleId,
+                r => r.Id,
+                (ur, r) => r)
+            .Include(r => r.Permissions)
+            .ToListAsync();
     }
 }

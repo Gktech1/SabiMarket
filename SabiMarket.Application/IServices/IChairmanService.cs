@@ -6,6 +6,7 @@ namespace SabiMarket.Application.IServices
 {
     public interface IChairmanService
     {
+
         Task<BaseResponse<ChairmanResponseDto>> GetChairmanById(string chairmanId);
         Task<BaseResponse<ChairmanResponseDto>> CreateChairman(CreateChairmanRequestDto chairmanDto);
         Task<BaseResponse<bool>> UpdateChairmanProfile(string chairmanId, UpdateProfileDto profileDto);
@@ -55,5 +56,6 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId);
         Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter);
         Task<BaseResponse<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>> GetMarketLevies(string marketId, PaginationFilter paginationFilter);
+        Task<BaseResponse<bool>> DeleteChairmanById(string chairmanId);
     }
 }

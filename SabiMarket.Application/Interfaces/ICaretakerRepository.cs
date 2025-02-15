@@ -6,6 +6,7 @@ namespace SabiMarket.Application.Interfaces
 {
     public interface ICaretakerRepository
     {
+        IQueryable<Caretaker> GetCaretakersQuery();
         Task<Caretaker> GetCaretakerById(string userId, bool trackChanges);
         Task<Caretaker> GetCaretakerByMarketId(string marketId, bool trackChanges);
         Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersWithPagination(PaginationFilter paginationFilter, bool trackChanges);
