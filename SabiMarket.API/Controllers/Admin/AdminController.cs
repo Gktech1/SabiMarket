@@ -157,4 +157,76 @@ public class AdminController : ControllerBase
         }
         return Ok(response);
     }
+
+    // Added Role Management Endpoints
+    [HttpGet("roles/{roleId}")]
+    [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetRole(string roleId)
+    {
+        var response = await _adminService.GetRoleById(roleId);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
+    }
+
+    [HttpGet("roles")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetRoles([FromQuery] RoleFilterRequestDto filter, [FromQuery] PaginationFilter pagination)
+    {
+        var response = await _adminService.GetRoles(filter, pagination);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
+    }
+
+    [HttpPost("roles")]
+    [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateRole([FromBody] CreateRoleRequestDto request)
+    {
+        var response = await _adminService.CreateRole(request);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return CreatedAtAction(nameof(GetRole), new { roleId = response.Data.Id }, response);
+    }
+
+    [HttpPut("roles/{roleId}")]
+    [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateRole(string roleId, [FromBody] UpdateRoleRequestDto request)
+    {
+        var response = await _adminService.UpdateRole(roleId, request);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
+    }
+
+    [HttpDelete("roles/{roleId}")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteRole(string roleId)
+    {
+        var response = await _adminService.DeleteRole(roleId);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
+    }
 }
