@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities;
 using SabiMarket.Domain.Entities.SowFoodLinkUp;
-using SabiMarket.Domain.Entities.WaiveMarketModule;
 using SabiMarket.Domain.Exceptions;
 using SabiMarket.Infrastructure.Utilities;
 
