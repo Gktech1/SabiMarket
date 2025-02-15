@@ -19,6 +19,13 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public void AddPayment(LevyPayment levyPayment) => Create(levyPayment);
 
+        public IQueryable<LevyPayment> GetPaymentsQuery()
+        {
+            return FindAll(trackChanges: false)
+                .Include(l => l.Market)
+                .Include(l => l.Trader)
+                .Include(l => l.GoodBoy);
+        }
         public async Task<IEnumerable<LevyPayment>> GetAllLevyPaymentForExport(bool trackChanges) =>
             await FindAll(trackChanges).ToListAsync();
 

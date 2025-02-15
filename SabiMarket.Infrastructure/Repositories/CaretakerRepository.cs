@@ -17,6 +17,13 @@ namespace SabiMarket.Infrastructure.Repositories
             _repositoryContext = repositoryContext;
         }
 
+        public IQueryable<Caretaker> GetCaretakersQuery()
+        {
+            return FindAll(trackChanges: false)
+                .Include(c => c.User)
+                .Include(c => c.Chairman)
+                .Include(c => c.Market);
+        }
         public async Task<Caretaker> GetCaretakerById(string userId, bool trackChanges) =>
          await FindByCondition(x => x.UserId == userId, trackChanges)
              .Include(a => a.Market)

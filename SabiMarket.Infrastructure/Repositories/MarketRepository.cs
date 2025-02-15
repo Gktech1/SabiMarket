@@ -38,6 +38,14 @@ namespace SabiMarket.Infrastructure.Repositories
            .Include(a => a.LocalGovernment)
            .FirstOrDefaultAsync();
 
+        public IQueryable<Market> GetMarketsQuery()
+        {
+            return FindAll(trackChanges: false)
+                .Include(m => m.Chairman)
+                .Include(m => m.Caretakers)
+                .Include(m => m.Traders)
+                .Include(m => m.LocalGovernment);
+        }
         public async Task<PaginatorDto<IEnumerable<Market>>> GetPagedMarket(PaginationFilter paginationFilter)
         {
             return await FindAll(false)

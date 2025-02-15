@@ -6,6 +6,7 @@ using SabiMarket.Domain.Enum;
 public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
 {
     void AddPayment(LevyPayment levyPayment);
+    IQueryable<LevyPayment> GetPaymentsQuery();
     Task<IEnumerable<LevyPayment>> GetAllLevyPaymentForExport(bool trackChanges);
     Task<LevyPayment> GetPaymentById(string id, bool trackChanges);
     Task<PaginatorDto<IEnumerable<LevyPayment>>> GetPagedPayment(int? period, PaginationFilter paginationFilter);

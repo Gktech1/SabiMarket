@@ -23,6 +23,23 @@ public class ChairmanController : ControllerBase
         _logger = logger;
     }
 
+    [HttpDelete("{chairmanId}")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteChairman(string chairmanId)
+    {
+        var response = await _chairmanService.DeleteChairmanById(chairmanId);
+
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+
+        return Ok(response);
+    }
+
     [HttpPost("markets")]
     [ProducesResponseType(typeof(BaseResponse<MarketResponseDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(BaseResponse<MarketResponseDto>), StatusCodes.Status400BadRequest)]

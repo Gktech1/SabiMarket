@@ -20,6 +20,7 @@ using SabiMarket.Infrastructure.Utilities;
 using SabiMarket.Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using ValidationException = FluentValidation.ValidationException;
+using Microsoft.EntityFrameworkCore;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -1628,6 +1629,111 @@ namespace SabiMarket.Infrastructure.Services
         {
             if (previous == 0) return 100;
             return ((current - previous) / previous) * 100;
+        }
+
+        public async Task<BaseResponse<bool>> DeleteChairmanById(string chairmanId)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Chairman Deletion",
+                    $"CorrelationId: {correlationId} - Attempting to delete chairman: {chairmanId}",
+                    "Chairman Management"
+                );
+
+                // Get chairman with tracking for deletion
+                var chairman = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, true);
+                if (chairman == null)
+                {
+                    await CreateAuditLog(
+                        "Chairman Deletion Failed",
+                        $"CorrelationId: {correlationId} - Chairman not found with ID: {chairmanId}",
+                        "Chairman Management"
+                    );
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Chairman not found"),
+                        "Chairman not found");
+                }
+
+                // Check if there are any dependencies (e.g., markets, caretakers) before deletion
+                var hasActiveDependencies = await CheckChairmanDependencies(chairman);
+                if (hasActiveDependencies)
+                {
+                    await CreateAuditLog(
+                        "Chairman Deletion Failed",
+                        $"CorrelationId: {correlationId} - Chairman has active dependencies and cannot be deleted",
+                        "Chairman Management"
+                    );
+                    return ResponseFactory.Fail<bool>(
+                        new InvalidOperationException("Chairman has active dependencies"),
+                        "Cannot delete chairman with active dependencies");
+                }
+
+                // Get associated user
+                var user = await _userManager.FindByIdAsync(chairman.UserId);
+                if (user != null)
+                {
+                    // Remove chairman role from user
+                    await _userManager.RemoveFromRoleAsync(user, UserRoles.Chairman);
+
+                    // Update user status
+                    user.IsActive = false;
+                    await _userManager.UpdateAsync(user);
+                }
+
+                // Delete chairman
+                _repository.ChairmanRepository.DeleteChairman(chairman);
+                await _repository.SaveChangesAsync();
+
+                await CreateAuditLog(
+                    "Chairman Deleted",
+                    $"CorrelationId: {correlationId} - Successfully deleted chairman with ID: {chairmanId}",
+                    "Chairman Management"
+                );
+
+                return ResponseFactory.Success(true, "Chairman deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Chairman Deletion Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Chairman Management"
+                );
+                _logger.LogError(ex, "Error deleting chairman: {ChairmanId}", chairmanId);
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while deleting the chairman");
+            }
+        }
+
+        private async Task<bool> CheckChairmanDependencies(Chairman chairman)
+        {
+            // Check for active markets
+            var hasActiveMarkets = await _repository.MarketRepository
+                .GetMarketsQuery()
+                .AnyAsync(m => m.ChairmanId == chairman.Id && m.IsActive);
+
+            if (hasActiveMarkets)
+            {
+                return true;
+            }
+
+            // Check for active caretakers
+            var hasActiveCaretakers = await _repository.CaretakerRepository
+                .GetCaretakersQuery()
+                .AnyAsync(c => c.ChairmanId == chairman.Id && c.IsActive);
+
+            if (hasActiveCaretakers)
+            {
+                return true;
+            }
+
+            // Check for pending levy payments
+            var hasPendingLevies = await _repository.LevyPaymentRepository
+                .GetPaymentsQuery()
+                .AnyAsync(l => l.ChairmanId == chairman.Id && l.PaymentStatus == PaymentStatusEnum.Pending);
+
+            return hasPendingLevies;
         }
 
         /*public async Task<BaseResponse<ChairmanResponseDto>> CreateChairman(CreateChairmanRequestDto chairmanDto)
