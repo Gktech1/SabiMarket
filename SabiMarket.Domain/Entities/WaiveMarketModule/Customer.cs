@@ -20,6 +20,8 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         public bool IsSubscriptionActive { get; set; }
 
         public virtual ApplicationUser User { get; set; }
+        public virtual WaivedProduct WaivedProduct { get; set; }
+        public virtual CustomerOrder Order { get; set; }
         public virtual LocalGovernment LocalGovernment { get; set; }
         public virtual ICollection<CustomerOrder> Orders { get; set; }
         public virtual ICollection<CustomerFeedback> Feedbacks { get; set; }

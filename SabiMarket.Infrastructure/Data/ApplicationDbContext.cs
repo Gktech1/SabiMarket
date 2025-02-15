@@ -252,8 +252,76 @@ namespace SabiMarket.Infrastructure.Data
             #endregion
 
             #region Waived Market Configuration
+            builder.Entity<WaivedProduct>(entity =>
+            {
+                entity.ToTable("WaivedProducts");
+
+                // Required Properties
+                entity.Property(e => e.Name)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.Description)
+                      .HasMaxLength(500);
+
+                entity.Property(e => e.ImageUrl)
+                      .HasMaxLength(255);
+
+                entity.Property(e => e.ProductCode)
+                      .HasMaxLength(50);
+
+                // Decimal Precision
+                entity.Property(e => e.OriginalPrice)
+                      .HasPrecision(18, 2);
+
+                entity.Property(e => e.WaivedPrice)
+                      .HasPrecision(18, 2);
+
+                // Indexes
+                entity.HasIndex(e => e.ProductCode)
+                      .IsUnique();
+
+                // Relationships
+                entity.HasOne(p => p.Vendor)
+                      .WithMany(v => v.Products)
+                      .HasForeignKey(p => p.VendorId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(p => p.Categories)
+                      .WithMany(c => c.Products)
+                      .UsingEntity(j => j.ToTable("ProductCategoryMappings"));
+
+                // Updated to match CustomerOrderItem's navigation property name
+                entity.HasMany(p => p.OrderItems)
+                      .WithOne(oi => oi.Product)  // Changed from WaivedProduct to Product
+                      .HasForeignKey(oi => oi.ProductId)  // Changed from WaivedProductId to ProductId
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
             builder.Entity<Vendor>(entity =>
             {
+                entity.ToTable("Vendors");
+
+                // Required Properties
+                entity.Property(e => e.BusinessName)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.BusinessAddress)
+                      .IsRequired()
+                      .HasMaxLength(200);
+
+                entity.Property(e => e.VendorCode)
+                      .IsRequired();
+
+                entity.Property(e => e.BusinessDescription)
+                      .HasMaxLength(500);
+
+                // Indexes
+                entity.HasIndex(e => e.VendorCode)
+                      .IsUnique();
+
+                // Relationships
                 entity.HasOne(v => v.User)
                       .WithOne(u => u.Vendor)
                       .HasForeignKey<Vendor>(v => v.UserId)
@@ -264,16 +332,57 @@ namespace SabiMarket.Infrastructure.Data
                       .HasForeignKey(v => v.LocalGovernmentId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasIndex(e => e.VendorCode).IsUnique();
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+                entity.HasMany(v => v.Products)
+                      .WithOne(p => p.Vendor)
+                      .HasForeignKey(p => p.VendorId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(v => v.Orders)
+                      .WithOne()
+                      .HasForeignKey("VendorId")
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(v => v.Feedbacks)
+                      .WithOne()
+                      .HasForeignKey("VendorId")
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(v => v.Advertisements)
+                      .WithOne()
+                      .HasForeignKey("VendorId")
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<WaivedProduct>(entity =>
             {
-                entity.Property(e => e.OriginalPrice).HasPrecision(18, 2);
-                entity.Property(e => e.WaivedPrice).HasPrecision(18, 2);
-                entity.HasIndex(e => e.ProductCode).IsUnique();
+                entity.ToTable("WaivedProducts");
 
+                // Required Properties
+                entity.Property(e => e.Name)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.Description)
+                      .HasMaxLength(500);
+
+                entity.Property(e => e.ImageUrl)
+                      .HasMaxLength(255);
+
+                entity.Property(e => e.ProductCode)
+                      .HasMaxLength(50);
+
+                // Decimal Precision
+                entity.Property(e => e.OriginalPrice)
+                      .HasPrecision(18, 2);
+
+                entity.Property(e => e.WaivedPrice)
+                      .HasPrecision(18, 2);
+
+                // Indexes
+                entity.HasIndex(e => e.ProductCode)
+                      .IsUnique();
+
+                // Relationships
                 entity.HasOne(p => p.Vendor)
                       .WithMany(v => v.Products)
                       .HasForeignKey(p => p.VendorId)
@@ -282,8 +391,160 @@ namespace SabiMarket.Infrastructure.Data
                 entity.HasMany(p => p.Categories)
                       .WithMany(c => c.Products)
                       .UsingEntity(j => j.ToTable("ProductCategoryMappings"));
+
+                entity.HasMany(p => p.OrderItems)
+                      .WithOne()
+                      .HasForeignKey("WaivedProductId")
+                      .OnDelete(DeleteBehavior.Restrict);
             });
+
+            builder.Entity<Customer>(entity =>
+            {
+                entity.ToTable("Customers");
+
+                // Required Properties
+                entity.Property(e => e.FullName)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                // Relationships
+                entity.HasOne(c => c.User)
+                      .WithOne(u => u.Customer)
+                      .HasForeignKey<Customer>(c => c.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(c => c.LocalGovernment)
+                      .WithMany()
+                      .HasForeignKey(c => c.LocalGovernmentId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(c => c.Orders)
+                      .WithOne()
+                      .HasForeignKey("CustomerId")
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(c => c.Feedbacks)
+                      .WithOne()
+                      .HasForeignKey("CustomerId")
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Subscription>(entity =>
+            {
+                entity.ToTable("Subscriptions");
+
+                // Properties
+                entity.Property(e => e.SGId)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.Amount)
+                      .HasPrecision(18, 2);
+
+                entity.Property(e => e.ProofOfPayment)
+                      .HasMaxLength(500);
+
+                // Relationships
+                entity.HasOne(s => s.Subscriber)
+                      .WithMany()
+                      .HasForeignKey(s => s.SubscriberId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(s => s.SubscriptionActivator)
+                      .WithMany()
+                      .HasForeignKey(s => s.SubscriptionActivatorId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<SubscriptionPlan>(entity =>
+            {
+                entity.ToTable("SubscriptionPlans");
+
+                // Properties
+                entity.Property(e => e.Frequency)
+                      .IsRequired()
+                      .HasMaxLength(50);
+
+                entity.Property(e => e.Amount)
+                      .HasPrecision(18, 2);
+
+                // Relationships
+                entity.HasMany(sp => sp.Subscriptions)
+                      .WithOne()
+                      .HasForeignKey("SubscriptionPlanId")
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
             #endregion
+
+            /*  #region Waived Market Configuration
+              builder.Entity<Vendor>(entity =>
+              {
+                  // Relationships
+                  entity.HasOne(v => v.User)
+                        .WithOne(u => u.Vendor)
+                        .HasForeignKey<Vendor>(v => v.UserId)
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                  entity.HasOne(v => v.LocalGovernment)
+                        .WithMany(lg => lg.Vendors)
+                        .HasForeignKey(v => v.LocalGovernmentId)
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                  // Indexes
+                  entity.HasIndex(e => e.VendorCode)
+                        .IsUnique();
+
+                  // Property configurations
+                  entity.Property(e => e.CreatedAt)
+                        .HasDefaultValueSql("GETDATE()");
+              });
+
+              builder.Entity<WaivedProduct>(entity =>
+              {
+                  // Required Properties
+                  entity.Property(e => e.Name)
+                        .IsRequired()
+                        .HasMaxLength(100);
+
+                  // Optional Properties
+                  entity.Property(e => e.Description)
+                        .HasMaxLength(500);
+
+                  entity.Property(e => e.ImageUrl)
+                        .HasMaxLength(255);
+
+                  entity.Property(e => e.ProductCode)
+                        .HasMaxLength(50);
+
+                  // Decimal Precision
+                  entity.Property(e => e.OriginalPrice)
+                        .HasPrecision(18, 2);
+
+                  entity.Property(e => e.WaivedPrice)
+                        .HasPrecision(18, 2);
+
+                  // Indexes
+                  entity.HasIndex(e => e.ProductCode)
+                        .IsUnique();
+
+                  // Relationships
+                  entity.HasOne(p => p.Vendor)
+                        .WithMany(v => v.Products)
+                        .HasForeignKey(p => p.VendorId)
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                  entity.HasMany(p => p.Categories)
+                        .WithMany(c => c.Products)
+                        .UsingEntity(j => j.ToTable("ProductCategoryMappings"));
+
+                  // Collection Properties
+                  entity.HasMany(p => p.OrderItems)
+                        .WithOne(oi => oi.WaivedProduct)
+                        .HasForeignKey(oi => oi.WaivedProductId)
+                        .OnDelete(DeleteBehavior.Restrict);
+              });
+              #endregion*/
 
             #region Customer & Order Configuration
             builder.Entity<Customer>(entity =>
@@ -301,9 +562,18 @@ namespace SabiMarket.Infrastructure.Data
 
             builder.Entity<CustomerOrder>(entity =>
             {
-                entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
-                entity.Property(e => e.OrderDate).HasDefaultValueSql("GETDATE()");
+                entity.ToTable("CustomerOrders");
 
+                entity.Property(e => e.TotalAmount)
+                      .HasPrecision(18, 2);
+
+                entity.Property(e => e.DeliveryAddress)
+                      .HasMaxLength(500);
+
+                entity.Property(e => e.Notes)
+                      .HasMaxLength(1000);
+
+                // Relationships
                 entity.HasOne(o => o.Customer)
                       .WithMany(c => c.Orders)
                       .HasForeignKey(o => o.CustomerId)
@@ -313,21 +583,32 @@ namespace SabiMarket.Infrastructure.Data
                       .WithMany(v => v.Orders)
                       .HasForeignKey(o => o.VendorId)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(o => o.OrderItems)
+                      .WithOne(oi => oi.Order)
+                      .HasForeignKey(oi => oi.OrderId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
             builder.Entity<CustomerOrderItem>(entity =>
             {
-                entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
-                entity.Property(e => e.TotalPrice).HasPrecision(18, 2);
+                entity.ToTable("CustomerOrderItems");
 
-                entity.HasOne(i => i.Order)
+                entity.Property(e => e.UnitPrice)
+                      .HasPrecision(18, 2);
+
+                entity.Property(e => e.TotalPrice)
+                      .HasPrecision(18, 2);
+
+                // Relationships
+                entity.HasOne(oi => oi.Order)
                       .WithMany(o => o.OrderItems)
-                      .HasForeignKey(i => i.OrderId)
+                      .HasForeignKey(oi => oi.OrderId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasOne(i => i.Product)
+                entity.HasOne(oi => oi.Product)
                       .WithMany(p => p.OrderItems)
-                      .HasForeignKey(i => i.ProductId)
+                      .HasForeignKey(oi => oi.ProductId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
