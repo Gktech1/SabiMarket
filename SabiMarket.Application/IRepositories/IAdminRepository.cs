@@ -20,5 +20,15 @@ namespace SabiMarket.Application.IRepositories
         Task<Admin> GetAdminDashboardStatsAsync(string adminId);
         IQueryable<AuditLog> GetAdminAuditLogsQuery(string adminId, DateTime? startDate, DateTime? endDate);
         IIncludableQueryable<Admin, ApplicationUser> GetFilteredAdminsQuery(AdminFilterRequestDto filterDto);
+
+        Task<ApplicationRole> GetRoleByIdAsync(string roleId, bool trackChanges = false);
+        IQueryable<ApplicationRole> GetFilteredRolesQuery(RoleFilterRequestDto filterDto);
+        Task<bool> RoleExistsAsync(string roleName, string excludeRoleId = null);
+        Task CreateRoleAsync(ApplicationRole role);
+        void UpdateRole(ApplicationRole role);
+        void DeleteRole(ApplicationRole role);
+        Task AddAdminToRolesAsync(string adminId, IEnumerable<string> roleIds);
+        Task RemoveAdminFromRolesAsync(string adminId, IEnumerable<string> roleIds);
+        Task<IEnumerable<ApplicationRole>> GetAdminRolesAsync(string adminId);
     }
 }
