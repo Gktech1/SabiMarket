@@ -1,4 +1,5 @@
-﻿using SabiMarket.Domain.Entities.UserManagement;
+﻿using Microsoft.EntityFrameworkCore;
+using SabiMarket.Domain.Entities.UserManagement;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -17,7 +18,6 @@ namespace SabiMarket.Domain.Entities.Administration
 
         // Advertisement Management
         public bool HasAdvertManagementAccess { get; set; } = true;
-        public virtual ICollection<Advertisement> Advertisements { get; set; }
 
         // Admin Portal Specific Data
         [MaxLength(100)]
@@ -36,12 +36,16 @@ namespace SabiMarket.Domain.Entities.Administration
         // Last Dashboard Access
         public DateTime? LastDashboardAccess { get; set; }
 
-        // Navigation Properties
-        public virtual ApplicationUser User { get; set; }
-        public virtual ICollection<AuditLog> AdminAuditLogs { get; set; }
-
         // Stats Last Updated
         public DateTime StatsLastUpdatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation Properties
+        [ForeignKey("UserId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
+        public virtual ApplicationUser User { get; set; }
+        public virtual ICollection<Advertisement> Advertisements { get; set; } = new List<Advertisement>();
+        public virtual ICollection<AuditLog> AdminAuditLogs { get; set; } = new List<AuditLog>();
+
     }
 
     /*  [Table("Admins")]

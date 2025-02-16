@@ -1,4 +1,5 @@
-﻿using SabiMarket.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using SabiMarket.Domain.Entities;
 using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.AdvertisementModule;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
@@ -9,8 +10,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 [Table("Advertisements")]
 public class Advertisement : BaseEntity
 {
+    [Required]
     public string VendorId { get; set; }
-    public string AdminId { get; set; }  // Add this foreign key
+
+    [Required]
+    public string AdminId { get; set; }
 
     [Required]
     public string Title { get; set; }
@@ -20,39 +24,35 @@ public class Advertisement : BaseEntity
 
     public string ImageUrl { get; set; }
     public string TargetUrl { get; set; }
-
-    // Status Management
     public AdvertStatusEnum Status { get; set; }
-
-    // Timing Properties
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal Price { get; set; }
 
-    // New Properties from Figma UI
-    public string AdvertId { get; set; }  // For custom IDs like Ad101
+    [Required]
+    public string Language { get; set; }
 
     [Required]
-    public string Language { get; set; }  // For multilingual support
-
-    // Location and Placement
-    [Required]
-    public string Location { get; set; }  // All location, SowFood Linkup, LG Linkup, etc.
+    public string Location { get; set; }
 
     [Required]
-    public string AdvertPlacement { get; set; }  // Vendor, Customer, Chairman, etc.
+    public string AdvertPlacement { get; set; }
 
-    // Payment Tracking
     public string PaymentStatus { get; set; }
     public string PaymentProofUrl { get; set; }
     public string BankTransferReference { get; set; }
 
-    // Navigation Properties
+    [ForeignKey("VendorId")]
+    [DeleteBehavior(DeleteBehavior.NoAction)]
     public virtual Vendor Vendor { get; set; }
-    public virtual Admin Admin { get; set; }  // Add this navigation property
-    public virtual ICollection<AdvertisementView> Views { get; set; }
-    public virtual ICollection<AdvertisementLanguage> Translations { get; set; }
+
+    [ForeignKey("AdminId")]
+    [DeleteBehavior(DeleteBehavior.NoAction)]
+    public virtual Admin Admin { get; set; }
+
+    public virtual ICollection<AdvertisementView> Views { get; set; } = new List<AdvertisementView>();
+    public virtual ICollection<AdvertisementLanguage> Translations { get; set; } = new List<AdvertisementLanguage>();
     public virtual AdvertPayment Payment { get; set; }
 }

@@ -17,7 +17,6 @@ namespace SabiMarket.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("dbo")
                 .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
@@ -32,62 +31,48 @@ namespace SabiMarket.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("AdvertId")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<string>("AdvertPlacement")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BankTransferReference")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Language")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Location")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PaymentProofUrl")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PaymentStatus")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Price")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("StartDate")
@@ -98,13 +83,11 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("TargetUrl")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -113,18 +96,13 @@ namespace SabiMarket.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("VendorId1")
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AdminId");
 
                     b.HasIndex("VendorId");
 
-                    b.HasIndex("VendorId1");
-
-                    b.ToTable("Advertisements", "dbo");
+                    b.ToTable("Advertisements");
                 });
 
             modelBuilder.Entity("GoodBoy", b =>
@@ -165,7 +143,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("GoodBoys", "dbo");
+                    b.ToTable("GoodBoys");
                 });
 
             modelBuilder.Entity("MarketSection", b =>
@@ -202,7 +180,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("MarketId");
 
-                    b.ToTable("MarketSections", "dbo");
+                    b.ToTable("MarketSections");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -227,7 +205,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims", "dbo");
+                    b.ToTable("AspNetRoleClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -252,7 +230,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims", "dbo");
+                    b.ToTable("AspNetUserClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
@@ -274,7 +252,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins", "dbo");
+                    b.ToTable("AspNetUserLogins", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
@@ -289,7 +267,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetUserRoles", "dbo");
+                    b.ToTable("AspNetUserRoles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -308,7 +286,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens", "dbo");
+                    b.ToTable("AspNetUserTokens", (string)null);
                 });
 
             modelBuilder.Entity("ProductCategoryWaivedProduct", b =>
@@ -323,7 +301,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("ProductsId");
 
-                    b.ToTable("ProductCategoryMappings", "dbo");
+                    b.ToTable("ProductCategoryWaivedProduct");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.Administration.Admin", b =>
@@ -348,29 +326,19 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("HasAdvertManagementAccess")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
+                        .HasColumnType("bit");
 
                     b.Property<bool>("HasAuditLogAccess")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
+                        .HasColumnType("bit");
 
                     b.Property<bool>("HasDashboardAccess")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
+                        .HasColumnType("bit");
 
                     b.Property<bool>("HasRoleManagementAccess")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
+                        .HasColumnType("bit");
 
                     b.Property<bool>("HasTeamManagementAccess")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -387,12 +355,9 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<DateTime>("StatsLastUpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("TotalRevenue")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -407,7 +372,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Admins", "dbo");
+                    b.ToTable("Admins");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.Administration.Chairman", b =>
@@ -435,7 +400,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("MarketId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Office")
                         .IsRequired()
@@ -466,14 +431,10 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("LocalGovernmentId");
 
-                    b.HasIndex("MarketId")
-                        .IsUnique()
-                        .HasFilter("[MarketId] IS NOT NULL");
-
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Chairmen", "dbo");
+                    b.ToTable("Chairmen");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.AdvertisementModule.AdvertPayment", b =>
@@ -483,26 +444,22 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("AccountName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("AccountNumber")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("AdvertisementId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("BankName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ConfirmedAt")
                         .HasColumnType("datetime2");
@@ -515,18 +472,15 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProofOfPaymentUrl")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -536,7 +490,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("AdvertisementId")
                         .IsUnique();
 
-                    b.ToTable("AdvertPayments", "dbo");
+                    b.ToTable("AdvertPayments");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.AdvertisementModule.AdvertisementLanguage", b =>
@@ -553,21 +507,18 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Language")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -576,7 +527,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("AdvertisementId");
 
-                    b.ToTable("AdvertisementLanguages", "dbo");
+                    b.ToTable("AdvertisementLanguages");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.AdvertisementModule.AdvertisementView", b =>
@@ -593,8 +544,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("IPAddress")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -615,7 +565,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AdvertisementViews", "dbo");
+                    b.ToTable("AdvertisementViews");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.AuditLog", b =>
@@ -676,7 +626,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AuditLogs", "dbo");
+                    b.ToTable("AuditLogs");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.LevyManagement.LevyPayment", b =>
@@ -685,7 +635,6 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("ChairmanId")
@@ -706,7 +655,6 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("bit");
 
                     b.Property<decimal?>("IncentiveAmount")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsActive")
@@ -721,9 +669,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("PaymentDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("PaymentMethod")
                         .HasColumnType("int");
@@ -759,7 +705,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("TraderId");
 
-                    b.ToTable("LevyPayments", "dbo");
+                    b.ToTable("LevyPayments");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.LocalGovernment", b =>
@@ -772,12 +718,9 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("CurrentRevenue")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsActive")
@@ -800,10 +743,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("LocalGovernments", "dbo");
+                    b.ToTable("LocalGovernments");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", b =>
@@ -816,7 +756,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("ChairmanId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("ComplianceRate")
                         .HasColumnType("decimal(18,2)");
@@ -825,9 +765,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -886,9 +824,12 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ChairmanId")
+                        .IsUnique();
+
                     b.HasIndex("LocalGovernmentId");
 
-                    b.ToTable("Markets", "dbo");
+                    b.ToTable("Markets");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.MarketParticipants.AssistCenterOfficer", b =>
@@ -937,7 +878,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("AssistCenterOfficers", "dbo");
+                    b.ToTable("AssistCenterOfficers");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.MarketParticipants.Caretaker", b =>
@@ -978,7 +919,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Caretakers", "dbo");
+                    b.ToTable("Caretakers");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.MarketParticipants.Trader", b =>
@@ -1009,7 +950,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("QRCode")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SectionId")
                         .HasColumnType("nvarchar(450)");
@@ -1032,19 +973,12 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("MarketId");
 
-                    b.HasIndex("QRCode")
-                        .IsUnique()
-                        .HasFilter("[QRCode] IS NOT NULL");
-
                     b.HasIndex("SectionId");
-
-                    b.HasIndex("TIN")
-                        .IsUnique();
 
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Traders", "dbo");
+                    b.ToTable("Traders");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.OrdersAndFeedback.CustomerFeedback", b =>
@@ -1086,7 +1020,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("VendorId");
 
-                    b.ToTable("CustomerFeedbacks", "dbo");
+                    b.ToTable("CustomerFeedbacks");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.OrdersAndFeedback.CustomerOrder", b =>
@@ -1101,21 +1035,16 @@ namespace SabiMarket.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("CustomerId1")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("DeliveryAddress")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
@@ -1124,7 +1053,6 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("TotalAmount")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1138,13 +1066,9 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.HasIndex("CustomerId1")
-                        .IsUnique()
-                        .HasFilter("[CustomerId1] IS NOT NULL");
-
                     b.HasIndex("VendorId");
 
-                    b.ToTable("CustomerOrders", "dbo");
+                    b.ToTable("CustomerOrders");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.OrdersAndFeedback.CustomerOrderItem", b =>
@@ -1170,19 +1094,13 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("TotalPrice")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("UnitPrice")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("WaivedProductId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -1190,7 +1108,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("CustomerOrderItems", "dbo");
+                    b.ToTable("CustomerOrderItems");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.Supporting.ProductCategory", b =>
@@ -1218,7 +1136,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductCategories", "dbo");
+                    b.ToTable("ProductCategories");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.UserManagement.ApplicationRole", b =>
@@ -1231,9 +1149,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
@@ -1271,7 +1187,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasDatabaseName("RoleNameIndex")
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
-                    b.ToTable("Roles", "dbo");
+                    b.ToTable("AspNetRoles", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", b =>
@@ -1293,9 +1209,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -1390,7 +1304,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.ToTable("Users", "dbo");
+                    b.ToTable("AspNetUsers", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.UserManagement.RolePermission", b =>
@@ -1412,10 +1326,9 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RoleId", "Name")
-                        .IsUnique();
+                    b.HasIndex("RoleId");
 
-                    b.ToTable("RolePermissions", "dbo");
+                    b.ToTable("RolePermissions");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.Customer", b =>
@@ -1463,7 +1376,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("WaivedProductId");
 
-                    b.ToTable("Customers", "dbo");
+                    b.ToTable("Customers");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.Subscription", b =>
@@ -1472,7 +1385,6 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -1489,13 +1401,11 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("ProofOfPayment")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SGId")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SubscriberId")
                         .IsRequired()
@@ -1508,56 +1418,19 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.Property<DateTime>("SubscriptionEndDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("SubscriptionPlanId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<DateTime>("SubscriptionStartDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("SGId");
 
                     b.HasIndex("SubscriberId");
 
                     b.HasIndex("SubscriptionActivatorId");
 
-                    b.HasIndex("SubscriptionPlanId");
-
-                    b.ToTable("Subscriptions", "dbo");
-                });
-
-            modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.SubscriptionPlan", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Frequency")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SubscriptionPlans", "dbo");
+                    b.ToTable("Subscriptions");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.Vendor", b =>
@@ -1572,8 +1445,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("BusinessDescription")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BusinessName")
                         .IsRequired()
@@ -1611,7 +1483,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("VendorCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -1620,10 +1492,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.HasIndex("VendorCode")
-                        .IsUnique();
-
-                    b.ToTable("Vendors", "dbo");
+                    b.ToTable("Vendors");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.WaivedProduct", b =>
@@ -1636,13 +1505,11 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -1656,13 +1523,11 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("OriginalPrice")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("ProductCode")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("StockQuantity")
                         .HasColumnType("int");
@@ -1675,17 +1540,13 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("WaivedPrice")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductCode")
-                        .IsUnique();
-
                     b.HasIndex("VendorId");
 
-                    b.ToTable("WaivedProducts", "dbo");
+                    b.ToTable("WaivedProducts");
                 });
 
             modelBuilder.Entity("SowFoodCompany", b =>
@@ -1695,8 +1556,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("CompanyName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -1714,7 +1574,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SowFoodCompanies", "dbo");
+                    b.ToTable("SowFoodCompanies");
                 });
 
             modelBuilder.Entity("SowFoodCompanyCustomer", b =>
@@ -1730,8 +1590,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("RegisteredBy")
                         .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SowFoodCompanyId")
                         .IsRequired()
@@ -1749,7 +1608,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SowFoodCompanyCustomers", "dbo");
+                    b.ToTable("SowFoodCompanyCustomers");
                 });
 
             modelBuilder.Entity("SowFoodCompanyProductionItem", b =>
@@ -1762,16 +1621,14 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
@@ -1781,7 +1638,6 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("UnitPrice")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1791,7 +1647,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("SowFoodCompanyId");
 
-                    b.ToTable("SowFoodCompanyProductionItems", "dbo");
+                    b.ToTable("SowFoodCompanyProductionItems");
                 });
 
             modelBuilder.Entity("SowFoodCompanySalesRecord", b =>
@@ -1825,7 +1681,6 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("UnitPrice")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1843,7 +1698,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("SowFoodCompanyStaffId");
 
-                    b.ToTable("SowFoodCompanySalesRecords", "dbo");
+                    b.ToTable("SowFoodCompanySalesRecords");
                 });
 
             modelBuilder.Entity("SowFoodCompanyShelfItem", b =>
@@ -1856,16 +1711,15 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
@@ -1875,7 +1729,6 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("UnitPrice")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1885,7 +1738,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("SowFoodCompanyId");
 
-                    b.ToTable("SowFoodCompanyShelfItems", "dbo");
+                    b.ToTable("SowFoodCompanyShelfItems");
                 });
 
             modelBuilder.Entity("SowFoodCompanyStaff", b =>
@@ -1898,8 +1751,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -1910,8 +1762,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("StaffId")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1925,7 +1776,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SowFoodCompanyStaff", "dbo");
+                    b.ToTable("SowFoodCompanyStaff");
                 });
 
             modelBuilder.Entity("SowFoodCompanyStaffAppraiser", b =>
@@ -1941,8 +1792,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("Remark")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SowFoodCompanyStaffId")
                         .IsRequired()
@@ -1960,7 +1810,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SowFoodCompanyStaffAppraisers", "dbo");
+                    b.ToTable("SowFoodCompanyStaffAppraisers");
                 });
 
             modelBuilder.Entity("SowFoodCompanyStaffAttendance", b =>
@@ -2002,7 +1852,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("SowFoodCompanyStaffId");
 
-                    b.ToTable("SowFoodCompanyStaffAttendances", "dbo");
+                    b.ToTable("SowFoodCompanyStaffAttendances");
                 });
 
             modelBuilder.Entity("Advertisement", b =>
@@ -2010,18 +1860,14 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.Administration.Admin", "Admin")
                         .WithMany("Advertisements")
                         .HasForeignKey("AdminId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.Vendor", "Vendor")
-                        .WithMany()
-                        .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.Vendor", null)
                         .WithMany("Advertisements")
-                        .HasForeignKey("VendorId1");
+                        .HasForeignKey("VendorId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Admin");
 
@@ -2033,19 +1879,19 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.MarketParticipants.Caretaker", "Caretaker")
                         .WithMany("GoodBoys")
                         .HasForeignKey("CaretakerId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "Market")
                         .WithMany()
                         .HasForeignKey("MarketId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("GoodBoy")
                         .HasForeignKey("GoodBoy", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Caretaker");
@@ -2060,7 +1906,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "Market")
                         .WithMany("Sections")
                         .HasForeignKey("MarketId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Market");
@@ -2137,7 +1983,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("Admin")
                         .HasForeignKey("SabiMarket.Domain.Entities.Administration.Admin", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -2148,23 +1994,16 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.LocalGovernment", "LocalGovernment")
                         .WithMany()
                         .HasForeignKey("LocalGovernmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-
-                    b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "Market")
-                        .WithOne("Chairman")
-                        .HasForeignKey("SabiMarket.Domain.Entities.Administration.Chairman", "MarketId")
-                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("Chairman")
                         .HasForeignKey("SabiMarket.Domain.Entities.Administration.Chairman", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("LocalGovernment");
-
-                    b.Navigation("Market");
 
                     b.Navigation("User");
                 });
@@ -2185,7 +2024,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("Advertisement", "Advertisement")
                         .WithMany("Translations")
                         .HasForeignKey("AdvertisementId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Advertisement");
@@ -2196,13 +2035,13 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("Advertisement", "Advertisement")
                         .WithMany("Views")
                         .HasForeignKey("AdvertisementId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Advertisement");
@@ -2214,13 +2053,12 @@ namespace SabiMarket.Infrastructure.Migrations
                 {
                     b.HasOne("SabiMarket.Domain.Entities.Administration.Admin", null)
                         .WithMany("AdminAuditLogs")
-                        .HasForeignKey("AdminId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("AdminId");
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -2231,25 +2069,25 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.Administration.Chairman", "Chairman")
                         .WithMany()
                         .HasForeignKey("ChairmanId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("GoodBoy", "GoodBoy")
                         .WithMany("LevyPayments")
                         .HasForeignKey("GoodBoyId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "Market")
                         .WithMany()
                         .HasForeignKey("MarketId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.MarketParticipants.Trader", "Trader")
                         .WithMany("LevyPayments")
                         .HasForeignKey("TraderId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Chairman");
@@ -2263,11 +2101,19 @@ namespace SabiMarket.Infrastructure.Migrations
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", b =>
                 {
+                    b.HasOne("SabiMarket.Domain.Entities.Administration.Chairman", "Chairman")
+                        .WithOne("Market")
+                        .HasForeignKey("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "ChairmanId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.LocalGovernment", "LocalGovernment")
                         .WithMany("Markets")
                         .HasForeignKey("LocalGovernmentId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
+
+                    b.Navigation("Chairman");
 
                     b.Navigation("LocalGovernment");
                 });
@@ -2277,23 +2123,24 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.Administration.Chairman", "Chairman")
                         .WithMany()
                         .HasForeignKey("ChairmanId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.LocalGovernment", "LocalGovernment")
-                        .WithMany()
+                        .WithMany("AssistCenterOfficers")
                         .HasForeignKey("LocalGovernmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "Market")
                         .WithMany()
-                        .HasForeignKey("MarketId");
+                        .HasForeignKey("MarketId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("AssistCenterOfficer")
                         .HasForeignKey("SabiMarket.Domain.Entities.MarketParticipants.AssistCenterOfficer", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Chairman");
@@ -2310,19 +2157,19 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.Administration.Chairman", "Chairman")
                         .WithMany()
                         .HasForeignKey("ChairmanId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "Market")
                         .WithMany("Caretakers")
                         .HasForeignKey("MarketId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("Caretaker")
                         .HasForeignKey("SabiMarket.Domain.Entities.MarketParticipants.Caretaker", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Chairman");
@@ -2337,24 +2184,24 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.MarketParticipants.Caretaker", "Caretaker")
                         .WithMany("AssignedTraders")
                         .HasForeignKey("CaretakerId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "Market")
                         .WithMany("Traders")
                         .HasForeignKey("MarketId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("MarketSection", "Section")
                         .WithMany("Traders")
                         .HasForeignKey("SectionId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("Trader")
                         .HasForeignKey("SabiMarket.Domain.Entities.MarketParticipants.Trader", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Caretaker");
@@ -2371,13 +2218,13 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.Customer", "Customer")
                         .WithMany("Feedbacks")
                         .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.Vendor", "Vendor")
                         .WithMany("Feedbacks")
                         .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Customer");
@@ -2390,17 +2237,13 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.Customer", "Customer")
                         .WithMany("Orders")
                         .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-
-                    b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.Customer", null)
-                        .WithOne("Order")
-                        .HasForeignKey("SabiMarket.Domain.Entities.OrdersAndFeedback.CustomerOrder", "CustomerId1");
 
                     b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.Vendor", "Vendor")
                         .WithMany("Orders")
                         .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Customer");
@@ -2413,13 +2256,13 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.OrdersAndFeedback.CustomerOrder", "Order")
                         .WithMany("OrderItems")
                         .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.WaivedProduct", "Product")
                         .WithMany("OrderItems")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Order");
@@ -2432,7 +2275,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.LocalGovernment", "LocalGovernment")
                         .WithMany("Users")
                         .HasForeignKey("LocalGovernmentId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("LocalGovernment");
                 });
@@ -2442,7 +2285,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationRole", "Role")
                         .WithMany("Permissions")
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Role");
@@ -2453,18 +2296,19 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.LocalGovernment", "LocalGovernment")
                         .WithMany("Customers")
                         .HasForeignKey("LocalGovernmentId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("Customer")
                         .HasForeignKey("SabiMarket.Domain.Entities.WaiveMarketModule.Customer", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.WaivedProduct", "WaivedProduct")
                         .WithMany()
-                        .HasForeignKey("WaivedProductId");
+                        .HasForeignKey("WaivedProductId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("LocalGovernment");
 
@@ -2478,19 +2322,14 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "Subscriber")
                         .WithMany()
                         .HasForeignKey("SubscriberId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "SubscriptionActivator")
                         .WithMany()
                         .HasForeignKey("SubscriptionActivatorId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-
-                    b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.SubscriptionPlan", null)
-                        .WithMany("Subscriptions")
-                        .HasForeignKey("SubscriptionPlanId")
-                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Subscriber");
 
@@ -2502,13 +2341,13 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.LocalGovernment", "LocalGovernment")
                         .WithMany("Vendors")
                         .HasForeignKey("LocalGovernmentId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("Vendor")
                         .HasForeignKey("SabiMarket.Domain.Entities.WaiveMarketModule.Vendor", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("LocalGovernment");
@@ -2521,7 +2360,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.Vendor", "Vendor")
                         .WithMany("Products")
                         .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Vendor");
@@ -2532,7 +2371,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("User");
                 });
@@ -2542,13 +2381,13 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SowFoodCompany", "SowFoodCompany")
                         .WithMany("Customers")
                         .HasForeignKey("SowFoodCompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("SowFoodCompany");
 
@@ -2560,7 +2399,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SowFoodCompany", "SowFoodCompany")
                         .WithMany("SowFoodProducts")
                         .HasForeignKey("SowFoodCompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("SowFoodCompany");
@@ -2571,7 +2410,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SowFoodCompanyCustomer", "SowFoodCompanyCustomer")
                         .WithMany("SowFoodCompanySalesRecords")
                         .HasForeignKey("SowFoodCompanyCustomerId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("SowFoodCompany", null)
                         .WithMany("SowFoodSalesRecords")
@@ -2580,17 +2419,17 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SowFoodCompanyProductionItem", "SowFoodCompanyProductItem")
                         .WithMany()
                         .HasForeignKey("SowFoodCompanyProductItemId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("SowFoodCompanyShelfItem", "SowFoodCompanyShelfItem")
                         .WithMany()
                         .HasForeignKey("SowFoodCompanyShelfItemId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("SowFoodCompanyStaff", "SowFoodCompanyStaff")
                         .WithMany("SowFoodCompanySalesRecords")
                         .HasForeignKey("SowFoodCompanyStaffId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("SowFoodCompanyCustomer");
@@ -2607,7 +2446,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SowFoodCompany", "SowFoodCompany")
                         .WithMany("SowFoodShelfItems")
                         .HasForeignKey("SowFoodCompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("SowFoodCompany");
@@ -2618,13 +2457,13 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SowFoodCompany", "SowFoodCompany")
                         .WithMany("Staff")
                         .HasForeignKey("SowFoodCompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("SowFoodCompany");
 
@@ -2636,13 +2475,13 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SowFoodCompanyStaff", "SowFoodCompanyStaff")
                         .WithMany()
                         .HasForeignKey("SowFoodCompanyStaffId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("SowFoodCompanyStaff");
 
@@ -2654,12 +2493,12 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "ConfirmedByUser")
                         .WithMany()
                         .HasForeignKey("ConfirmedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("SowFoodCompanyStaff", "SowFoodCompanyStaff")
                         .WithMany("SowFoodCompanyStaffAttendances")
                         .HasForeignKey("SowFoodCompanyStaffId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("ConfirmedByUser");
@@ -2694,8 +2533,16 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.Navigation("Advertisements");
                 });
 
+            modelBuilder.Entity("SabiMarket.Domain.Entities.Administration.Chairman", b =>
+                {
+                    b.Navigation("Market")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.LocalGovernment", b =>
                 {
+                    b.Navigation("AssistCenterOfficers");
+
                     b.Navigation("Customers");
 
                     b.Navigation("Markets");
@@ -2708,9 +2555,6 @@ namespace SabiMarket.Infrastructure.Migrations
             modelBuilder.Entity("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", b =>
                 {
                     b.Navigation("Caretakers");
-
-                    b.Navigation("Chairman")
-                        .IsRequired();
 
                     b.Navigation("Sections");
 
@@ -2770,15 +2614,7 @@ namespace SabiMarket.Infrastructure.Migrations
                 {
                     b.Navigation("Feedbacks");
 
-                    b.Navigation("Order")
-                        .IsRequired();
-
                     b.Navigation("Orders");
-                });
-
-            modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.SubscriptionPlan", b =>
-                {
-                    b.Navigation("Subscriptions");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.Vendor", b =>

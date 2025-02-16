@@ -35,6 +35,8 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<CustomerOrderItem> CustomerOrderItems { get; set; }
         public DbSet<CustomerFeedback> CustomerFeedbacks { get; set; }
         public DbSet<Advertisement> Advertisements { get; set; }
+        public DbSet<AdvertPayment> AdvertPayments { get; set; }
+        public DbSet<AdvertisementLanguage> AdvertisementLanguage { get; set; }   
         public DbSet<AdvertisementView> AdvertisementViews { get; set; }
         public DbSet<ProductCategory> ProductCategories { get; set; }
         public DbSet<Chairman> Chairmen { get; set; }
@@ -54,7 +56,7 @@ namespace SabiMarket.Infrastructure.Data
 
         #endregion
 
-        protected override void OnModelCreating(ModelBuilder builder)
+    /*    protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
@@ -120,7 +122,7 @@ namespace SabiMarket.Infrastructure.Data
             });
             #endregion
 
-            /*           #region Market Participants Configuration
+            *//*           #region Market Participants Configuration
                        builder.Entity<Chairman>(entity =>
                        {
                            entity.HasOne(c => c.User)
@@ -230,7 +232,7 @@ namespace SabiMarket.Infrastructure.Data
 
                      // Remove any explicit configuration of Market here since it's configured in Market entity
                  });
-                 #endregion*/ // recent
+                 #endregion*//* // recent
 
             #region Market Participants Configuration
             builder.Entity<AssistCenterOfficer>(entity =>
@@ -633,7 +635,7 @@ namespace SabiMarket.Infrastructure.Data
 
             #endregion
 
-            /*  #region Waived Market Configuration
+            *//*  #region Waived Market Configuration
               builder.Entity<Vendor>(entity =>
               {
                   // Relationships
@@ -700,7 +702,7 @@ namespace SabiMarket.Infrastructure.Data
                         .HasForeignKey(oi => oi.WaivedProductId)
                         .OnDelete(DeleteBehavior.Cascade);
               });
-              #endregion*/
+              #endregion*//*
 
             #region Customer & Order Configuration
             builder.Entity<Customer>(entity =>
@@ -875,7 +877,7 @@ namespace SabiMarket.Infrastructure.Data
             });
             #endregion
 
-            /*    #region Admin Configuration
+            *//*    #region Admin Configuration
                 builder.Entity<Admin>(entity =>
                 {
                     entity.ToTable("Admins");
@@ -909,7 +911,7 @@ namespace SabiMarket.Infrastructure.Data
                           .HasForeignKey<Admin>(a => a.UserId)
                           .OnDelete(DeleteBehavior.Cascade);
                 });
-                #endregion*/
+                #endregion*//*
 
             #region AuditLog Configuration
             builder.Entity<AuditLog>(entity =>
@@ -1324,7 +1326,7 @@ namespace SabiMarket.Infrastructure.Data
 
             #endregion
 
-        }
+        }*/
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

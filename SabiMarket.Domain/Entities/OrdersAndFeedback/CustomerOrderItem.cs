@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
 
 namespace SabiMarket.Domain.Entities.OrdersAndFeedback
@@ -17,7 +18,12 @@ namespace SabiMarket.Domain.Entities.OrdersAndFeedback
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalPrice { get; set; }
 
+        [ForeignKey("OrderId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual CustomerOrder Order { get; set; }
+
+        [ForeignKey("ProductId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual WaivedProduct Product { get; set; }
     }
 

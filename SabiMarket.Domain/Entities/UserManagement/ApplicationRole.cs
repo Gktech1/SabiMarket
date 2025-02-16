@@ -1,18 +1,22 @@
 ﻿namespace SabiMarket.Domain.Entities.UserManagement
 {
     using Microsoft.AspNetCore.Identity;
+    using Microsoft.EntityFrameworkCore;
     using System.ComponentModel.DataAnnotations;
+    using System.ComponentModel.DataAnnotations.Schema;
 
+    [Table("AspNetRoles")]
     public class ApplicationRole : IdentityRole
     {
         [MaxLength(500)]
         public string Description { get; set; }
 
+        [Required]
         public bool IsActive { get; set; }
 
+        [Required]
         public DateTime CreatedAt { get; set; }
 
-        // New properties to match UI requirements
         [MaxLength(100)]
         public string CreatedBy { get; set; }
 
@@ -21,7 +25,6 @@
         [MaxLength(100)]
         public string LastModifiedBy { get; set; }
 
-        // Collection of permissions as shown in the UI
         public virtual ICollection<RolePermission> Permissions { get; set; }
 
         public ApplicationRole() : base()
@@ -35,6 +38,7 @@
         }
     }
 
+    [Table("RolePermissions")]
     public class RolePermission
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -43,35 +47,14 @@
         [MaxLength(100)]
         public string Name { get; set; }
 
+        [Required]
         public bool IsGranted { get; set; }
 
+        [Required]
         public string RoleId { get; set; }
+
+        [ForeignKey("RoleId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual ApplicationRole Role { get; set; }
     }
-
-
-    /* public class ApplicationRole : IdentityRole<string>
-     {
-         public string Description { get; set; }
-         public bool IsActive { get; set; }
-         public DateTime CreatedAt { get; set; }
-     }*/
-
-    /* public class ApplicationRole : IdentityRole 
-     {
-         public string Description { get; set; }
-         public bool IsActive { get; set; }
-         public DateTime CreatedAt { get; set; }
-
-
-         public ApplicationRole() : base()
-         {
-         }
-
-         public ApplicationRole(string roleName) : base(roleName)
-         {
-         }
-     }*/
-
-
 }

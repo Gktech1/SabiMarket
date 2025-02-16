@@ -1,4 +1,5 @@
-﻿using SabiMarket.Domain.Entities.UserManagement;
+﻿using Microsoft.EntityFrameworkCore;
+using SabiMarket.Domain.Entities.UserManagement;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -35,6 +36,8 @@ namespace SabiMarket.Domain.Entities
         public string IpAddress { get; set; }
 
         // Navigation property
+        [ForeignKey("UserId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual ApplicationUser User { get; set; }
 
         // Helper method for setting Date and Time consistently
