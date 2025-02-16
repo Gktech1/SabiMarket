@@ -12,7 +12,6 @@ public class MarketSection : BaseEntity
     public string Name { get; set; }
     public string Description { get; set; }
     public int Capacity { get; set; }
-    public bool IsActive { get; set; }
 
     // Add this property
     public string MarketId { get; set; }  // Foreign key for Market

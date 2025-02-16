@@ -1009,7 +1009,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("QRCode")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("SectionId")
                         .HasColumnType("nvarchar(450)");
@@ -1032,7 +1032,14 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("MarketId");
 
+                    b.HasIndex("QRCode")
+                        .IsUnique()
+                        .HasFilter("[QRCode] IS NOT NULL");
+
                     b.HasIndex("SectionId");
+
+                    b.HasIndex("TIN")
+                        .IsUnique();
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -1099,19 +1106,19 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.Property<string>("DeliveryAddress")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<DateTime>("OrderDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -2026,19 +2033,19 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.MarketParticipants.Caretaker", "Caretaker")
                         .WithMany("GoodBoys")
                         .HasForeignKey("CaretakerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "Market")
                         .WithMany()
                         .HasForeignKey("MarketId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("GoodBoy")
                         .HasForeignKey("GoodBoy", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Caretaker");
@@ -2141,7 +2148,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.LocalGovernment", "LocalGovernment")
                         .WithMany()
                         .HasForeignKey("LocalGovernmentId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "Market")
@@ -2152,7 +2159,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("Chairman")
                         .HasForeignKey("SabiMarket.Domain.Entities.Administration.Chairman", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("LocalGovernment");
@@ -2303,19 +2310,19 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.Administration.Chairman", "Chairman")
                         .WithMany()
                         .HasForeignKey("ChairmanId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "Market")
                         .WithMany("Caretakers")
                         .HasForeignKey("MarketId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("Caretaker")
                         .HasForeignKey("SabiMarket.Domain.Entities.MarketParticipants.Caretaker", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Chairman");
@@ -2330,23 +2337,24 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasOne("SabiMarket.Domain.Entities.MarketParticipants.Caretaker", "Caretaker")
                         .WithMany("AssignedTraders")
                         .HasForeignKey("CaretakerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.Market", "Market")
                         .WithMany("Traders")
                         .HasForeignKey("MarketId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("MarketSection", "Section")
                         .WithMany("Traders")
-                        .HasForeignKey("SectionId");
+                        .HasForeignKey("SectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
                         .WithOne("Trader")
                         .HasForeignKey("SabiMarket.Domain.Entities.MarketParticipants.Trader", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Caretaker");

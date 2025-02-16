@@ -3,6 +3,7 @@ using SabiMarket.Domain.Entities.WaiveMarketModule;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using SabiMarket.Domain.Entities.UserManagement;
+using SabiMarket.Domain.Entities.MarketParticipants;
 
 namespace SabiMarket.Domain.Entities.LocalGovernmentAndMArket
 {
@@ -27,6 +28,7 @@ namespace SabiMarket.Domain.Entities.LocalGovernmentAndMArket
         public virtual ICollection<Market> Markets { get; set; }
         public virtual ICollection<Vendor> Vendors { get; set; }
         public virtual ICollection<Customer> Customers { get; set; }
+        public virtual ICollection<AssistCenterOfficer> AssistCenterOfficers { get; set; }
     }
 
 }
