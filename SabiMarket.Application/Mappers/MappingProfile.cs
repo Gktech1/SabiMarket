@@ -8,6 +8,7 @@ using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Enum;
+using static RoleResponseDto;
 
 public class MappingProfile : Profile
 {
@@ -324,6 +325,9 @@ public class MappingProfile : Profile
 
         CreateMap<UpdateGoodBoyProfileDto, ApplicationUser>();
         CreateMap<LevyPayment, LevyPaymentResponseDto>();
+
+        CreateMap<ApplicationRole, RoleResponseDto>();
+        CreateMap<RolePermission, RolePermissionDto>();
 
         CreateMap<LevyPayment, LevyPaymentResponseDto>();
 
