@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 using SabiMarket.Domain.Entities.OrdersAndFeedback;
 using SabiMarket.Domain.Entities.Supporting;
 
@@ -8,6 +9,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
     [Table("WaivedProducts")]
     public class WaivedProduct : BaseEntity
     {
+        [Required]
         public string VendorId { get; set; }
 
         [Required]
@@ -23,11 +25,15 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal WaivedPrice { get; set; }
-        public bool IsAvailbleForUrgentPurchase { get; set; }
 
+        public bool IsAvailbleForUrgentPurchase { get; set; }
         public int StockQuantity { get; set; }
+
+        [ForeignKey("VendorId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual Vendor Vendor { get; set; }
-        public virtual ICollection<ProductCategory> Categories { get; set; }
-        public virtual ICollection<CustomerOrderItem> OrderItems { get; set; }
+
+        public virtual ICollection<ProductCategory> Categories { get; set; } = new List<ProductCategory>();
+        public virtual ICollection<CustomerOrderItem> OrderItems { get; set; } = new List<CustomerOrderItem>();
     }
 }

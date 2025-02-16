@@ -1,17 +1,40 @@
-﻿namespace SabiMarket.Domain.Entities.SowFoodLinkUp
+﻿using Microsoft.EntityFrameworkCore;
+using SabiMarket.Domain.Entities;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
+
+[Table("SowFoodCompanySalesRecords")]
+public class SowFoodCompanySalesRecord : BaseEntity
 {
-    public class SowFoodCompanySalesRecord : BaseEntity
-    {
-        public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-        public decimal TotalPrice => Quantity * UnitPrice;
-        public string? SowFoodCompanyProductItemId { get; set; }
-        public SowFoodCompanyProductionItem? SowFoodCompanyProductItem { get; set; }
-        public string? SowFoodCompanyShelfItemId { get; set; }
-        public SowFoodCompanyShelfItem? SowFoodCompanyShelfItem { get; set; }
-        public string? SowFoodCompanyCustomerId { get; set; }
-        public string SowFoodCompanyStaffId { get; set; }
-        public SowFoodCompanyCustomer SowFoodCompanyCustomer { get; set; }
-        public SowFoodCompanyStaff SowFoodCompanyStaff { get; set; }
-    }
+    [Required]
+    public int Quantity { get; set; }
+
+    [Required]
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal UnitPrice { get; set; }
+
+    public decimal TotalPrice => Quantity * UnitPrice;
+
+    public string? SowFoodCompanyProductItemId { get; set; }
+    public string? SowFoodCompanyShelfItemId { get; set; }
+    public string? SowFoodCompanyCustomerId { get; set; }
+
+    [Required]
+    public string SowFoodCompanyStaffId { get; set; }
+
+    [ForeignKey("SowFoodCompanyProductItemId")]
+    [DeleteBehavior(DeleteBehavior.NoAction)]
+    public virtual SowFoodCompanyProductionItem? SowFoodCompanyProductItem { get; set; }
+
+    [ForeignKey("SowFoodCompanyShelfItemId")]
+    [DeleteBehavior(DeleteBehavior.NoAction)]
+    public virtual SowFoodCompanyShelfItem? SowFoodCompanyShelfItem { get; set; }
+
+    [ForeignKey("SowFoodCompanyCustomerId")]
+    [DeleteBehavior(DeleteBehavior.NoAction)]
+    public virtual SowFoodCompanyCustomer SowFoodCompanyCustomer { get; set; }
+
+    [ForeignKey("SowFoodCompanyStaffId")]
+    [DeleteBehavior(DeleteBehavior.NoAction)]
+    public virtual SowFoodCompanyStaff SowFoodCompanyStaff { get; set; }
 }

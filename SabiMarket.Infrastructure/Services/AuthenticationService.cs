@@ -480,7 +480,7 @@ namespace SabiMarket.Infrastructure.Services
                 // Create token
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-                var expiresAt = DateTime.UtcNow.AddDays(1);
+                var expiresAt = DateTime.UtcNow.AddMinutes(30);
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {
                     Subject = new ClaimsIdentity(claims),

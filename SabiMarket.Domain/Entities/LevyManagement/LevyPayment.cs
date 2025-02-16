@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
@@ -9,27 +11,56 @@ namespace SabiMarket.Domain.Entities.LevyManagement
     [Table("LevyPayments")]
     public class LevyPayment : BaseEntity
     {
+        [Required]
         public string ChairmanId { get; set; }
+
+        [Required]
         public string MarketId { get; set; }
+
+        [Required]
         public string TraderId { get; set; }
+
+        [Required]
+        public string GoodBoyId { get; set; }
+
+        [Required]
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
+
+        [Required]
         public PaymentPeriodEnum Period { get; set; }
+
+        [Required]
         public PaymentMethodEnum PaymentMethod { get; set; }
+
+        [Required]
         public PaymentStatusEnum PaymentStatus { get; set; }
+
         public string TransactionReference { get; set; }
         public bool HasIncentive { get; set; }
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal? IncentiveAmount { get; set; }
-        public DateTime PaymentDate { get; set; }
-        public string Notes { get; set; }
-        public virtual Trader Trader { get; set; }
-        public virtual Market Market { get; set; }
-        public string GoodBoyId { get; set; }
-        public DateTime CollectionDate { get; set; }
-        public string QRCodeScanned { get; set; }
-        public virtual GoodBoy GoodBoy { get; set; }
-        public virtual Chairman Chairman { get; set; }  
 
+        public DateTime PaymentDate { get; set; }
+        public DateTime CollectionDate { get; set; }
+        public string Notes { get; set; }
+        public string QRCodeScanned { get; set; }
+
+        [ForeignKey("TraderId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
+        public virtual Trader Trader { get; set; }
+
+        [ForeignKey("MarketId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
+        public virtual Market Market { get; set; }
+
+        [ForeignKey("GoodBoyId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
+        public virtual GoodBoy GoodBoy { get; set; }
+
+        [ForeignKey("ChairmanId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
+        public virtual Chairman Chairman { get; set; }
     }
 }

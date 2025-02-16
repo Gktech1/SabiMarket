@@ -10,8 +10,8 @@ namespace SabiMarket.Domain.Entities.AdvertisementModule
         public string UserId { get; set; }
         public string IPAddress { get; set; }
         public DateTime ViewedAt { get; set; }
-
         public virtual Advertisement Advertisement { get; set; }
         public virtual ApplicationUser User { get; set; }
     }
+
 }

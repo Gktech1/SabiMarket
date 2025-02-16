@@ -17,6 +17,12 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<bool>> ReactivateAdmin(string adminId);
         Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogResponseDto>>>> GetAdminAuditLogs(
             string adminId, DateTime? startDate, DateTime? endDate, PaginationFilter paginationFilter);
+        Task<BaseResponse<bool>> DeleteRole(string roleId);
+        Task<BaseResponse<RoleResponseDto>> UpdateRole(string roleId, UpdateRoleRequestDto updateRoleDto);
+        Task<BaseResponse<RoleResponseDto>> CreateRole(CreateRoleRequestDto createRoleDto);
+        Task<BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>> GetRoles(
+       RoleFilterRequestDto filterDto, PaginationFilter paginationFilter);
+        Task<BaseResponse<RoleResponseDto>> GetRoleById(string roleId);
     }
 }
 

@@ -4,7 +4,6 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities;
-using SabiMarket.Domain.Entities.SowFoodLinkUp;
 using SabiMarket.Domain.Exceptions;
 using SabiMarket.Infrastructure.Utilities;
 
@@ -81,7 +80,7 @@ namespace SabiMarket.Infrastructure.Services.SowFoodLinkUpServices
                 return ResponseFactory.Fail<TraderDetailsDto>(ex, "An unexpected error occurred");
             }
         }
-        public async Task<BaseResponse<string>> CreateStaff(CreateSowFoodStaffDto dto)
+     /*   public async Task<BaseResponse<string>> CreateStaff(CreateSowFoodStaffDto dto)
         {
 
             var subscription = new SowFoodCompanyStaff
@@ -99,7 +98,7 @@ namespace SabiMarket.Infrastructure.Services.SowFoodLinkUpServices
             _repositoryManager.StaffRepository.AddStaff(subscription);
             await _repositoryManager.SaveChangesAsync();
             return ResponseFactory.Success("Success", "Subscription Created Successfully.");
-        }
+        }*/
 
         public async Task<BaseResponse<PaginatorDto<IEnumerable<SowFoodCompanyStaff>>>> GetAllStaffs(PaginationFilter filter)
         {

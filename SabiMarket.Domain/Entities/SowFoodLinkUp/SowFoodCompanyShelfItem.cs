@@ -1,13 +1,29 @@
-﻿namespace SabiMarket.Domain.Entities.SowFoodLinkUp
-{
-    public class SowFoodCompanyShelfItem : BaseEntity
-    {
-        public string Name { get; set; }
-        public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-        public string ImageUrl { get; set; }
-        public string SowFoodCompanyId { get; set; }
-        public SowFoodCompany SowFoodCompany { get; set; }
+﻿using Microsoft.EntityFrameworkCore;
+using SabiMarket.Domain.Entities;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-    }
+[Table("SowFoodCompanyShelfItems")]
+public class SowFoodCompanyShelfItem : BaseEntity
+{
+    [Required]
+    [StringLength(100)]
+    public string Name { get; set; }
+
+    [Required]
+    public int Quantity { get; set; }
+
+    [Required]
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal UnitPrice { get; set; }
+
+    public string ImageUrl { get; set; }
+
+    [Required]
+    public string SowFoodCompanyId { get; set; }
+
+    // Navigation property
+    [ForeignKey("SowFoodCompanyId")]
+    [DeleteBehavior(DeleteBehavior.NoAction)]
+    public virtual SowFoodCompany SowFoodCompany { get; set; }
 }

@@ -16,6 +16,7 @@ using SabiMarket.Infrastructure.Helpers;
 using SabiMarket.Infrastructure.Utilities;
 using ValidationException = FluentValidation.ValidationException;
 using System.Text.Json;
+using SabiMarket.Application.Validators;
 
 public class AdminService : IAdminService
 {
@@ -27,6 +28,8 @@ public class AdminService : IAdminService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IValidator<CreateAdminRequestDto> _createAdminValidator;
     private readonly IValidator<UpdateAdminProfileDto> _updateProfileValidator;
+    private readonly IValidator<CreateRoleRequestDto> _createRoleValidator;
+    private readonly IValidator<UpdateRoleRequestDto> _updateRoleValidator;
 
     public AdminService(
         IRepositoryManager repository,
@@ -36,7 +39,8 @@ public class AdminService : IAdminService
         ICurrentUserService currentUser,
         IHttpContextAccessor httpContextAccessor,
         IValidator<CreateAdminRequestDto> createAdminValidator,
-        IValidator<UpdateAdminProfileDto> updateProfileValidator)
+        IValidator<UpdateAdminProfileDto> updateProfileValidator,
+        IValidator<CreateRoleRequestDto> createRoleValidator)
     {
         _repository = repository;
         _logger = logger;
@@ -46,6 +50,7 @@ public class AdminService : IAdminService
         _httpContextAccessor = httpContextAccessor;
         _createAdminValidator = createAdminValidator;
         _updateProfileValidator = updateProfileValidator;
+        _createRoleValidator = createRoleValidator;
     }
 
     private string GetCurrentIpAddress()
@@ -656,251 +661,275 @@ public class AdminService : IAdminService
         }
     }
 
-    /* public async Task<BaseResponse<bool>> UpdateDashboardAccess(string adminId, UpdateAdminAccessDto accessDto)
-     {
-         try
-         {
-             var admin = await _repository.AdminRepository.GetAdminByIdAsync(adminId, trackChanges: true);
-             if (admin == null)
-             {
-                 return ResponseFactory.Fail<bool>(
-                     new NotFoundException("Admin not found"),
-                     "Admin not found");
-             }
-
-             // Check if current user has permission to update access
-             var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(_currentUser.UserId, trackChanges: false);
-             if (currentAdmin == null || !currentAdmin.HasRoleManagementAccess)
-             {
-                 return ResponseFactory.Fail<bool>(
-                     new UnauthorizedException("Access denied"),
-                     "You don't have permission to update admin access");
-             }
-
-             // Update access permissions
-             admin.HasDashboardAccess = accessDto.HasDashboardAccess;
-             admin.HasRoleManagementAccess = accessDto.HasRoleManagementAccess;
-             admin.HasTeamManagementAccess = accessDto.HasTeamManagementAccess;
-             admin.HasAuditLogAccess = accessDto.HasAuditLogAccess;
-
-             _repository.AdminRepository.UpdateAdmin(admin);
-
-             // Create audit log
-             var auditLog = new AuditLog
-             {
-                 UserId = _currentUser.UserId,
-                 Activity = "Updated admin access permissions",
-                 Module = "Admin Management",
-                 Details = $"Updated access permissions for admin ID: {adminId}",
-                 IpAddress = _currentUser.IpAddress
-             };
-             auditLog.SetDateTime(DateTime.UtcNow);
-             _repository.AuditLogRepository.CreateAuditLog(auditLog);
-
-             await _repository.SaveChangesAsync();
-
-             return ResponseFactory.Success(true, "Admin access updated successfully");
-         }
-         catch (Exception ex)
-         {
-             _logger.LogError(ex, "Error updating admin access");
-             return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-         }
-     }
- */
-    /*public async Task<BaseResponse<bool>> DeactivateAdmin(string adminId)
+    // Role Management Methods matching UI/UX
+    public async Task<BaseResponse<RoleResponseDto>> GetRoleById(string roleId)
     {
         try
         {
-            var admin = await _repository.AdminRepository.GetAdminByIdAsync(adminId, trackChanges: true);
-            if (admin == null)
+            var role = await _repository.AdminRepository.GetRoleByIdAsync(roleId, trackChanges: false);
+            if (role == null)
             {
-                return ResponseFactory.Fail<bool>(
-                    new NotFoundException("Admin not found"),
-                    "Admin not found");
+                await CreateAuditLog(
+                    "Role Lookup Failed",
+                    $"Failed to find role with ID: {roleId}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<RoleResponseDto>(
+                    new NotFoundException("Role not found"),
+                    "Role not found");
             }
 
-            // Check if current user has permission
-            var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(_currentUser.UserId, trackChanges: false);
-            if (currentAdmin == null || !currentAdmin.HasRoleManagementAccess)
-            {
-                return ResponseFactory.Fail<bool>(
-                    new UnauthorizedException("Access denied"),
-                    "You don't have permission to deactivate admins");
-            }
+            var roleDto = _mapper.Map<RoleResponseDto>(role);
 
-            // Get associated user
-            var user = await _userManager.FindByIdAsync(admin.UserId);
-            if (user == null)
-            {
-                return ResponseFactory.Fail<bool>(
-                    new NotFoundException("User not found"),
-                    "Associated user not found");
-            }
+            await CreateAuditLog(
+                "Role Lookup",
+                $"Retrieved role details for ID: {roleId}",
+                "Role Management"
+            );
 
-            // Deactivate user
-            user.IsActive = false;
-            var updateResult = await _userManager.UpdateAsync(user);
-            if (!updateResult.Succeeded)
-            {
-                return ResponseFactory.Fail<bool>(
-                    new ValidationException(updateResult.Errors.Select(e => e.Description)),
-                    "Failed to deactivate admin");
-            }
-
-            // Create audit log
-            var auditLog = new AuditLog
-            {
-                UserId = _currentUser.UserId,
-                Activity = "Deactivated admin account",
-                Module = "Admin Management",
-                Details = $"Deactivated admin account for {user.Email}",
-                IpAddress = _currentUser.IpAddress
-            };
-            auditLog.SetDateTime(DateTime.UtcNow);
-            _repository.AuditLogRepository.CreateAuditLog(auditLog);
-
-            await _repository.SaveChangesAsync();
-
-            return ResponseFactory.Success(true, "Admin deactivated successfully");
+            return ResponseFactory.Success(roleDto, "Role retrieved successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deactivating admin");
-            return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+            _logger.LogError(ex, "Error retrieving role");
+            return ResponseFactory.Fail<RoleResponseDto>(ex, "An unexpected error occurred");
         }
     }
-
-    public async Task<BaseResponse<bool>> ReactivateAdmin(string adminId)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>> GetRoles(
+        RoleFilterRequestDto filterDto, PaginationFilter paginationFilter)
     {
         try
         {
-            var admin = await _repository.AdminRepository.GetAdminByIdAsync(adminId, trackChanges: true);
-            if (admin == null)
-            {
-                return ResponseFactory.Fail<bool>(
-                    new NotFoundException("Admin not found"),
-                    "Admin not found");
-            }
+            // Default to 10 rows per page as shown in UI
+            paginationFilter.PageSize = paginationFilter.PageSize <= 0 ? 10 : paginationFilter.PageSize;
 
-            // Check if current user has permission
-            var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(_currentUser.UserId, trackChanges: false);
-            if (currentAdmin == null || !currentAdmin.HasRoleManagementAccess)
-            {
-                return ResponseFactory.Fail<bool>(
-                    new UnauthorizedException("Access denied"),
-                    "You don't have permission to reactivate admins");
-            }
+            var query = _repository.AdminRepository.GetFilteredRolesQuery(filterDto);
+            var paginatedRoles = await query.Paginate(paginationFilter);
 
-            // Get associated user
-            var user = await _userManager.FindByIdAsync(admin.UserId);
-            if (user == null)
-            {
-                return ResponseFactory.Fail<bool>(
-                    new NotFoundException("User not found"),
-                    "Associated user not found");
-            }
+            var roleDtos = _mapper.Map<IEnumerable<RoleResponseDto>>(paginatedRoles.PageItems);
 
-            // Reactivate user
-            user.IsActive = true;
-            var updateResult = await _userManager.UpdateAsync(user);
-            if (!updateResult.Succeeded)
+            // Format response to match UI display
+            var result = new PaginatorDto<IEnumerable<RoleResponseDto>>
             {
-                return ResponseFactory.Fail<bool>(
-                    new ValidationException(updateResult.Errors.Select(e => e.Description)),
-                    "Failed to reactivate admin");
-            }
-
-            // Create audit log
-            var auditLog = new AuditLog
-            {
-                UserId = _currentUser.UserId,
-                Activity = "Reactivated admin account",
-                Module = "Admin Management",
-                Details = $"Reactivated admin account for {user.Email}",
-                IpAddress = _currentUser.IpAddress
+                PageItems = roleDtos,
+                PageSize = paginatedRoles.PageSize,
+                CurrentPage = paginatedRoles.CurrentPage,
+                NumberOfPages = paginatedRoles.NumberOfPages
             };
-            auditLog.SetDateTime(DateTime.UtcNow);
-            _repository.AuditLogRepository.CreateAuditLog(auditLog);
 
-            await _repository.SaveChangesAsync();
+            await CreateAuditLog(
+                "Role List Query",
+                $"Retrieved role list - Page {paginationFilter.PageNumber}, " +
+                $"Size {paginationFilter.PageSize}, Search: {filterDto.SearchTerm ?? "none"}",
+                "Role Management"
+            );
 
-            return ResponseFactory.Success(true, "Admin reactivated successfully");
+            return ResponseFactory.Success(result, "Roles retrieved successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error reactivating admin");
-            return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-        }
-    }
-
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<AdminResponseDto>>>> GetAdmins(
-     AdminFilterRequestDto filterDto, PaginationFilter paginationFilter)
-    {
-        try
-        {
-            var query = _repository.AdminRepository.GetFilteredAdminsQuery(filterDto);
-            var paginatedAdmins = await query.Paginate(paginationFilter);
-
-            var adminDtos = _mapper.Map<IEnumerable<AdminResponseDto>>(paginatedAdmins.PageItems);
-            var result = new PaginatorDto<IEnumerable<AdminResponseDto>>
-            {
-                PageItems = adminDtos,
-                PageSize = paginatedAdmins.PageSize,
-                CurrentPage = paginatedAdmins.CurrentPage,
-                NumberOfPages = paginatedAdmins.NumberOfPages
-            };
-
-            return ResponseFactory.Success(result, "Admins retrieved successfully");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving admins");
-            return ResponseFactory.Fail<PaginatorDto<IEnumerable<AdminResponseDto>>>(
+            _logger.LogError(ex, "Error retrieving roles");
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<RoleResponseDto>>>(
                 ex, "An unexpected error occurred");
         }
     }
 
-    // Update GetAdminAuditLogs method:
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogResponseDto>>>> GetAdminAuditLogs(
-        string adminId, DateTime? startDate, DateTime? endDate, PaginationFilter paginationFilter)
+    public async Task<BaseResponse<RoleResponseDto>> CreateRole(CreateRoleRequestDto createRoleDto)
     {
         try
         {
-            var admin = await _repository.AdminRepository.GetAdminByIdAsync(adminId, trackChanges: false);
-            if (admin == null)
+            var validationResult = await _createRoleValidator.ValidateAsync(createRoleDto);
+            if (!validationResult.IsValid)
             {
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<AuditLogResponseDto>>>(
-                    new NotFoundException("Admin not found"),
-                    "Admin not found");
+                await CreateAuditLog(
+                    "Role Creation Failed",
+                    $"Validation failed for new role creation: {createRoleDto.Name}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<RoleResponseDto>(
+                    new ValidationException(validationResult.Errors),
+                    "Validation failed");
             }
 
-            if (!admin.HasAuditLogAccess)
+            // Check if role exists
+            if (await _repository.AdminRepository.RoleExistsAsync(createRoleDto.Name))
             {
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<AuditLogResponseDto>>>(
-                    new UnauthorizedException("Access denied"),
-                    "You don't have access to audit logs");
+                await CreateAuditLog(
+                    "Role Creation Failed",
+                    $"Role name already exists: {createRoleDto.Name}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<RoleResponseDto>("Role name already exists");
             }
 
-            var query = _repository.AuditLogRepository.GetAdminAuditLogsQuery(adminId, startDate, endDate);
-            var paginatedLogs = await query.Paginate(paginationFilter);
-
-            var logDtos = _mapper.Map<IEnumerable<AuditLogResponseDto>>(paginatedLogs.PageItems);
-            var result = new PaginatorDto<IEnumerable<AuditLogResponseDto>>
+            // Create role with UI-specified permissions
+            var role = new ApplicationRole
             {
-                PageItems = logDtos,
-                PageSize = paginatedLogs.PageSize,
-                CurrentPage = paginatedLogs.CurrentPage,
-                NumberOfPages = paginatedLogs.NumberOfPages
+                Id = Guid.NewGuid().ToString(),
+                Name = createRoleDto.Name,
+                NormalizedName = createRoleDto.Name.ToUpper(),
+                CreatedBy = _currentUser.GetUserId(),
+                LastModifiedBy = _currentUser.GetUserId(),
+                CreatedAt = DateTime.UtcNow,
+                LastModifiedAt = DateTime.UtcNow,
+                IsActive = true,
+                Permissions = createRoleDto.Permissions.Select(p => new RolePermission
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Name = p,
+                    IsGranted = true
+                }).ToList()
             };
 
-            return ResponseFactory.Success(result, "Audit logs retrieved successfully");
+            await _repository.AdminRepository.CreateRoleAsync(role);
+            await _repository.SaveChangesAsync();
+
+            await CreateAuditLog(
+                "Created Role",
+                $"Created role {role.Name} with permissions: {string.Join(", ", createRoleDto.Permissions)}",
+                "Role Management"
+            );
+
+            var responseDto = _mapper.Map<RoleResponseDto>(role);
+            return ResponseFactory.Success(responseDto, "Role created successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving admin audit logs");
-            return ResponseFactory.Fail<PaginatorDto<IEnumerable<AuditLogResponseDto>>>(
-                ex, "An unexpected error occurred");
+            _logger.LogError(ex, "Error creating role");
+            return ResponseFactory.Fail<RoleResponseDto>(ex, "An unexpected error occurred");
         }
-    }*/
+    }
+
+    public async Task<BaseResponse<RoleResponseDto>> UpdateRole(string roleId, UpdateRoleRequestDto updateRoleDto)
+    {
+        try
+        {
+            var validationResult = await _updateRoleValidator.ValidateAsync(updateRoleDto);
+            if (!validationResult.IsValid)
+            {
+                await CreateAuditLog(
+                    "Role Update Failed",
+                    $"Validation failed for role update ID: {roleId}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<RoleResponseDto>(
+                    new ValidationException(validationResult.Errors),
+                    "Validation failed");
+            }
+
+            var role = await _repository.AdminRepository.GetRoleByIdAsync(roleId, trackChanges: true);
+            if (role == null)
+            {
+                await CreateAuditLog(
+                    "Role Update Failed",
+                    $"Role not found for ID: {roleId}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<RoleResponseDto>(
+                    new NotFoundException("Role not found"),
+                    "Role not found");
+            }
+
+            // Check for duplicate name
+            if (await _repository.AdminRepository.RoleExistsAsync(updateRoleDto.Name, roleId))
+            {
+                await CreateAuditLog(
+                    "Role Update Failed",
+                    $"Role name already exists: {updateRoleDto.Name}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<RoleResponseDto>("Role name already exists");
+            }
+
+            // Track changes for audit
+            var originalPermissions = role.Permissions.Select(p => p.Name).ToList();
+            var addedPermissions = updateRoleDto.Permissions.Except(originalPermissions).ToList();
+            var removedPermissions = originalPermissions.Except(updateRoleDto.Permissions).ToList();
+
+            // Update role properties
+            role.Name = updateRoleDto.Name;
+            role.NormalizedName = updateRoleDto.Name.ToUpper();
+            role.LastModifiedBy = _currentUser.GetUserId();
+            role.LastModifiedAt = DateTime.UtcNow;
+
+            // Update permissions
+            role.Permissions.Clear();
+            role.Permissions = updateRoleDto.Permissions.Select(p => new RolePermission
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = p,
+                IsGranted = true
+            }).ToList();
+
+            _repository.AdminRepository.UpdateRole(role);
+            await _repository.SaveChangesAsync();
+
+            var changes = new List<string>();
+            if (addedPermissions.Any())
+                changes.Add($"Added permissions: {string.Join(", ", addedPermissions)}");
+            if (removedPermissions.Any())
+                changes.Add($"Removed permissions: {string.Join(", ", removedPermissions)}");
+
+            await CreateAuditLog(
+                "Updated Role",
+                $"Updated role {role.Name}. Changes: {string.Join("; ", changes)}",
+                "Role Management"
+            );
+
+            var responseDto = _mapper.Map<RoleResponseDto>(role);
+            return ResponseFactory.Success(responseDto, "Role updated successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating role");
+            return ResponseFactory.Fail<RoleResponseDto>(ex, "An unexpected error occurred");
+        }
+    }
+
+    public async Task<BaseResponse<bool>> DeleteRole(string roleId)
+    {
+        try
+        {
+            var role = await _repository.AdminRepository.GetRoleByIdAsync(roleId, trackChanges: true);
+            if (role == null)
+            {
+                await CreateAuditLog(
+                    "Role Deletion Failed",
+                    $"Role not found for ID: {roleId}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<bool>(
+                    new NotFoundException("Role not found"),
+                    "Role not found");
+            }
+
+            // Check if role is in use
+            var usersInRole = await _userManager.GetUsersInRoleAsync(role.Name);
+            if (usersInRole.Any())
+            {
+                await CreateAuditLog(
+                    "Role Deletion Failed",
+                    $"Role {role.Name} is still assigned to users",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<bool>("Cannot delete role as it is assigned to users");
+            }
+
+            _repository.AdminRepository.DeleteRole(role);
+            await _repository.SaveChangesAsync();
+
+            await CreateAuditLog(
+                "Deleted Role",
+                $"Deleted role {role.Name}",
+                "Role Management"
+            );
+
+            return ResponseFactory.Success(true, "Role deleted successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting role");
+            return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+        }
+    }
 }

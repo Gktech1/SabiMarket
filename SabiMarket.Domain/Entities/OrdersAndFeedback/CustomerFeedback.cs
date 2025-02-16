@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
 
 namespace SabiMarket.Domain.Entities.OrdersAndFeedback
@@ -14,7 +15,12 @@ namespace SabiMarket.Domain.Entities.OrdersAndFeedback
         public int Rating { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        [ForeignKey("CustomerId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual Customer Customer { get; set; }
+
+        [ForeignKey("VendorId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual Vendor Vendor { get; set; }
     }
 }

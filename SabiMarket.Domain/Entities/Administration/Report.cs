@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 
 namespace SabiMarket.Domain.Entities
@@ -39,6 +40,7 @@ namespace SabiMarket.Domain.Entities
         public int TotalCaretakers { get; set; }
 
         // Navigation property
+        [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual Market Market { get; set; }
     }
 }
