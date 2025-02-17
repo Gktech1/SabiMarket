@@ -15,6 +15,7 @@ using SabiMarket.Infrastructure.Repositories;
 using SabiMarket.Infrastructure.Services;
 using SabiMarket.Infrastructure.Helpers;
 using SabiMarket.API.ServiceExtensions;
+using SabiMarket.Application.IServices;
 
 public static class ServiceCollectionExtensions
 {
@@ -60,6 +61,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordValidator>();
         services.AddScoped<IValidator<CreateGoodBoyDto>, CreateGoodBoyValidator>();
         services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordValidator>();
+        services.AddScoped<IValidator<CreateAdminRequestDto>, CreateAdminRequestValidator>();
+        services.AddScoped<IValidator<UpdateAdminProfileDto>, UpdateAdminProfileValidator>();
+        services.AddScoped<IValidator<CreateRoleRequestDto>, CreateRoleRequestValidator>();
+        services.AddScoped<IValidator<UpdateRoleRequestDto>, UpdateRoleRequestValidator>();  // Add this line
+    
+        services.AddScoped<IAdminService, AdminService>();
+        services.AddAutoMapper(typeof(MappingProfile));
+        // Or if you have multiple profiles:
+        services.AddAutoMapper(typeof(Program).Assembly);
         // Current approach - easily replaceable
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
