@@ -158,8 +158,7 @@ public class AdminController : ControllerBase
         return Ok(response);
     }
 
-    // Added Role Management Endpoints
-    [HttpGet("roles/{roleId}")]
+    [HttpGet("get-roles/{roleId}")]
     [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status500InternalServerError)]
@@ -172,21 +171,38 @@ public class AdminController : ControllerBase
         }
         return Ok(response);
     }
-
-    [HttpGet("roles")]
+    
+    /// <summary>
+    /// Retrieves a paginated list of roles with optional filtering
+    /// </summary>
+    /// <param name="filter">Filter criteria for roles</param>
+    /// <param name="pagination">Pagination parameters</param>
+    /// <returns>Paginated list of roles</returns>
+    [HttpGet("get-roles")]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetRoles([FromQuery] RoleFilterRequestDto filter, [FromQuery] PaginationFilter pagination)
+    public async Task<IActionResult> GetRoles(
+        [FromQuery] RoleFilterRequestDto filter,
+        [FromQuery] PaginationFilter pagination)
     {
-        var response = await _adminService.GetRoles(filter, pagination);
-        if (!response.IsSuccessful)
-        {
-            return StatusCode(response.Error.StatusCode, response);
-        }
-        return Ok(response);
+            _logger.LogInformation("Getting roles with filter: {@Filter}, pagination: {@Pagination}",
+                filter, pagination);
+
+            var response = await _adminService.GetRoles(filter, pagination);
+
+            if (!response.IsSuccessful)
+            {
+                _logger.LogWarning("Failed to get roles: {ErrorMessage}", response.Message);
+                return StatusCode(response.Error.StatusCode, response);
+            }
+
+            return Ok(response);
     }
 
-    [HttpPost("roles")]
+    [HttpPost("create-roles")]
     [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<RoleResponseDto>), StatusCodes.Status500InternalServerError)]
