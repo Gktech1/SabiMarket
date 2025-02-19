@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Localization;
+using SabiMarket.Domain.Enum;
 
 namespace SabiMarket.Application.DTOs.Requests
 {
@@ -31,6 +32,8 @@ namespace SabiMarket.Application.DTOs.Requests
         public string BusinessType { get; set; }
         public string BusinessDescription { get; set; }
         public int LocalGovernmentId { get; set; }
+        public string? Currency { get; set; }
+        public VendorTypeEnum  VendorTypeEnum { get; set; } 
     }
 
     public class CustomerDetailsDto

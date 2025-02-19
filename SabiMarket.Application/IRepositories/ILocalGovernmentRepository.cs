@@ -1,4 +1,5 @@
 ﻿using SabiMarket.Application.DTOs;
+using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 
@@ -18,5 +19,14 @@ namespace SabiMarket.Infrastructure.Repositories
         void CreateLocalGovernment(LocalGovernment localGovernment);
         void UpdateLocalGovernment(LocalGovernment localGovernment);
         void DeleteLocalGovernment(LocalGovernment localGovernment);
+        IQueryable<LocalGovernment> GetFilteredLGAsQuery(LGAFilterRequestDto filterDto);
+        Task<PaginatorDto<IEnumerable<LocalGovernment>>> GetLocalGovernmentAreas(
+     string searchTerm,
+     string officerName,  // Changed from chairmanName to officerName
+     bool? isActive,
+     string state,
+     string orderBy,
+     bool? isDescending,
+     PaginationFilter paginationFilter);
     }
 }

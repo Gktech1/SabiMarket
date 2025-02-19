@@ -88,53 +88,127 @@ namespace SabiMarket.Infrastructure.Services
             await _repository.SaveChangesAsync();
         }
 
-        /* public async Task<BaseResponse<PaginatorDto<LGAResponseDto>>> GetLocalGovernmentAreas(
-           LGAFilterRequestDto filterDto,
-           PaginationFilter paginationFilter)
+        // Search Implementation
+        /* public async Task<BaseResponse<PaginatorDto<IEnumerable<LocalGovernmentAreaDto>>>> SearchLocalGovernments(
+             LocalGovernmentSearchRequestDto searchRequest)
          {
              try
              {
-                 var query = _repository.ChairmanRepository.GetFilteredLGAsQuery(filterDto);
+                 var query = _repository.AdminRepository.GetLocalGovernmentsQuery(searchRequest.SearchTerm);
 
-                 query = query
-                     .Include(lga => lga.Markets)
-                     .Include(lga => lga.Users)
-                         .ThenInclude(u => u.Chairman);
+                 var paginatedResult = await query.Paginate(new PaginationFilter(
+                     searchRequest.PageNumber,
+                     searchRequest.PageSize));
 
-                 var paginatedLGAs = await query.Paginate(paginationFilter);
+                 var lgaDtos = paginatedResult.PageItems.Select(MapToLocalGovernmentDto).ToList();
 
-                 // Map items individually to ensure proper mapping
-                 var lgaDtos = new List<LGAResponseDto>();
-                 foreach (var lga in paginatedLGAs.PageItems)
-                 {
-                     var dto = _mapper.Map<LGAResponseDto>(lga);
-                     lgaDtos.Add(dto);
-                 }
-
-                 var result = new PaginatorDto<LGAResponseDto>
+                 var result = new PaginatorDto<IEnumerable<LocalGovernmentAreaDto>>
                  {
                      PageItems = lgaDtos,
-                     PageSize = paginatedLGAs.PageSize,
-                     CurrentPage = paginatedLGAs.CurrentPage,
-                     NumberOfPages = paginatedLGAs.NumberOfPages
+                     PageSize = paginatedResult.PageSize,
+                     CurrentPage = paginatedResult.CurrentPage,
+                     NumberOfPages = paginatedResult.NumberOfPages
                  };
 
                  await CreateAuditLog(
-                     "LGA List Query",
-                     $"Retrieved LGA list - Page {paginationFilter.PageNumber}, " +
-                     $"Size {paginationFilter.PageSize}, Filters: {JsonSerializer.Serialize(filterDto)}",
-                     "LGA Query"
+                     "LGA Search",
+                     $"Searched LGAs with term: {searchRequest.SearchTerm ?? "none"}",
+                     "LGA Management"
                  );
 
-                 return ResponseFactory.Success(result, "LGAs retrieved successfully");
+                 return ResponseFactory.Success(result, "Local governments retrieved successfully");
              }
              catch (Exception ex)
              {
-                 _logger.LogError(ex, "Error retrieving LGAs: {ErrorMessage}", ex.Message);
-                 return ResponseFactory.Fail<PaginatorDto<LGAResponseDto>>(
-                     ex, "An unexpected error occurred while retrieving LGAs");
+                 _logger.LogError(ex,
+                     "Error searching local governments. SearchTerm: {SearchTerm}, Page: {PageNumber}",
+                     searchRequest.SearchTerm,
+                     searchRequest.PageNumber);
+                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<LocalGovernmentAreaDto>>>(
+                     ex, "An unexpected error occurred");
              }
          }*/
+
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>> GetLocalGovernmentAreas(
+         LGAFilterRequestDto filterDto,
+         PaginationFilter paginationFilter)
+        {
+            try
+            {
+                var query = _repository.LocalGovernmentRepository.GetFilteredLGAsQuery(filterDto);
+
+                // Get paginated results using your existing Paginate extension method
+                var paginatedLGAs = await query.Paginate(paginationFilter);
+
+                // Map the IEnumerable<LocalGovernment> to IEnumerable<LGAResponseDto>
+                var lgaDtos = paginatedLGAs.PageItems.Select(lga => _mapper.Map<LGAResponseDto>(lga));
+
+                // Create new PaginatorDto with mapped DTOs
+                var result = new PaginatorDto<IEnumerable<LGAResponseDto>>
+                {
+                    PageItems = lgaDtos,
+                    PageSize = paginatedLGAs.PageSize,
+                    CurrentPage = paginatedLGAs.CurrentPage,
+                    NumberOfPages = paginatedLGAs.NumberOfPages
+                };
+
+                await CreateAuditLog(
+                    "LGA List Query",
+                    $"Retrieved LGA list - Page {paginationFilter.PageNumber}, " +
+                    $"Size {paginationFilter.PageSize}, Filters: {JsonSerializer.Serialize(filterDto)}",
+                    "LGA Query"
+                );
+
+                return ResponseFactory.Success(result, "LGAs retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving LGAs: {ErrorMessage}", ex.Message);
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<LGAResponseDto>>>(
+                    ex, "An unexpected error occurred while retrieving LGAs");
+            }
+        }
+
+        public async Task<BaseResponse<LGAResponseDto>> GetLocalGovernmentById(string id)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    return ResponseFactory.Fail<LGAResponseDto>(
+                        new BadRequestException("Local Government ID is required"),
+                        "Invalid ID provided");
+                }
+
+                var localGovernment = await _repository.LocalGovernmentRepository
+                    .GetLocalGovernmentById(id, trackChanges: false);
+
+                if (localGovernment == null)
+                {
+                    return ResponseFactory.Fail<LGAResponseDto>(
+                        new NotFoundException($"Local Government with ID {id} was not found"),
+                        "Local Government not found");
+                }
+
+                var lgaDto = _mapper.Map<LGAResponseDto>(localGovernment);
+
+                await CreateAuditLog(
+                    "LGA Details Query",
+                    $"Retrieved LGA details for ID: {id}",
+                    "LGA Query"
+                );
+
+                return ResponseFactory.Success(lgaDto, "Local Government retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving Local Government with ID {Id}: {ErrorMessage}",
+                    id, ex.Message);
+
+                return ResponseFactory.Fail<LGAResponseDto>(
+                    ex, "An unexpected error occurred while retrieving the Local Government");
+            }
+        }
         public async Task<BaseResponse<ChairmanResponseDto>> GetChairmanById(string chairmanId)
         {
             var correlationId = Guid.NewGuid().ToString();

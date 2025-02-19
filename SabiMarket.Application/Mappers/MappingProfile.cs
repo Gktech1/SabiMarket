@@ -259,7 +259,7 @@ public class MappingProfile : Profile
         .ForMember(dest => dest.TransactionReference, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
         .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => PaymentStatusEnum.Paid));
 
-        // Main RoleResponseDto mapping
+        /*// Main RoleResponseDto mapping
         CreateMap<ApplicationRole, RoleResponseDto>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
@@ -287,110 +287,27 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy))
             .ForMember(dest => dest.LastModifiedAt, opt => opt.MapFrom(src => src.LastModifiedAt))
             .ForMember(dest => dest.LastModifiedBy, opt => opt.MapFrom(src => src.LastModifiedBy));
+*/
+  
 
-        CreateMap<ApplicationRole, RoleResponseDto>()
-                .AfterMap((src, dest) =>
-                {
-                    // Explicitly populate AllPermissions
-                    dest.AllPermissions = src.Permissions?
-                        .Where(p => p.IsGranted)
-                        .Select(p => p.Name)
-                        .ToList() ?? new List<string>();
-
-                    // VisiblePermissions and AdditionalPermissionsCount will be computed automatically
-                    // since they are get-only properties based on AllPermissions
-                });
-
-        // For debugging purposes, you can add this test mapping
-        CreateMap<RolePermission, string>()
-            .ConvertUsing(rp => rp.Name);
-        // RolePermissionDto mapping
-        CreateMap<RolePermission, RoleResponseDto.RolePermissionDto>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-            .ForMember(dest => dest.IsGranted, opt => opt.MapFrom(src => src.IsGranted));
-
-        // AdminRoleResponseDto mapping
-        CreateMap<ApplicationRole, RoleResponseDto.AdminRoleResponseDto>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
-            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
-            .ForMember(dest => dest.Permissions, opt => opt.MapFrom(src =>
-                src.Permissions != null
-                    ? src.Permissions
-                        .Where(p => p.IsGranted)
-                        .Select(p => p.Name)
-                        .ToList()
-                    : new List<string>()));
-
-        /* // Main RoleResponseDto mapping
-         CreateMap<ApplicationRole, RoleResponseDto>()
-             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-             .ForMember(dest => dest.AllPermissions, opt => opt.MapFrom(src =>
-                 src.Permissions
-                     .Where(p => p.IsGranted)
-                     .Select(p => p.Name)
-                     .ToList()))
-             .ForMember(dest => dest.VisiblePermissions, opt => opt.Ignore()) // Computed property
-             .ForMember(dest => dest.AdditionalPermissionsCount, opt => opt.Ignore()) // Computed property
-             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
-             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-             .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy))
-             .ForMember(dest => dest.LastModifiedAt, opt => opt.MapFrom(src => src.LastModifiedAt))
-             .ForMember(dest => dest.LastModifiedBy, opt => opt.MapFrom(src => src.LastModifiedBy));
-
-         // RolePermissionDto mapping
-         CreateMap<RolePermission, RoleResponseDto.RolePermissionDto>()
-             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-             .ForMember(dest => dest.IsGranted, opt => opt.MapFrom(src => src.IsGranted));
-
-         // AdminRoleResponseDto mapping
-         CreateMap<ApplicationRole, RoleResponseDto.AdminRoleResponseDto>()
-             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
-             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
-             .ForMember(dest => dest.Permissions, opt => opt.MapFrom(src =>
-                 src.Permissions
-                     .Where(p => p.IsGranted)
-                     .Select(p => p.Name)
-                     .ToList()));
-
-         // Reverse mappings for create/update scenarios
-         CreateMap<CreateRoleRequestDto, ApplicationRole>()
-             .ForMember(dest => dest.Id, opt => opt.Ignore())
-             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-             .ForMember(dest => dest.Permissions, opt => opt.Ignore()) // Handle in service layer
-             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
-             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
-
-         CreateMap<UpdateRoleRequestDto, ApplicationRole>()
-             .ForMember(dest => dest.Id, opt => opt.Ignore())
-             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-             .ForMember(dest => dest.Permissions, opt => opt.Ignore()) // Handle in service layer
-             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
-             .ForMember(dest => dest.LastModifiedAt, opt => opt.MapFrom(src => DateTime.UtcNow));*/
-
-        /*
-                CreateMap<ApplicationRole, RoleResponseDto>()
-                      .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-                      .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-                      .ForMember(dest => dest.AllPermissions, opt => opt.MapFrom(src =>
-                          src.Permissions.Where(p => p.IsGranted).Select(p => p.Name).ToList()))
-                      .ForMember(dest => dest.VisiblePermissions, opt => opt.Ignore()) // This is computed
-                      .ForMember(dest => dest.AdditionalPermissionsCount, opt => opt.Ignore()) // This is computed
-                      .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
-                      .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-                      .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy))
-                      .ForMember(dest => dest.LastModifiedAt, opt => opt.MapFrom(src => src.LastModifiedAt))
-                      .ForMember(dest => dest.LastModifiedBy, opt => opt.MapFrom(src => src.LastModifiedBy));
-        */
-
-        CreateMap<UpdateGoodBoyProfileDto, ApplicationUser>();
-        CreateMap<LevyPayment, LevyPaymentResponseDto>();
+        CreateMap<LocalGovernment, LGAResponseDto>()
+                   .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+                   .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+                   .ForMember(dest => dest.StateId, opt => opt.MapFrom(src => src.State)) // Assuming State field contains StateId
+                   .ForMember(dest => dest.StateName, opt => opt.MapFrom(src => src.State)) // You might need to adjust this if StateName comes from a different property
+                   .ForMember(dest => dest.Code, opt => opt.MapFrom(src => src.LGA))
+                   .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true)) // Set default or map from appropriate property
+                   .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => "")) // Map from appropriate property if available
+                   .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+                   .ForMember(dest => dest.LastModifiedBy, opt => opt.MapFrom(src => "")) // Map from appropriate property if available
+                   .ForMember(dest => dest.LastModifiedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+                   // Statistics
+                   .ForMember(dest => dest.TotalMarkets, opt => opt.MapFrom(src => src.Markets.Count))
+                   .ForMember(dest => dest.ActiveMarkets, opt => opt.MapFrom(src => src.Markets.Count(m => m.IsActive)))
+                   .ForMember(dest => dest.TotalTraders, opt => opt.MapFrom(src => src.Vendors.Count))
+                   .ForMember(dest => dest.TotalRevenue, opt => opt.MapFrom(src => src.CurrentRevenue));
+    
+    CreateMap<LevyPayment, LevyPaymentResponseDto>();
 
         CreateMap<ApplicationRole, RoleResponseDto>();
         CreateMap<RolePermission, RolePermissionDto>();

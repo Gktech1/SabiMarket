@@ -730,9 +730,10 @@ public class AdminService : IAdminService
             return ResponseFactory.Fail<RoleResponseDto>(ex, "An unexpected error occurred");
         }
     }
+
     public async Task<BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>> GetRoles(
-        RoleFilterRequestDto filterDto,
-        PaginationFilter paginationFilter)
+    RoleFilterRequestDto filterDto,
+    PaginationFilter paginationFilter)
     {
         try
         {
@@ -743,10 +744,12 @@ public class AdminService : IAdminService
                     "Pagination parameters are required");
             }
 
+            // Create empty filter if null to get all records
+            filterDto ??= new RoleFilterRequestDto();
+
             const int MinPageSize = 1;
             const int DefaultPageSize = 10;
             const int MaxPageSize = 100;
-
             paginationFilter.PageSize = paginationFilter.PageSize switch
             {
                 < MinPageSize => DefaultPageSize,
@@ -763,8 +766,6 @@ public class AdminService : IAdminService
             }
 
             var paginatedRoles = await query.Paginate(paginationFilter);
-
-            // Use private mapping method
             var roleDtos = paginatedRoles.PageItems.Select(MapToRoleResponseDto).ToList();
 
             var result = new PaginatorDto<IEnumerable<RoleResponseDto>>
@@ -775,16 +776,18 @@ public class AdminService : IAdminService
                 NumberOfPages = paginatedRoles.NumberOfPages
             };
 
-            var response = ResponseFactory.Success(result, "Roles retrieved successfully");
+            // Create audit log with appropriate message based on whether search was used
+            var searchDescription = string.IsNullOrWhiteSpace(filterDto.SearchTerm)
+                ? "all roles"
+                : $"roles with search: {filterDto.SearchTerm}";
 
             await CreateAuditLog(
                 "Role List Query",
-                $"Retrieved role list - Page {paginationFilter.PageNumber}, " +
-                $"Size {paginationFilter.PageSize}, Search: {filterDto.SearchTerm ?? "none"}",
+                $"Retrieved {searchDescription} - Page {paginationFilter.PageNumber}, Size {paginationFilter.PageSize}",
                 "Role Management"
             );
 
-            return response;
+            return ResponseFactory.Success(result, "Roles retrieved successfully");
         }
         catch (Exception ex)
         {
@@ -796,7 +799,73 @@ public class AdminService : IAdminService
                 ex, "An unexpected error occurred");
         }
     }
+    /* public async Task<BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>> GetRoles(
+         RoleFilterRequestDto filterDto,
+         PaginationFilter paginationFilter)
+     {
+         try
+         {
+             if (paginationFilter == null)
+             {
+                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<RoleResponseDto>>>(
+                     new ArgumentNullException(nameof(paginationFilter)),
+                     "Pagination parameters are required");
+             }
 
+             const int MinPageSize = 1;
+             const int DefaultPageSize = 10;
+             const int MaxPageSize = 100;
+
+             paginationFilter.PageSize = paginationFilter.PageSize switch
+             {
+                 < MinPageSize => DefaultPageSize,
+                 > MaxPageSize => MaxPageSize,
+                 _ => paginationFilter.PageSize
+             };
+
+             var query = _repository.AdminRepository.GetFilteredRolesQuery(filterDto);
+             if (query == null)
+             {
+                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<RoleResponseDto>>>(
+                     new InvalidOperationException("Query could not be created"),
+                     "Failed to create roles query");
+             }
+
+             var paginatedRoles = await query.Paginate(paginationFilter);
+
+             // Use private mapping method
+             var roleDtos = paginatedRoles.PageItems.Select(MapToRoleResponseDto).ToList();
+
+             var result = new PaginatorDto<IEnumerable<RoleResponseDto>>
+             {
+                 PageItems = roleDtos,
+                 PageSize = paginatedRoles.PageSize,
+                 CurrentPage = paginatedRoles.CurrentPage,
+                 NumberOfPages = paginatedRoles.NumberOfPages
+             };
+
+             var response = ResponseFactory.Success(result, "Roles retrieved successfully");
+
+             await CreateAuditLog(
+                 "Role List Query",
+                 $"Retrieved role list - Page {paginationFilter.PageNumber}, " +
+                 $"Size {paginationFilter.PageSize}, Search: {filterDto.SearchTerm ?? "none"}",
+                 "Role Management"
+             );
+
+             return response;
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex,
+                 "Error retrieving roles. Filter: {@FilterDto}, Pagination: {@PaginationFilter}",
+                 filterDto,
+                 paginationFilter);
+             return ResponseFactory.Fail<PaginatorDto<IEnumerable<RoleResponseDto>>>(
+                 ex, "An unexpected error occurred");
+         }
+     }
+ */
     private static RoleResponseDto MapToRoleResponseDto(ApplicationRole role)
     {
         if (role == null) return null;
