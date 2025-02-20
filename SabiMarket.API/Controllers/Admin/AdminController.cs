@@ -245,4 +245,82 @@ public class AdminController : ControllerBase
         }
         return Ok(response);
     }
+
+    [HttpGet("team-members/{memberId}")]
+    [ProducesResponseType(typeof(BaseResponse<TeamMemberResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<TeamMemberResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<TeamMemberResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTeamMember(string memberId)
+    {
+        var response = await _adminService.GetTeamMemberById(memberId);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
+    }
+
+    [HttpGet("team-members")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<TeamMemberResponseDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<TeamMemberResponseDto>>>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<TeamMemberResponseDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTeamMembers(
+        [FromQuery] TeamMemberFilterRequestDto filter,
+        [FromQuery] PaginationFilter pagination)
+    {
+        _logger.LogInformation("Getting team members with filter: {@Filter}, pagination: {@Pagination}",
+            filter, pagination);
+
+        var response = await _adminService.GetTeamMembers(filter, pagination);
+        if (!response.IsSuccessful)
+        {
+            _logger.LogWarning("Failed to get team members: {ErrorMessage}", response.Message);
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
+    }
+
+    [HttpPost("team-members")]
+    [ProducesResponseType(typeof(BaseResponse<TeamMemberResponseDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(BaseResponse<TeamMemberResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<TeamMemberResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateTeamMember([FromBody] CreateTeamMemberRequestDto request)
+    {
+        var response = await _adminService.CreateTeamMember(request);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return CreatedAtAction(nameof(GetTeamMember), new { memberId = response.Data.Id }, response);
+    }
+
+    [HttpPut("team-members/{memberId}")]
+    [ProducesResponseType(typeof(BaseResponse<TeamMemberResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<TeamMemberResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<TeamMemberResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<TeamMemberResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateTeamMember(string memberId, [FromBody] UpdateTeamMemberRequestDto request)
+    {
+        var response = await _adminService.UpdateTeamMember(memberId, request);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
+    }
+
+    [HttpDelete("team-members/{memberId}")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteTeamMember(string memberId)
+    {
+        var response = await _adminService.DeleteTeamMember(memberId);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
+    }
 }

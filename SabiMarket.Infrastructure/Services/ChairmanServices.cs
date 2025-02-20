@@ -347,6 +347,16 @@ namespace SabiMarket.Infrastructure.Services
 
                 var result = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, trackChanges: false);
 
+                if(result is null)
+                {
+                    await CreateAuditLog(
+                    "Chairman Details Query",
+                    $"CorrelationId: {correlationId} - Cahirman not found for ID: {chairmanId}",
+                    "Chairman Management"
+                );
+                    return ResponseFactory.Success(_mapper.Map<ChairmanResponseDto>(result), "Chairman not found");
+                }
+
                 await CreateAuditLog(
                     "Chairman Details Retrieved",
                     $"CorrelationId: {correlationId} - Chairman details retrieved successfully",

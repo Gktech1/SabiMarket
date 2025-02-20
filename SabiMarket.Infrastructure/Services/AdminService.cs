@@ -18,6 +18,8 @@ using ValidationException = FluentValidation.ValidationException;
 using System.Text.Json;
 using SabiMarket.Application.Validators;
 using AutoMapper.QueryableExtensions;
+using FluentValidation.Results;
+using Azure.Core;
 
 public class AdminService : IAdminService
 {
@@ -135,7 +137,7 @@ public class AdminService : IAdminService
                     $"Email already exists: {adminDto.Email}",
                     "Admin Creation"
                 );
-                return ResponseFactory.Fail<AdminResponseDto>( "Email already exists");
+                return ResponseFactory.Fail<AdminResponseDto>("Email already exists");
             }
 
             var user = new ApplicationUser
@@ -1188,6 +1190,421 @@ public class AdminService : IAdminService
         {
             _logger.LogError(ex, "Error deleting role");
             return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+        }
+    }
+
+    public async Task<BaseResponse<TeamMemberResponseDto>> CreateTeamMember(CreateTeamMemberRequestDto requestDto)
+    {
+        try
+        {
+            var userId = _currentUser.GetUserId();
+            var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
+
+            if (currentAdmin == null || !currentAdmin.HasTeamManagementAccess)
+            {
+                await CreateAuditLog(
+                    "Team Member Creation Denied",
+                    $"Unauthorized team member creation attempt by user: {userId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<TeamMemberResponseDto>(
+                    new UnauthorizedException("Access denied"),
+                    "You don't have permission to create team members");
+            }
+
+            // Check if email already exists
+            var existingUser = await _userManager.FindByEmailAsync(requestDto.EmailAddress);
+            if (existingUser != null)
+            {
+                await CreateAuditLog(
+                    "Team Member Creation Failed",
+                    $"Email already exists: {requestDto.EmailAddress}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<TeamMemberResponseDto>("Email address already exists");
+            }
+
+            // Generate a new unique ID for the team member
+            var newUserId = Guid.NewGuid().ToString();
+
+            var user = new ApplicationUser
+            {
+                Id = newUserId,    // Use the new unique ID instead of admin's ID
+                UserName = requestDto.EmailAddress,
+                Email = requestDto.EmailAddress,
+                PhoneNumber = requestDto.PhoneNumber,
+                NormalizedUserName = requestDto.EmailAddress,
+                NormalizedEmail = requestDto.EmailAddress,  
+                FirstName = requestDto.FullName.Split(' ')[0],
+                LastName = requestDto.FullName.Contains(" ") ?
+                    string.Join(" ", requestDto.FullName.Split(' ').Skip(1)) : "",
+                ProfileImageUrl = "",
+                IsActive = true,
+                EmailConfirmed = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var createUserResult = await _userManager.CreateAsync(user);
+            if (!createUserResult.Succeeded)
+            {
+                await CreateAuditLog(
+                    "Team Member Creation Failed",
+                    $"Failed to create user account for: {requestDto.EmailAddress}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<TeamMemberResponseDto>(
+                    new ValidationException(createUserResult.Errors.Select(e =>
+                        new ValidationFailure(e.Code, e.Description))),
+                    "Failed to create user account");
+            }
+
+            // Add to team member role
+            await _userManager.AddToRoleAsync(user, UserRoles.TeamMember);
+
+            await CreateAuditLog(
+                "Created Team Member",
+                $"Created team member account for {user.Email} ({requestDto.FullName})",
+                "Team Management"
+            );
+
+            var responseDto = new TeamMemberResponseDto
+            {
+                Id = user.Id,
+                FullName = requestDto.FullName,
+                PhoneNumber = requestDto.PhoneNumber,
+                EmailAddress = requestDto.EmailAddress,
+                DateAdded = user.CreatedAt
+            };
+
+            return ResponseFactory.Success(responseDto, "Team member created successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating team member");
+            return ResponseFactory.Fail<TeamMemberResponseDto>(ex, "An unexpected error occurred");
+        }
+    }
+    public async Task<BaseResponse<TeamMemberResponseDto>> UpdateTeamMember(
+       string memberId,
+       UpdateTeamMemberRequestDto requestDto)
+    {
+        try
+        {
+            var userId = _currentUser.GetUserId();
+            var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
+
+            if (currentAdmin == null || !currentAdmin.HasTeamManagementAccess)
+            {
+                await CreateAuditLog(
+                    "Team Member Update Denied",
+                    $"Unauthorized team member update attempt by user: {userId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<TeamMemberResponseDto>(
+                    new UnauthorizedException("Access denied"),
+                    "You don't have permission to update team members");
+            }
+
+            var user = await _userManager.FindByIdAsync(memberId);
+            if (user == null)
+            {
+                await CreateAuditLog(
+                    "Team Member Update Failed",
+                    $"Team member not found with ID: {memberId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<TeamMemberResponseDto>(
+                    new NotFoundException("Team member not found"),
+                    "Team member not found");
+            }
+
+            // Track changes for audit log
+            var changes = new List<string>();
+
+            // Debug logging
+            _logger.LogInformation("Current Values - FirstName: {FirstName}, LastName: {LastName}",
+                user.FirstName, user.LastName);
+            _logger.LogInformation("New FullName: {FullName}", requestDto.FullName);
+
+            // Update name if provided
+            if (!string.IsNullOrWhiteSpace(requestDto.FullName))
+            {
+                var currentFullName = $"{user.FirstName} {user.LastName}".Trim();
+                var newFullName = requestDto.FullName.Trim();
+
+                if (currentFullName != newFullName)
+                {
+                    changes.Add($"Name: {currentFullName} → {newFullName}");
+
+                    var nameParts = newFullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    user.FirstName = nameParts[0];
+                    user.LastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : "";
+                }
+            }
+
+            // Update email if provided
+            if (!string.IsNullOrWhiteSpace(requestDto.EmailAddress) && user.Email != requestDto.EmailAddress)
+            {
+                changes.Add($"Email: {user.Email} → {requestDto.EmailAddress}");
+                user.Email = requestDto.EmailAddress;
+                user.UserName = requestDto.EmailAddress;
+                user.EmailConfirmed = true;
+            }
+
+            // Update phone if provided
+            if (!string.IsNullOrWhiteSpace(requestDto.PhoneNumber) && user.PhoneNumber != requestDto.PhoneNumber)
+            {
+                changes.Add($"Phone: {user.PhoneNumber} → {requestDto.PhoneNumber}");
+                user.PhoneNumber = requestDto.PhoneNumber;
+            }
+
+            // Only proceed with update if there are changes
+            if (changes.Any())
+            {
+                _logger.LogInformation("Applying changes: {@Changes}", changes);
+
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    await CreateAuditLog(
+                        "Team Member Update Failed",
+                        $"Failed to update user properties for ID: {memberId}",
+                        "Team Management"
+                    );
+                    return ResponseFactory.Fail<TeamMemberResponseDto>(
+                        new ValidationException(updateResult.Errors.Select(e =>
+                            new ValidationFailure(e.Code, e.Description))),
+                        "Failed to update team member");
+                }
+
+                await CreateAuditLog(
+                    "Updated Team Member",
+                    $"Updated team member {user.Email}. Changes: {string.Join(", ", changes)}",
+                    "Team Management"
+                );
+            }
+            else
+            {
+                _logger.LogInformation("No changes detected for user {UserId}", memberId);
+            }
+
+            var responseDto = new TeamMemberResponseDto
+            {
+                Id = user.Id,
+                FullName = $"{user.FirstName} {user.LastName}".Trim(),
+                PhoneNumber = user.PhoneNumber ?? string.Empty,
+                EmailAddress = user.Email,
+                DateAdded = user.CreatedAt
+            };
+
+            return ResponseFactory.Success(responseDto, changes.Any()
+                ? "Team member updated successfully"
+                : "No changes were made to team member");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating team member");
+            return ResponseFactory.Fail<TeamMemberResponseDto>(ex, "An unexpected error occurred");
+        }
+    }
+    public async Task<BaseResponse<TeamMemberResponseDto>> GetTeamMemberById(string memberId)
+    {
+        try
+        {
+            var userId = _currentUser.GetUserId();
+            var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
+
+            if (currentAdmin == null || !currentAdmin.HasTeamManagementAccess)
+            {
+                await CreateAuditLog(
+                    "Team Member Access Denied",
+                    $"Unauthorized team member access attempt by user: {userId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<TeamMemberResponseDto>(
+                    new UnauthorizedException("Access denied"),
+                    "You don't have permission to view team members");
+            }
+
+            var user = await _userManager.FindByIdAsync(memberId);
+            if (user == null)
+            {
+                await CreateAuditLog(
+                    "Team Member Lookup Failed",
+                    $"Team member not found with ID: {memberId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<TeamMemberResponseDto>(
+                    new NotFoundException("Team member not found"),
+                    "Team member not found");
+            }
+
+            var responseDto = new TeamMemberResponseDto
+            {
+                Id = user.Id,
+                FullName = $"{user.FirstName} {user.LastName}".Trim(),
+                PhoneNumber = user.PhoneNumber,
+                EmailAddress = user.Email,
+                DateAdded = user.CreatedAt
+            };
+
+            await CreateAuditLog(
+                "Team Member Lookup",
+                $"Retrieved team member details for ID: {memberId}",
+                "Team Management"
+            );
+
+            return ResponseFactory.Success(responseDto, "Team member retrieved successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving team member");
+            return ResponseFactory.Fail<TeamMemberResponseDto>(ex, "An unexpected error occurred");
+        }
+    }
+
+    public async Task<BaseResponse<bool>> DeleteTeamMember(string memberId)
+    {
+        try
+        {
+            var userId = _currentUser.GetUserId();
+            var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
+
+            if (currentAdmin == null || !currentAdmin.HasTeamManagementAccess)
+            {
+                await CreateAuditLog(
+                    "Team Member Deletion Denied",
+                    $"Unauthorized team member deletion attempt by user: {userId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<bool>(
+                    new UnauthorizedException("Access denied"),
+                    "You don't have permission to delete team members");
+            }
+
+            var user = await _userManager.FindByIdAsync(memberId);
+            if (user == null)
+            {
+                await CreateAuditLog(
+                    "Team Member Deletion Failed",
+                    $"Team member not found with ID: {memberId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<bool>(
+                    new NotFoundException("Team member not found"),
+                    "Team member not found");
+            }
+
+            // Instead of hard delete, deactivate the user
+            user.IsActive = false;
+            var updateResult = await _userManager.DeleteAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                await CreateAuditLog(
+                    "Team Member Deletion Failed",
+                    $"Failed to deactivate user account for ID: {memberId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<bool>(
+                    new ValidationException(updateResult.Errors.Select(e =>
+                        new ValidationFailure(e.Code, e.Description))),
+                    "Failed to delete team member");
+            }
+
+            await CreateAuditLog(
+                "Deleted Team Member",
+                $"Deactivated team member account for {user.Email} ({user.FirstName} {user.LastName})",
+                "Team Management"
+            );
+
+            return ResponseFactory.Success(true, "Team member deleted successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting team member");
+            return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+        }
+    }
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<TeamMemberResponseDto>>>> GetTeamMembers(
+     TeamMemberFilterRequestDto filterDto,
+     PaginationFilter paginationFilter)
+    {
+        try
+        {
+            var userId = _currentUser.GetUserId();
+            var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
+
+            if (currentAdmin == null || !currentAdmin.HasTeamManagementAccess)
+            {
+                await CreateAuditLog(
+                    "Team Members List Access Denied",
+                    $"Unauthorized team members list access attempt by user: {userId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<TeamMemberResponseDto>>>(
+                    new UnauthorizedException("Access denied"),
+                    "You don't have permission to view team members");
+            }
+
+            // Get all team member user IDs from UserRoles table
+            var teamMemberIds = await _userManager.GetUsersInRoleAsync(UserRoles.TeamMember);
+            var teamMemberIdList = teamMemberIds.Select(u => u.Id).ToList();
+
+            // Query users with those IDs
+            var query = _userManager.Users.Where(u => teamMemberIdList.Contains(u.Id));
+
+            // Apply search filter if provided
+            if (!string.IsNullOrWhiteSpace(filterDto?.SearchTerm))
+            {
+                var searchTerm = filterDto.SearchTerm.Trim().ToLower();
+                query = query.Where(u =>
+                    (u.FirstName + " " + u.LastName).ToLower().Contains(searchTerm) ||
+                    u.Email.ToLower().Contains(searchTerm) ||
+                    (u.PhoneNumber != null && u.PhoneNumber.Contains(searchTerm)));
+            }
+
+            // Only include active members
+            query = query.Where(u => u.IsActive);
+
+            // Apply ordering
+            query = query.OrderByDescending(u => u.CreatedAt);
+
+            // Apply pagination
+            var paginatedMembers = await query.Paginate(paginationFilter);
+
+            // Map to response DTOs
+            var memberDtos = paginatedMembers.PageItems.Select(user => new TeamMemberResponseDto
+            {
+                Id = user.Id,
+                FullName = $"{user.FirstName} {user.LastName}".Trim(),
+                PhoneNumber = user.PhoneNumber ?? string.Empty,
+                EmailAddress = user.Email,
+                DateAdded = user.CreatedAt
+            });
+
+            // Create paginated result
+            var result = new PaginatorDto<IEnumerable<TeamMemberResponseDto>>
+            {
+                PageItems = memberDtos,
+                PageSize = paginatedMembers.PageSize,
+                CurrentPage = paginatedMembers.CurrentPage,
+                NumberOfPages = paginatedMembers.NumberOfPages
+            };
+
+            await CreateAuditLog(
+                "Team Members List Retrieved",
+                $"Retrieved team members list - Page {paginationFilter.PageNumber}, " +
+                $"Size {paginationFilter.PageSize}, Search: {filterDto?.SearchTerm ?? "none"}",
+                "Team Management"
+            );
+
+            return ResponseFactory.Success(result, "Team members retrieved successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving team members list: {Error}", ex.Message);
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<TeamMemberResponseDto>>>(
+                ex, "An unexpected error occurred");
         }
     }
 }

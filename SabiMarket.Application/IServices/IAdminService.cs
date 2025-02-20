@@ -23,6 +23,13 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<PaginatorDto<IEnumerable<RoleResponseDto>>>> GetRoles(
        RoleFilterRequestDto filterDto, PaginationFilter paginationFilter);
         Task<BaseResponse<RoleResponseDto>> GetRoleById(string roleId);
+        Task<BaseResponse<TeamMemberResponseDto>> CreateTeamMember(CreateTeamMemberRequestDto requestDto);
+        Task<BaseResponse<TeamMemberResponseDto>> UpdateTeamMember(string memberId, UpdateTeamMemberRequestDto requestDto);
+        Task<BaseResponse<TeamMemberResponseDto>> GetTeamMemberById(string memberId);
+        Task<BaseResponse<bool>> DeleteTeamMember(string memberId);
+        Task<BaseResponse<PaginatorDto<IEnumerable<TeamMemberResponseDto>>>> GetTeamMembers(
+         TeamMemberFilterRequestDto filterDto,
+         PaginationFilter paginationFilter);
     }
 }
 
