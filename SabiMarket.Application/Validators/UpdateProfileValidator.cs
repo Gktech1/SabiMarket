@@ -17,9 +17,9 @@ public class UpdateProfileValidator : AbstractValidator<UpdateProfileDto>
             .MaximumLength(256); // IdentityUser email max length
 
         RuleFor(x => x.PhoneNumber)
-            .NotEmpty().WithMessage("Phone number is required")
-            .Matches(@"^\+?[1-9]\d{1,14}$")
-            .WithMessage("Invalid phone number format");
+              .NotEmpty().WithMessage("Phone number is required")
+              .Matches(@"^[0-9]{11}$").WithMessage("Phone number must be exactly 11 digits")
+              .Must(phone => phone.StartsWith("0")).WithMessage("Phone number must start with 0");
 
         RuleFor(x => x.LocalGovernmentId)
             .NotEmpty().WithMessage("Local Government is required");

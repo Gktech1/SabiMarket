@@ -7,9 +7,14 @@ namespace SabiMarket.Application.IServices
     public interface IChairmanService
     {
         Task<BaseResponse<LGAResponseDto>> GetLocalGovernmentById(string id);
-        Task<BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>> GetLocalGovernmentAreas(
-         LGAFilterRequestDto filterDto,
-         PaginationFilter paginationFilter);
+        Task<BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>> GetLocalGovernments(
+       LGAFilterRequestDto filterDto,
+       PaginationFilter paginationFilter);
+
+        Task<BaseResponse<PaginatorDto<IEnumerable<LGResponseDto>>>> GetLocalGovernmentAreas(
+           string searchTerm,
+             PaginationFilter paginationFilter);
+
         Task<BaseResponse<ChairmanResponseDto>> GetChairmanById(string chairmanId);
         Task<BaseResponse<ChairmanResponseDto>> CreateChairman(CreateChairmanRequestDto chairmanDto);
         Task<BaseResponse<bool>> UpdateChairmanProfile(string chairmanId, UpdateProfileDto profileDto);

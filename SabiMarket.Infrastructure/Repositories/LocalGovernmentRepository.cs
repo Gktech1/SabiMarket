@@ -1,9 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
+using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
+using System.Linq;
+using static iText.StyledXmlParser.Jsoup.Select.Evaluator;
 
 namespace SabiMarket.Infrastructure.Repositories
 {
@@ -79,63 +82,111 @@ namespace SabiMarket.Infrastructure.Repositories
         public void DeleteLocalGovernment(LocalGovernment localGovernment) =>
             Delete(localGovernment);
 
-        public async Task<PaginatorDto<IEnumerable<LocalGovernment>>> GetLocalGovernmentAreas(
-     string searchTerm,
-     string officerName,  // Changed from chairmanName to officerName
-     bool? isActive,
-     string state,
-     string orderBy,
-     bool? isDescending,
-     PaginationFilter paginationFilter)
+        public async Task<PaginatorDto<IEnumerable<LocalGovernment>>> GetLocalGovernmentArea(
+      string searchTerm,
+      PaginationFilter paginationFilter)
         {
-            var predicate = PredicateBuilder.New<LocalGovernment>(true);
+            // Start with Chairman query and include LocalGovernment
+            var query = _repositoryContext.Chairmen
+                .AsNoTracking()
+                .Include(c => c.LocalGovernment)
+                .Select(chairman => new LocalGovernment
+                {
+                    Id = chairman.LocalGovernment.Id,
+                    Name = chairman.LocalGovernment.Name,
+                    LGA = chairman.FullName ?? "Not Assigned"
+                });
+
+            // For LGAs without chairmen, union with LGAs that don't have chairmen
+            var lgasWithoutChairmen = _repositoryContext.LocalGovernments
+                .AsNoTracking()
+                .Where(lg => !_repositoryContext.Chairmen.Any(c => c.LocalGovernmentId == lg.Id))
+                .Select(lg => new LocalGovernment
+                {
+                    Id = lg.Id,
+                    Name = lg.Name,
+                    LGA = "Not Assigned"
+                });
+
+            // Combine both queries
+            query = query.Union(lgasWithoutChairmen);
 
             // Apply search term filter
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 var term = searchTerm.ToLower();
-                predicate = predicate.And(lg =>
+                query = query.Where(lg =>
                     lg.Name.ToLower().Contains(term) ||
-                    lg.Address.ToLower().Contains(term) ||
-                    (lg.LGA != null && lg.LGA.ToLower().Contains(term)));
+                    lg.LGA.ToLower().Contains(term));
             }
 
-            // Apply officer name filter
-            if (!string.IsNullOrWhiteSpace(officerName))
-            {
-                var name = officerName.ToLower();
-                predicate = predicate.And(lg =>
-                    lg.AssistCenterOfficers.Any(officer =>
-                        officer.User.FirstName.ToLower().Contains(name) ||
-                        officer.User.LastName.ToLower().Contains(name)));
-            }
+            // Order by name
+            query = query.OrderBy(lg => lg.Name);
 
-            // Apply active status filter
-            if (isActive.HasValue)
-            {
-                predicate = predicate.And(lg => lg.IsActive == isActive.Value);
-            }
-
-            // Apply state filter
-            if (!string.IsNullOrWhiteSpace(state))
-            {
-                var stateValue = state.ToLower();
-                predicate = predicate.And(lg => lg.State.ToLower().Contains(stateValue));
-            }
-
-            // Start with base query including AssistCenterOfficers and their User information
-            var query = FindAll(trackChanges: false)
-                .Include(lg => lg.AssistCenterOfficers)
-                    .ThenInclude(aco => aco.User)
-                .Where(predicate);
-
-            // Apply ordering
-            query = ApplyLocalGovernmentOrdering(query, orderBy, isDescending ?? false);
-
-            // Apply pagination and return results
+            // Use the Paginate extension method
             return await query.Paginate(paginationFilter);
         }
 
+        /* public async Task<PaginatorDto<IEnumerable<LocalGovernment>>> GetLocalGovernmentArea(
+       string searchTerm,
+       PaginationFilter paginationFilter)
+   {
+       // Start with base query and include Chairman relationship
+       var query = _repositoryContext.LocalGovernments
+           .AsNoTracking()
+           .GroupJoin(
+               _repositoryContext.Chairmen,
+               lg => lg.Id,
+               c => c.LocalGovernmentId,
+               (lg, chairmen) => new { LocalGovt = lg, Chairmen = chairmen })
+           .SelectMany(
+               x => x.Chairmen.DefaultIfEmpty(),
+               (lg, chairman) => new LocalGovernment
+               {
+                   Id = lg.LocalGovt.Id,
+                   Name = lg.LocalGovt.Name,
+                   LGA = chairman != null ? chairman.FullName : "Not Assigned"  // Store chairman name in LGA property
+               });
+
+       // Apply search term filter
+       if (!string.IsNullOrWhiteSpace(searchTerm))
+       {
+           var term = searchTerm.ToLower();
+           query = query.Where(lg =>
+               lg.Name.ToLower().Contains(term) ||
+               lg.LGA.ToLower().Contains(term));  // Search in both name and chairman name
+       }
+
+       // Order by name
+       query = query.OrderBy(lg => lg.Name);
+
+       // Use the Paginate extension method
+       return await query.Paginate(paginationFilter);
+   }*/
+        /*    public async Task<PaginatorDto<IEnumerable<LocalGovernment>>> GetLocalGovernmentArea(
+          string searchTerm,
+          PaginationFilter paginationFilter)
+            {
+                // Start with base query and include related entities
+                var query = FindAll(trackChanges: false)
+                    .Include(lg => lg.AssistCenterOfficers)
+                        .ThenInclude(aco => aco.User)
+                    .AsNoTracking();
+
+                // Apply search term filter
+                if (!string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    var term = searchTerm.ToLower();
+                    query = query.Where(lg =>
+                        lg.Name.ToLower().Contains(term) ||
+                        lg.Address.ToLower().Contains(term) ||
+                        (lg.LGA != null && lg.LGA.ToLower().Contains(term)));
+                }
+
+                // Apply pagination and return results
+                return await query.Paginate(paginationFilter);
+            }
+    */
         private static IQueryable<LocalGovernment> ApplyLocalGovernmentOrdering(
             IQueryable<LocalGovernment> query,
             string orderBy,
@@ -156,78 +207,35 @@ namespace SabiMarket.Infrastructure.Repositories
                 _ => query.OrderBy(lg => lg.Name) // Default ordering
             };
         }
+
+  
         public IQueryable<LocalGovernment> GetFilteredLGAsQuery(LGAFilterRequestDto filterDto)
         {
-            // Start with a base query without unnecessary includes
-            var query = FindAll(trackChanges: false);
-
-            // Build the where clause using PredicateBuilder for dynamic filtering
-            var predicate = PredicateBuilder.New<LocalGovernment>(true);
+            // Make sure to use AsNoTracking() for read-only operations
+            var query = FindAll(trackChanges: false).AsNoTracking();
 
             // Apply filters only if they exist (using case-insensitive comparison)
             if (!string.IsNullOrWhiteSpace(filterDto.State))
             {
                 var state = filterDto.State.ToLower();
-                predicate = predicate.And(lg => lg.State.ToLower() == state);
+                query = query.Where(lg => lg.State.ToLower() == state);
             }
 
             if (!string.IsNullOrWhiteSpace(filterDto.LGA))
             {
                 var lga = filterDto.LGA.ToLower();
-                predicate = predicate.And(lg => lg.LGA.ToLower() == lga);
+                query = query.Where(lg => lg.LGA.ToLower() == lga);
             }
 
             if (!string.IsNullOrWhiteSpace(filterDto.Name))
             {
                 var name = filterDto.Name.ToLower();
-                predicate = predicate.And(lg => lg.Name.ToLower().Contains(name));
+                query = query.Where(lg => lg.Name.ToLower().Contains(name));
             }
 
-            if (filterDto.MinRevenue.HasValue)
-            {
-                predicate = predicate.And(lg => lg.CurrentRevenue >= filterDto.MinRevenue.Value);
-            }
-
-            if (filterDto.MaxRevenue.HasValue)
-            {
-                predicate = predicate.And(lg => lg.CurrentRevenue <= filterDto.MaxRevenue.Value);
-            }
-
-            // Apply the combined predicate
-            query = query.Where(predicate);
-
-            // Apply market activity filter separately to avoid unnecessary joins if not needed
-            if (filterDto.HasActiveMarkets.HasValue)
-            {
-                query = filterDto.HasActiveMarkets.Value
-                    ? query.Where(lg => lg.Markets.Any(m => m.IsActive))
-                    : query.Where(lg => !lg.Markets.Any(m => m.IsActive));
-            }
-
-            // Apply sorting only once at the end
-            var sortProperty = filterDto.SortBy?.ToLower();
-            var isDescending = filterDto.SortOrder?.ToLower() == "desc";
-
-            // Include only the necessary related entities based on sort criteria
-            if (sortProperty == "markets" || filterDto.HasActiveMarkets.HasValue)
-            {
-                query = query.Include(lg => lg.Markets);
-            }
-            if (sortProperty == "vendors")
-            {
-                query = query.Include(lg => lg.Vendors);
-            }
-            if (sortProperty == "customers")
-            {
-                query = query.Include(lg => lg.Customers);
-            }
-
-            // Apply sorting using a more efficient approach
-            query = ApplySorting(query, sortProperty, isDescending);
-
+            // Apply the query with a single execution context
             return query;
         }
-
         private static IQueryable<LocalGovernment> ApplySorting(
             IQueryable<LocalGovernment> query,
             string sortProperty,

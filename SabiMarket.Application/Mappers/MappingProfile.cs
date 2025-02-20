@@ -43,6 +43,7 @@ public class MappingProfile : Profile
           .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
           .ForMember(dest => dest.User, opt => opt.Ignore());
 
+
         CreateMap<Chairman, ChairmanResponseDto>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
@@ -51,6 +52,11 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.Name))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.LastLoginAt))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt));
+
+        CreateMap<Admin, AdminDashboardStatsDto>()
+           .ForMember(dest => dest.RegisteredLGAs, opt => opt.MapFrom(src => src.RegisteredLGAs))
+           .ForMember(dest => dest.ActiveChairmen, opt => opt.MapFrom(src => src.ActiveChairmen))
+           .ForMember(dest => dest.TotalRevenue, opt => opt.MapFrom(src => src.TotalRevenue));
 
         CreateMap<Caretaker, CaretakerResponseDto>()
            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
