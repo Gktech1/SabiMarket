@@ -20,6 +20,8 @@ public static class UserRoles
     public const string Chairman = "CHAIRMAN";
     public const string Caretaker = "CARETAKER";
     public const string Trader = "TRADER";
+    public const string TeamMember = "TEAMMEMBER";
+
 }
 public class DatabaseSeeder
 {
@@ -122,6 +124,12 @@ public class DatabaseSeeder
             new[] {
                 "ViewTraders", "ViewLevies", "ScanTradersQRCode",
                 "AddLevies", "AddTraders"
+            }
+        },
+        {
+            UserRoles.TeamMember,
+            new[] {
+                "ViewTraders", 
             }
         }
     };

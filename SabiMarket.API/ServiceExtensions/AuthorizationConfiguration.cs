@@ -9,6 +9,7 @@ namespace SabiMarket.API.ServiceExtensions
         public const string RequireCustomerOnly = "RequireCustomerOnly";
         public const string RequireCaretakerOnly = "RequireCaretakerOnly";
         public const string RequireTraderOnly = "RequireTraderOnly";
+        public const string RequiredTeamMember = "RequireTeamMember";
 
         // Combined policies
         public const string RequireMarketStaff = "RequireMarketStaff";
