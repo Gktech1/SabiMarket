@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,10 @@ using Microsoft.IdentityModel.Tokens;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Interfaces;
+using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities.UserManagement;
+using SabiMarket.Domain.Entities.WaiveMarketModule;
+using SabiMarket.Domain.Enum;
 using SabiMarket.Domain.Exceptions;
 using ValidationException = FluentValidation.ValidationException;
 
@@ -27,6 +31,7 @@ namespace SabiMarket.Infrastructure.Services
         private readonly IValidator<LoginRequestDto> _loginValidator;
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly IValidator<ChangePasswordDto> _changePasswordValidator;
+        private readonly IRepositoryManager _repositoryMannager;
 
         public AuthenticationService(
             UserManager<ApplicationUser> userManager,
@@ -36,7 +41,8 @@ namespace SabiMarket.Infrastructure.Services
             IValidator<RegistrationRequestDto> registrationValidator,
             RoleManager<ApplicationRole> roleManager,
             IValidator<LoginRequestDto> loginValidator,
-            IValidator<ChangePasswordDto> changePasswordValidator)
+            IValidator<ChangePasswordDto> changePasswordValidator,
+            IRepositoryManager repositoryMannager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -46,6 +52,7 @@ namespace SabiMarket.Infrastructure.Services
             _roleManager = roleManager;
             _loginValidator = loginValidator;
             _changePasswordValidator = changePasswordValidator;
+            _repositoryMannager = repositoryMannager;
         }
 
         public async Task<BaseResponse<LoginResponseDto>> LoginAsync(LoginRequestDto loginRequest)
@@ -220,13 +227,21 @@ namespace SabiMarket.Infrastructure.Services
         {
             try
             {
-                // Validate request using FluentValidation
-                var validationResult = await _registrationValidator.ValidateAsync(request);
-                if (!validationResult.IsValid)
+                // Validate email format
+                var emailPattern = @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
+                if (!Regex.IsMatch(request.Email, emailPattern))
                 {
                     return ResponseFactory.Fail<RegistrationResponseDto>(
-                        new FluentValidation.ValidationException(validationResult.Errors),
-                        "Validation failed");
+                        new BadRequestException("Invalid email format"),
+                        "Please provide a valid email address");
+                }
+
+                // Validate password strength
+                if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
+                {
+                    return ResponseFactory.Fail<RegistrationResponseDto>(
+                        new BadRequestException("Password must be at least 8 characters long"),
+                        "Invalid password");
                 }
 
                 // Check if email already exists
@@ -261,13 +276,100 @@ namespace SabiMarket.Infrastructure.Services
                     EmailConfirmed = true,
                     CreatedAt = DateTime.UtcNow
                 };
-                // Create user
+
+                // Create user with role
                 var result = await _userManager.CreateAsync(user, request.Password);
                 if (!result.Succeeded)
                 {
                     return ResponseFactory.Fail<RegistrationResponseDto>(
                         new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description))),
                         "User creation failed");
+                }
+
+                // Handle role-specific logic
+                switch (request.Role.ToUpper())
+                {
+                    case "VENDOR":
+                        if (request.VendorDetails == null)
+                        {
+                            await _userManager.DeleteAsync(user);
+                            return ResponseFactory.Fail<RegistrationResponseDto>(
+                                new BadRequestException("Vendor details are required"),
+                                "Missing vendor information");
+                        }
+
+                        var vendor = new Vendor
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            UserId = user.Id,
+                            LocalGovernmentId = request.VendorDetails.LocalGovernmentId.ToString(),
+                            BusinessName = request.VendorDetails.BusinessName,
+                            BusinessAddress = request.Address,
+                            BusinessDescription = request.VendorDetails.BusinessDescription,
+                            VendorCode = $"V-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
+                            Type = VendorTypeEnum.Other,
+                            IsVerified = false,
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                         _repositoryMannager.VendorRepository.Create(vendor);
+                        break;
+
+                    case "CUSTOMER":
+                        if (request.CustomerDetails == null)
+                        {
+                            await _userManager.DeleteAsync(user);
+                            return ResponseFactory.Fail<RegistrationResponseDto>(
+                                new BadRequestException("Customer details are required"),
+                                "Missing customer information");
+                        }
+
+                        var customer = new Customer
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            UserId = user.Id,
+                            LocalGovernmentId = request.CustomerDetails.LocalGovernmentId.ToString(),
+                            FullName = $"{request.FirstName} {request.LastName}",
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _repositoryMannager.CustomerRepository.CreateCustomer(customer);
+                        break;
+
+                    case "ADVERTISER":
+                        if (request.AdvertiserDetails == null)
+                        {
+                            await _userManager.DeleteAsync(user);
+                            return ResponseFactory.Fail<RegistrationResponseDto>(
+                                new BadRequestException("Advertiser details are required"),
+                                "Missing advertiser information");
+                        }
+
+                        var advertisement = new Advertisement
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            VendorId = user.Id,  // Using the user ID since they're the advertiser
+                            Title = request.AdvertiserDetails.CompanyName,
+                            Description = request.AdvertiserDetails.BusinessType,
+                            Status = AdvertStatusEnum.Pending,
+                            Language = "en", // Default language, could be made configurable
+                            Location = request.Address,
+                            AdvertPlacement = "Default", // This could be made configurable
+                            PaymentStatus = "Pending",
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _repositoryMannager.AdvertisementRepository.CreateAdvertisement(advertisement);
+                        break;
+
+                    default:
+                        await _userManager.DeleteAsync(user);
+                        return ResponseFactory.Fail<RegistrationResponseDto>(
+                            new BadRequestException($"Registration for role {request.Role} is not supported"),
+                            "Unsupported role type");
                 }
 
                 // Assign role
@@ -286,7 +388,7 @@ namespace SabiMarket.Infrastructure.Services
                     Email = user.Email,
                     Role = request.Role,
                     Message = "Registration successful. You can now log in",
-                    RequiresApproval = RequiresApproval(request.Role)
+                    RequiresApproval = request.Role.ToUpper() is "VENDOR" or "ADVERTISER"
                 };
 
                 return ResponseFactory.Success(response, "Registration successful");
@@ -300,6 +402,208 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        /*  public async Task<BaseResponse<RegistrationResponseDto>> RegisterAsync(RegistrationRequestDto request)
+          {
+              try
+              {
+                  // Validate email format using regex
+                  var emailPattern = @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
+                  if (!Regex.IsMatch(request.Email, emailPattern))
+                  {
+                      return ResponseFactory.Fail<RegistrationResponseDto>(
+                          new BadRequestException("Invalid email format"),
+                          "Please provide a valid email address");
+                  }
+
+                  // Validate password strength
+                  if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
+                  {
+                      return ResponseFactory.Fail<RegistrationResponseDto>(
+                          new BadRequestException("Password must be at least 8 characters long"),
+                          "Invalid password");
+                  }
+
+               *//*   if (!request.Password.Any(char.IsUpper))
+                  {
+                      return ResponseFactory.Fail<RegistrationResponseDto>(
+                          new BadRequestException("Password must contain at least one uppercase letter"),
+                          "Invalid password");
+                  }
+
+                  if (!request.Password.Any(char.IsLower))
+                  {
+                      return ResponseFactory.Fail<RegistrationResponseDto>(
+                          new BadRequestException("Password must contain at least one lowercase letter"),
+                          "Invalid password");
+                  }
+
+                  if (!request.Password.Any(char.IsDigit))
+                  {
+                      return ResponseFactory.Fail<RegistrationResponseDto>(
+                          new BadRequestException("Password must contain at least one number"),
+                          "Invalid password");
+                  }
+
+                  if (!request.Password.Any(ch => !char.IsLetterOrDigit(ch)))
+                  {
+                      return ResponseFactory.Fail<RegistrationResponseDto>(
+                          new BadRequestException("Password must contain at least one special character"),
+                          "Invalid password");
+                  }
+
+                  // Check if email already exists
+                  var existingUser = await _userManager.FindByEmailAsync(request.Email);
+                  if (existingUser != null)
+                  {
+                      return ResponseFactory.Fail<RegistrationResponseDto>(
+                          new BadRequestException("Email already registered"),
+                          "Email exists");
+                  }*//*
+
+                  // Rest of your existing code...
+                  if (!await _roleManager.RoleExistsAsync(request.Role.ToUpper()))
+                  {
+                      return ResponseFactory.Fail<RegistrationResponseDto>(
+                          new BadRequestException("Invalid role specified"),
+                          "Invalid role");
+                  }
+
+                  var user = new ApplicationUser
+                  {
+                      Id = Guid.NewGuid().ToString(),
+                      UserName = request.Email,
+                      Email = request.Email,
+                      FirstName = request.FirstName,
+                      LastName = request.LastName,
+                      PhoneNumber = request.PhoneNumber,
+                      Address = request.Address,
+                      ProfileImageUrl = request.ProfileImageUrl ?? "",
+                      IsActive = true,
+                      EmailConfirmed = true,
+                      CreatedAt = DateTime.UtcNow,
+                  };
+
+                  var result = await _userManager.CreateAsync(user, request.Password);
+                  if (!result.Succeeded)
+                  {
+                      return ResponseFactory.Fail<RegistrationResponseDto>(
+                          new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description))),
+                          "User creation failed");
+                  }
+
+                  var roleResult = await _userManager.AddToRoleAsync(user, request.Role.ToUpper());
+                  if (!roleResult.Succeeded)
+                  {
+                      await _userManager.DeleteAsync(user);
+                      return ResponseFactory.Fail<RegistrationResponseDto>(
+                          new BadRequestException("Failed to assign role"),
+                          "Role assignment failed");
+                  }
+
+                  var response = new RegistrationResponseDto
+                  {
+                      UserId = user.Id,
+                      Email = user.Email,
+                      Role = request.Role,
+                      Message = "Registration successful. You can now log in",
+                      RequiresApproval = RequiresApproval(request.Role)
+                  };
+
+                  return ResponseFactory.Success(response, "Registration successful");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Registration failed for email: {Email}", request.Email);
+                  return ResponseFactory.Fail<RegistrationResponseDto>(
+                      new BadRequestException("An unexpected error occurred during registration"),
+                      "Registration failed");
+              }
+          }
+  */
+        /* public async Task<BaseResponse<RegistrationResponseDto>> RegisterAsync(RegistrationRequestDto request)
+         {
+             try
+             {
+                 // Validate request using FluentValidation
+              *//*   var validationResult = await _registrationValidator.ValidateAsync(request);
+                 if (!validationResult.IsValid)
+                 {
+                     return ResponseFactory.Fail<RegistrationResponseDto>(
+                         new FluentValidation.ValidationException(validationResult.Errors),
+                         "Validation failed");
+                 }*//*
+
+                 // Check if email already exists
+                 var existingUser = await _userManager.FindByEmailAsync(request.Email);
+                 if (existingUser != null)
+                 {
+                     return ResponseFactory.Fail<RegistrationResponseDto>(
+                         new BadRequestException("Email already registered"),
+                         "Email exists");
+                 }
+
+                 // Validate role
+                 if (!await _roleManager.RoleExistsAsync(request.Role.ToUpper()))
+                 {
+                     return ResponseFactory.Fail<RegistrationResponseDto>(
+                         new BadRequestException("Invalid role specified"),
+                         "Invalid role");
+                 }
+
+                 // Create base user
+                 var user = new ApplicationUser
+                 {
+                     Id = Guid.NewGuid().ToString(),
+                     UserName = request.Email,
+                     Email = request.Email,
+                     FirstName = request.FirstName,
+                     LastName = request.LastName,
+                     PhoneNumber = request.PhoneNumber,
+                     Address = request.Address,
+                     ProfileImageUrl = request.ProfileImageUrl ?? "",
+                     IsActive = true,
+                     EmailConfirmed = true,
+                     CreatedAt = DateTime.UtcNow
+                 };
+                 // Create user
+                 var result = await _userManager.CreateAsync(user, request.Password);
+                 if (!result.Succeeded)
+                 {
+                     return ResponseFactory.Fail<RegistrationResponseDto>(
+                         new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description))),
+                         "User creation failed");
+                 }
+
+                 // Assign role
+                 var roleResult = await _userManager.AddToRoleAsync(user, request.Role.ToUpper());
+                 if (!roleResult.Succeeded)
+                 {
+                     await _userManager.DeleteAsync(user);
+                     return ResponseFactory.Fail<RegistrationResponseDto>(
+                         new BadRequestException("Failed to assign role"),
+                         "Role assignment failed");
+                 }
+
+                 var response = new RegistrationResponseDto
+                 {
+                     UserId = user.Id,
+                     Email = user.Email,
+                     Role = request.Role,
+                     Message = "Registration successful. You can now log in",
+                     RequiresApproval = RequiresApproval(request.Role)
+                 };
+
+                 return ResponseFactory.Success(response, "Registration successful");
+             }
+             catch (Exception ex)
+             {
+                 _logger.LogError(ex, "Registration failed for email: {Email}", request.Email);
+                 return ResponseFactory.Fail<RegistrationResponseDto>(
+                     new BadRequestException("An unexpected error occurred during registration"),
+                     "Registration failed");
+             }
+         }
+ */
         private bool RequiresApproval(string role)
         {
             return role.ToUpper() switch

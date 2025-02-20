@@ -31,11 +31,8 @@
 
     public class AdminDashboardStatsDto
     {
-        public int TotalUsers { get; set; }
-        public int ActiveUsers { get; set; }
-        public int TotalAdmins { get; set; }
-        public int TotalOrders { get; set; }
+        public int RegisteredLGAs { get; set; }
+        public int ActiveChairmen { get; set; }
         public decimal TotalRevenue { get; set; }
-        public int PendingApprovals { get; set; }
     }
 }

@@ -23,7 +23,7 @@ public class AdminRepository : GeneralRepository<Admin>, IAdminRepository
 
     public async Task<Admin> GetAdminByIdAsync(string adminId, bool trackChanges)
     {
-        return await FindByCondition(a => a.Id == adminId, trackChanges)
+        return await FindByCondition(a => a.UserId == adminId, trackChanges)
             .Include(a => a.User)
             .FirstOrDefaultAsync();
     }

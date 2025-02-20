@@ -40,7 +40,7 @@
     // DTOs/Requests/RoleFilterRequestDto.cs
     public class RoleFilterRequestDto
     {
-        public string SearchTerm { get; set; }
+        public string? SearchTerm { get; set; }
     }
 
   
