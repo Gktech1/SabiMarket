@@ -44,17 +44,19 @@ public class AdminService : IAdminService
         IHttpContextAccessor httpContextAccessor,
         IValidator<CreateAdminRequestDto> createAdminValidator,
         IValidator<UpdateAdminProfileDto> updateProfileValidator,
-        IValidator<CreateRoleRequestDto> createRoleValidator)
+        IValidator<CreateRoleRequestDto> createRoleValidator,
+        IValidator<UpdateRoleRequestDto> updateRoleValidator)
     {
-        _repository = repository;
-        _logger = logger;
-        _mapper = mapper;
-        _userManager = userManager;
-        _currentUser = currentUser;
-        _httpContextAccessor = httpContextAccessor;
-        _createAdminValidator = createAdminValidator;
-        _updateProfileValidator = updateProfileValidator;
-        _createRoleValidator = createRoleValidator;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+        _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
+        _currentUser = currentUser ?? throw new ArgumentNullException(nameof(currentUser));
+        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+        _createAdminValidator = createAdminValidator ?? throw new ArgumentNullException(nameof(createAdminValidator));
+        _updateProfileValidator = updateProfileValidator ?? throw new ArgumentNullException(nameof(updateProfileValidator));
+        _createRoleValidator = createRoleValidator ?? throw new ArgumentNullException(nameof(createRoleValidator));
+        _updateRoleValidator = updateRoleValidator ?? throw new ArgumentNullException(nameof(updateRoleValidator));
     }
 
     private string GetCurrentIpAddress()
@@ -1078,6 +1080,151 @@ public class AdminService : IAdminService
     {
         try
         {
+            // Check current user's permission
+            var userId = _currentUser.GetUserId();
+            var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
+
+            if (currentAdmin == null || !currentAdmin.HasRoleManagementAccess)
+            {
+                await CreateAuditLog(
+                    "Role Update Denied",
+                    $"Unauthorized role update attempt by user: {userId}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<RoleResponseDto>(
+                    new UnauthorizedException("Access denied"),
+                    "You don't have permission to update roles");
+            }
+
+            // Validate request
+            var validationResult = await _updateRoleValidator.ValidateAsync(updateRoleDto);
+            if (!validationResult.IsValid)
+            {
+                await CreateAuditLog(
+                    "Role Update Failed",
+                    $"Validation failed for role update ID: {roleId}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<RoleResponseDto>(
+                    new ValidationException(validationResult.Errors),
+                    "Validation failed");
+            }
+
+            var role = await _repository.AdminRepository.GetRoleByIdAsync(roleId, trackChanges: true);
+            if (role == null)
+            {
+                await CreateAuditLog(
+                    "Role Update Failed",
+                    $"Role not found for ID: {roleId}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<RoleResponseDto>(
+                    new NotFoundException("Role not found"),
+                    "Role not found");
+            }
+
+            // Track all changes for audit log
+            var changes = new List<string>();
+
+            // Debug logging
+            _logger.LogInformation("Current Role Name: {Name}", role.Name);
+            _logger.LogInformation("New Role Name: {Name}", updateRoleDto.Name);
+
+            // Check for duplicate name only if name is changing
+            if (role.Name != updateRoleDto.Name)
+            {
+                if (await _repository.AdminRepository.RoleExistsAsync(updateRoleDto.Name, roleId))
+                {
+                    await CreateAuditLog(
+                        "Role Update Failed",
+                        $"Role name already exists: {updateRoleDto.Name}",
+                        "Role Management"
+                    );
+                    return ResponseFactory.Fail<RoleResponseDto>("Role name already exists");
+                }
+
+                changes.Add($"Name: {role.Name} → {updateRoleDto.Name}");
+                role.Name = updateRoleDto.Name;
+                role.NormalizedName = updateRoleDto.Name.ToUpper();
+            }
+
+            // Track changes for permissions
+            var originalPermissions = role.Permissions.Select(p => p.Name).ToList();
+            var addedPermissions = updateRoleDto.Permissions.Except(originalPermissions).ToList();
+            var removedPermissions = originalPermissions.Except(updateRoleDto.Permissions).ToList();
+
+            if (addedPermissions.Any() || removedPermissions.Any())
+            {
+                if (addedPermissions.Any())
+                    changes.Add($"Added permissions: {string.Join(", ", addedPermissions)}");
+                if (removedPermissions.Any())
+                    changes.Add($"Removed permissions: {string.Join(", ", removedPermissions)}");
+
+                // Create new permissions list
+                var updatedPermissions = new List<RolePermission>();
+
+                // Keep existing permissions that weren't removed
+                foreach (var permission in role.Permissions)
+                {
+                    if (!removedPermissions.Contains(permission.Name))
+                    {
+                        updatedPermissions.Add(permission);
+                    }
+                }
+
+                // Add new permissions
+                foreach (var newPermission in addedPermissions)
+                {
+                    updatedPermissions.Add(new RolePermission
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        RoleId = roleId,
+                        Name = newPermission,
+                        IsGranted = true
+                    });
+                }
+
+                // Update role's permissions
+                role.Permissions = updatedPermissions;
+            }
+
+            // Only proceed with update if there are changes
+            if (changes.Any())
+            {
+                _logger.LogInformation("Applying changes: {@Changes}", changes);
+
+                role.LastModifiedBy = userId;
+                role.LastModifiedAt = DateTime.UtcNow;
+
+                _repository.AdminRepository.UpdateRole(role);
+                await _repository.SaveChangesAsync();
+
+                await CreateAuditLog(
+                    "Updated Role",
+                    $"Updated role {role.Name}. Changes: {string.Join("; ", changes)}",
+                    "Role Management"
+                );
+            }
+            else
+            {
+                _logger.LogInformation("No changes detected for role {RoleId}", roleId);
+            }
+
+            var responseDto = _mapper.Map<RoleResponseDto>(role);
+            return ResponseFactory.Success(responseDto, changes.Any()
+                ? "Role updated successfully"
+                : "No changes were made to role");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating role");
+            return ResponseFactory.Fail<RoleResponseDto>(ex, "An unexpected error occurred");
+        }
+    }
+   /* public async Task<BaseResponse<RoleResponseDto>> UpdateRole(string roleId, UpdateRoleRequestDto updateRoleDto)
+    {
+        try
+        {
             var validationResult = await _updateRoleValidator.ValidateAsync(updateRoleDto);
             if (!validationResult.IsValid)
             {
@@ -1132,6 +1279,7 @@ public class AdminService : IAdminService
             {
                 Id = Guid.NewGuid().ToString(),
                 Name = p,
+                RoleId = roleId,  // Add this line to set the RoleId
                 IsGranted = true
             }).ToList();
 
@@ -1159,7 +1307,7 @@ public class AdminService : IAdminService
             return ResponseFactory.Fail<RoleResponseDto>(ex, "An unexpected error occurred");
         }
     }
-
+*/
     public async Task<BaseResponse<bool>> DeleteRole(string roleId)
     {
         try

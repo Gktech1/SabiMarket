@@ -13,9 +13,9 @@ namespace SabiMarket.Application.Validators
         public CreateRoleValidator()
         {
             RuleFor(x => x.Name)
-                .NotEmpty().WithMessage("Role name is required")
-                .MaximumLength(50).WithMessage("Role name cannot exceed 50 characters")
-                .Matches("^[a-zA-Z0-9\\s-]+$").WithMessage("Role name can only contain letters, numbers, spaces and hyphens");
+              .NotEmpty().WithMessage("Role name is required")
+              .MaximumLength(50).WithMessage("Role name cannot exceed 50 characters")
+              .Matches("^[a-zA-Z_]+$").WithMessage("Role name can only contain letters and underscores");
 
             RuleFor(x => x.Permissions)
                 .NotNull().WithMessage("Permissions cannot be null")

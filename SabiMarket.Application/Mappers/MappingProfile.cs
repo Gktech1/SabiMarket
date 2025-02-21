@@ -265,7 +265,7 @@ public class MappingProfile : Profile
         .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => DateTime.UtcNow))
         .ForMember(dest => dest.TransactionReference, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
         .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => PaymentStatusEnum.Paid));
-        
+
         CreateMap<AuditLog, AuditLogResponseDto>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
@@ -284,35 +284,16 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Browser, opt => opt.Ignore())
             .ForMember(dest => dest.OperatingSystem, opt => opt.Ignore())
             .ForMember(dest => dest.Location, opt => opt.Ignore());
-        /*// Main RoleResponseDto mapping
-        CreateMap<ApplicationRole, RoleResponseDto>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-            .ForMember(dest => dest.AllPermissions, opt => opt.MapFrom(src =>
-                src.Permissions != null
-                    ? src.Permissions
-                        .Where(p => p.IsGranted)
-                        .Select(p => p.Name)
-                        .ToList()
-                    : new List<string>()))
-            .ForMember(dest => dest.VisiblePermissions, opt => opt.MapFrom(src =>
-                src.Permissions != null
-                    ? src.Permissions
-                        .Where(p => p.IsGranted)
-                        .Select(p => p.Name)
-                        .Take(RolePermissionConstants.VisiblePermissionsCount)
-                        .ToList()
-                    : new List<string>()))
-            .ForMember(dest => dest.AdditionalPermissionsCount, opt => opt.MapFrom(src =>
-                src.Permissions != null
-                    ? Math.Max(0, src.Permissions.Count(p => p.IsGranted) - RolePermissionConstants.VisiblePermissionsCount)
-                    : 0))
-            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
-            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-            .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy))
-            .ForMember(dest => dest.LastModifiedAt, opt => opt.MapFrom(src => src.LastModifiedAt))
-            .ForMember(dest => dest.LastModifiedBy, opt => opt.MapFrom(src => src.LastModifiedBy));
-*/
+
+        CreateMap<Chairman, ReportResponseDto>()
+               .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+               .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
+               // Since Chairman doesn't have Description, we can set a default
+               .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Office))
+               .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.FullName))
+               .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.TermStart))
+               .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+               .ForMember(dest => dest.ChairmanId, opt => opt.MapFrom(src => src.Id));
 
 
         CreateMap<LocalGovernment, LGAResponseDto>()
@@ -331,8 +312,8 @@ public class MappingProfile : Profile
                    .ForMember(dest => dest.ActiveMarkets, opt => opt.MapFrom(src => src.Markets.Count(m => m.IsActive)))
                    .ForMember(dest => dest.TotalTraders, opt => opt.MapFrom(src => src.Vendors.Count))
                    .ForMember(dest => dest.TotalRevenue, opt => opt.MapFrom(src => src.CurrentRevenue));
-    
-    CreateMap<LevyPayment, LevyPaymentResponseDto>();
+
+        CreateMap<LevyPayment, LevyPaymentResponseDto>();
 
         CreateMap<ApplicationRole, RoleResponseDto>();
         CreateMap<RolePermission, RolePermissionDto>();

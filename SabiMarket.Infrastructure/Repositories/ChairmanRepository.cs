@@ -15,8 +15,15 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<Chairman> GetChairmanByIdAsync(string userId, bool trackChanges)
         {
-            return await FindByCondition(c => c.Id == userId, trackChanges)
+            return await FindByCondition(c => c.LocalGovernmentId == userId, trackChanges)
                 .Include(c => c.Market) 
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<Chairman> GetChairmanById(string userId, bool trackChanges)
+        {
+            return await FindByCondition(c => c.Id == userId, trackChanges)
+                .Include(c => c.Market)
                 .FirstOrDefaultAsync();
         }
 
