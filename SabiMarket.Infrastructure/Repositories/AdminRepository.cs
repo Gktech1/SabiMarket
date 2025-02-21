@@ -152,16 +152,62 @@ public class AdminRepository : GeneralRepository<Admin>, IAdminRepository
                    .Include(a => a.User);
     }
 
-    public async Task<ApplicationRole> GetRoleByIdAsync(string roleId, bool trackChanges = false)
+    public async Task<ApplicationRole> GetRoleByIdAsync(string roleId, bool trackChanges)
     {
-        var query = _dbContext.Roles
-            .Include(r => r.Permissions)
-            .Where(r => r.Id == roleId);
+        var query = !trackChanges ?
+            _dbContext.Roles.AsNoTracking() :
+            _dbContext.Roles;
 
-        return trackChanges
-            ? await query.FirstOrDefaultAsync()
-            : await query.AsNoTracking().FirstOrDefaultAsync();
+        return await query
+            .Include(r => r.Permissions)
+            .FirstOrDefaultAsync(r => r.Id == roleId);
     }
+
+    public void DeleteRolePermission(RolePermission permission)
+    {
+        _dbContext.Set<RolePermission>().Remove(permission);
+    }
+
+    public void DeleteRole(ApplicationRole role)
+    {
+        _dbContext.Roles.Remove(role);
+    }
+
+ /*   public void DeleteRole(ApplicationRole role)
+    {
+        try
+        {
+            // Get all permissions for this role
+            var permissions = _dbContext.Set<RolePermission>()
+                .Where(rp => rp.RoleId == role.Id)
+                .ToList();
+
+            // Delete permissions first
+            if (permissions.Any())
+            {
+                _dbContext.Set<RolePermission>().RemoveRange(permissions);
+                _dbContext.SaveChanges();
+            }
+
+            // Now delete the role
+            _dbContext.Roles.Remove(role);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error deleting role: {ex.Message}", ex);
+        }
+    }*/
+
+    /*public async Task<ApplicationRole> GetRoleByIdAsync(string roleId, bool trackChanges)
+    {
+        var query = !trackChanges ?
+            _dbContext.Roles.AsNoTracking() :
+            _dbContext.Roles;
+
+        return await query
+            .Include(r => r.Permissions)
+            .FirstOrDefaultAsync(r => r.Id == roleId);
+    }*/
 
     public IQueryable<ApplicationRole> GetFilteredRolesQuery(RoleFilterRequestDto filterDto)
     {
@@ -202,10 +248,10 @@ public class AdminRepository : GeneralRepository<Admin>, IAdminRepository
         _dbContext.Roles.Update(role);
     }
 
-    public void DeleteRole(ApplicationRole role)
+  /*  public void DeleteRole(ApplicationRole role)
     {
         _dbContext.Roles.Remove(role);
-    }
+    }*/
 
     public async Task AddAdminToRolesAsync(string adminId, IEnumerable<string> roleIds)
     {

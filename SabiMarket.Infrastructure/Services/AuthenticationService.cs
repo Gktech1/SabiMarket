@@ -106,6 +106,7 @@ namespace SabiMarket.Infrastructure.Services
                 var userDetails = await GetUserDetailsByRole(user, roles.First());
 
                 // Update last login
+                //user.IsActive = true;   
                 user.LastLoginAt = DateTime.UtcNow;
                 await _userManager.UpdateAsync(user);
 
@@ -115,11 +116,6 @@ namespace SabiMarket.Infrastructure.Services
 
                 // Generate refresh token
                 user.RefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-                user.RefreshTokenJwtId = jwtId;
-                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(30);
-                user.IsRefreshTokenUsed = false;
-
-                await _userManager.UpdateAsync(user);
                 var response = new LoginResponseDto
                 {
                     AccessToken = token,

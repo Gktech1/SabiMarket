@@ -30,5 +30,6 @@ namespace SabiMarket.Application.IRepositories
         Task AddAdminToRolesAsync(string adminId, IEnumerable<string> roleIds);
         Task RemoveAdminFromRolesAsync(string adminId, IEnumerable<string> roleIds);
         Task<IEnumerable<ApplicationRole>> GetAdminRolesAsync(string adminId);
+        void DeleteRolePermission(RolePermission permission);
     }
 }

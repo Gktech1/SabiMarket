@@ -2,6 +2,7 @@
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
+using SabiMarket.Domain.Entities;
 using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
@@ -264,7 +265,25 @@ public class MappingProfile : Profile
         .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => DateTime.UtcNow))
         .ForMember(dest => dest.TransactionReference, opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
         .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => PaymentStatusEnum.Paid));
-
+        
+        CreateMap<AuditLog, AuditLogResponseDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
+            .ForMember(dest => dest.UserEmail, opt => opt.MapFrom(src => src.User.Email))
+            .ForMember(dest => dest.UserFullName, opt =>
+                opt.MapFrom(src => $"{src.User.FirstName} {src.User.LastName}".Trim()))
+            .ForMember(dest => dest.UserRole, opt => opt.Ignore())  // We'll set this separately
+            .ForMember(dest => dest.Date, opt => opt.MapFrom(src => src.Date))
+            .ForMember(dest => dest.Time, opt => opt.MapFrom(src => src.Time))
+            .ForMember(dest => dest.Timestamp, opt => opt.MapFrom(src => src.Timestamp))
+            .ForMember(dest => dest.Activity, opt => opt.MapFrom(src => src.Activity))
+            .ForMember(dest => dest.Module, opt => opt.MapFrom(src => src.Module))
+            .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.Details))
+            .ForMember(dest => dest.IpAddress, opt => opt.MapFrom(src => src.IpAddress))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => "Completed"))
+            .ForMember(dest => dest.Browser, opt => opt.Ignore())
+            .ForMember(dest => dest.OperatingSystem, opt => opt.Ignore())
+            .ForMember(dest => dest.Location, opt => opt.Ignore());
         /*// Main RoleResponseDto mapping
         CreateMap<ApplicationRole, RoleResponseDto>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
@@ -294,7 +313,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.LastModifiedAt, opt => opt.MapFrom(src => src.LastModifiedAt))
             .ForMember(dest => dest.LastModifiedBy, opt => opt.MapFrom(src => src.LastModifiedBy));
 */
-  
+
 
         CreateMap<LocalGovernment, LGAResponseDto>()
                    .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))

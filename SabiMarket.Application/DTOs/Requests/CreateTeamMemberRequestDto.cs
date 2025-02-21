@@ -35,6 +35,6 @@ namespace SabiMarket.Application.DTOs.Requests
     // TeamMemberFilterRequestDto.cs
     public class TeamMemberFilterRequestDto
     {
-        public string SearchTerm { get; set; }
+        public string? SearchTerm { get; set; }
     }
 }
