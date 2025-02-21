@@ -20,6 +20,7 @@ using SabiMarket.Application.Validators;
 using AutoMapper.QueryableExtensions;
 using FluentValidation.Results;
 using Azure.Core;
+using CloudinaryDotNet.Actions;
 
 public class AdminService : IAdminService
 {
@@ -607,7 +608,7 @@ public class AdminService : IAdminService
     }
 
     public async Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogResponseDto>>>> GetAdminAuditLogs(
-        string adminId, DateTime? startDate, DateTime? endDate, PaginationFilter paginationFilter)
+    string adminId, DateTime? startDate, DateTime? endDate, PaginationFilter paginationFilter)
     {
         try
         {
@@ -639,7 +640,20 @@ public class AdminService : IAdminService
             var query = _repository.AdminRepository.GetAdminAuditLogsQuery(adminId, startDate, endDate);
             var paginatedLogs = await query.Paginate(paginationFilter);
 
-            var logDtos = _mapper.Map<IEnumerable<AuditLogResponseDto>>(paginatedLogs.PageItems);
+            // Map to DTOs
+            var logDtos = _mapper.Map<IEnumerable<AuditLogResponseDto>>(paginatedLogs.PageItems).ToList();
+
+            // Add roles for each audit log
+            foreach (var logDto in logDtos)
+            {
+                var user = await _userManager.FindByIdAsync(logDto.UserId);
+                if (user != null)
+                {
+                    var roles = await _userManager.GetRolesAsync(user);
+                    logDto.UserRole = roles.FirstOrDefault() ?? "Unknown";
+                }
+            }
+
             var result = new PaginatorDto<IEnumerable<AuditLogResponseDto>>
             {
                 PageItems = logDtos,
@@ -1163,6 +1177,19 @@ public class AdminService : IAdminService
                     "Role not found");
             }
 
+            // Check if trying to delete Admin role
+            if (role.Name.Equals(UserRoles.Admin, StringComparison.OrdinalIgnoreCase))
+            {
+                await CreateAuditLog(
+                    "Protected Role Deletion Attempted",
+                    $"Attempted to delete protected Admin role (ID: {roleId})",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<bool>(
+                    new UnauthorizedException("Protected role"),
+                    "The Admin role cannot be deleted as it is a protected system role");
+            }
+
             // Check if role is in use
             var usersInRole = await _userManager.GetUsersInRoleAsync(role.Name);
             if (usersInRole.Any())
@@ -1173,6 +1200,16 @@ public class AdminService : IAdminService
                     "Role Management"
                 );
                 return ResponseFactory.Fail<bool>("Cannot delete role as it is assigned to users");
+            }
+
+            // Instead of Clear(), remove each permission directly
+            if (role.Permissions != null && role.Permissions.Any())
+            {
+                foreach (var permission in role.Permissions.ToList())
+                {
+                    _repository.AdminRepository.DeleteRolePermission(permission);
+                }
+                await _repository.SaveChangesAsync();
             }
 
             _repository.AdminRepository.DeleteRole(role);
@@ -1192,7 +1229,6 @@ public class AdminService : IAdminService
             return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
         }
     }
-
     public async Task<BaseResponse<TeamMemberResponseDto>> CreateTeamMember(CreateTeamMemberRequestDto requestDto)
     {
         try
