@@ -22,7 +22,7 @@ namespace SabiMarket.Infrastructure.Repositories
             if (category is not null)
             {
                 return await FindAll(false)
-                            .Where(l => l.Categories.Any(a => a.Name == category))
+                            .Where(l => l.Category.ToLower() == category.ToLower())
                             .Paginate(paginationFilter);
             }
             else
@@ -35,8 +35,7 @@ namespace SabiMarket.Infrastructure.Repositories
         public async Task<PaginatorDto<IEnumerable<WaivedProduct>>> SearchWaivedProduct(string searchString, PaginationFilter paginationFilter)
         {
             return await FindAll(false)
-                           .Where(a => a.Name.Contains(searchString) ||
-                           a.ProductCode.Contains(searchString))
+                           .Where(a => a.ProductName.Contains(searchString))
                            .Paginate(paginationFilter);
         }
     }
