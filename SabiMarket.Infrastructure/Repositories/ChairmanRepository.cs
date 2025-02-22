@@ -35,12 +35,17 @@ namespace SabiMarket.Infrastructure.Repositories
         }
 
         public async Task<PaginatorDto<IEnumerable<Chairman>>> GetChairmenWithPaginationAsync(
-            PaginationFilter paginationFilter, bool trackChanges)
+     PaginationFilter paginationFilter, bool trackChanges)
         {
             return await FindPagedByCondition(
+                expression: _ => true,
                 paginationFilter: paginationFilter,
                 trackChanges: trackChanges,
-                orderBy: query => query.OrderBy(c => c.CreatedAt));
+                orderBy: query => query
+                    .Include(c => c.User)
+                    .Include(c => c.Market)
+                    .Include(c => c.LocalGovernment)
+                    .OrderBy(c => c.CreatedAt));
         }
         public async Task<IEnumerable<Chairman>> SearchChairmenAsync(
             string searchTerm, PaginationFilter paginationFilter, bool trackChanges)

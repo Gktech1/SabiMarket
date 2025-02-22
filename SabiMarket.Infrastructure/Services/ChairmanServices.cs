@@ -1484,7 +1484,7 @@ namespace SabiMarket.Infrastructure.Services
                     "Chairman Management"
                 );
 
-                var validationResult = await _updateProfileValidator.ValidateAsync(profileDto);
+               /* var validationResult = await _updateProfileValidator.ValidateAsync(profileDto);
                 if (!validationResult.IsValid)
                 {
                     await CreateAuditLog(
@@ -1495,6 +1495,16 @@ namespace SabiMarket.Infrastructure.Services
                     return ResponseFactory.Fail<bool>(
                         new ValidationException(validationResult.Errors),
                         "Validation failed");
+                }*/
+               if(string.IsNullOrEmpty(chairmanId))
+               {
+                    await CreateAuditLog(
+                        $"{chairmanId}: ChairmanId is null",
+                        $"CorrelationId: {correlationId} - {chairmanId} : chairmanId is null",
+                        "Chairman Management"
+                    );
+
+                    return ResponseFactory.Fail<bool>("chairman is not found");
                 }
 
                 var chairman = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, true);
