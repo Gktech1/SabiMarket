@@ -32,10 +32,12 @@
     // DTOs/Requests/UpdateRoleRequestDto.cs
     public class UpdateRoleRequestDto
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; } = string.Empty;
         public List<string> Permissions { get; set; } = new();
         public bool IsActive { get; set; } = true;
     }
+
 
     // DTOs/Requests/RoleFilterRequestDto.cs
     public class RoleFilterRequestDto
