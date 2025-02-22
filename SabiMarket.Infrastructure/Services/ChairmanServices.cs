@@ -345,7 +345,7 @@ namespace SabiMarket.Infrastructure.Services
                     "Chairman Management"
                 );
 
-                var result = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, trackChanges: false);
+                var result = await _repository.ChairmanRepository.GetChairmanById(chairmanId, trackChanges: false);
 
                 if(result is null)
                 {
@@ -1953,7 +1953,7 @@ namespace SabiMarket.Infrastructure.Services
                     await _userManager.RemoveFromRoleAsync(user, UserRoles.Chairman);
 
                     // Update user status
-                    user.IsActive = false;
+                    //user.IsActive = false;
                     await _userManager.UpdateAsync(user);
                 }
 

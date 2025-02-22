@@ -72,6 +72,17 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<UpdateLevyRequestDto>, UpdateLevyRequestDtoValidator>();
         services.AddValidatorsFromAssemblyContaining<CreateLevyRequestDtoValidator>();
         services.AddScoped<IValidator<UpdateProfileDto>, UpdateProfileDtoValidator>();
+        services.AddScoped<IValidator<CreateAdminRequestDto>, CreateAdminValidator>();
+        services.AddScoped<IValidator<UpdateAdminProfileDto>, UpdateAdminProfileValidator>();
+        services.AddScoped<IValidator<CreateRoleRequestDto>, CreateRoleValidator>();
+        services.AddScoped<IValidator<UpdateRoleRequestDto>, UpdateRoleValidator>();
+
+        // Add other services
+        services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<IRepositoryManager, RepositoryManager>();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddHttpContextAccessor();
+        services.AddAutoMapper(typeof(MappingProfile));
         services.AddScoped<IValidator<CreateAssistantOfficerRequestDto>, CreateAssistantOfficerRequestDtoValidator>();
         services.AddAutoMapper(typeof(MappingProfile));
         // Or if you have multiple profiles:
