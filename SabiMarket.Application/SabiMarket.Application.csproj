@@ -32,4 +32,8 @@
     <ProjectReference Include="..\SabiMarket.Domain\SabiMarket.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="IServices\SowFood\" />
+  </ItemGroup>
+
 </Project>

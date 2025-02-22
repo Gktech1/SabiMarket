@@ -29,11 +29,20 @@ namespace SabiMarket.Application.IRepositories
         public IReportRepository ReportRepository { get; }
 
         public IAdminRepository AdminRepository { get; }
-        public ISowFoodStaffRepository StaffRepository { get; }
+        //public ISowFoodStaffRepository StaffRepository { get; }
 
-        public IAdvertisementRepository AdvertisementRepository { get; }    
+        public IAdvertisementRepository AdvertisementRepository { get; }
         public ICustomerRepository CustomerRepository { get; }
-
+        #region SOW FOOD
+        public ISowFoodCompanyRepository SowFoodCompanyRepository { get; }
+        public ISowFoodCompanyCustomerRepository SowFoodCompanyCustomerRepository { get; }
+        public ISowFoodCompanyProductionItemRepository SowFoodCompanyProductionItemRepository { get; }
+        public ISowFoodCompanySalesRecordRepository SowFoodCompanySalesRecordRepository { get; }
+        public ISowFoodCompanyShelfItemRepository SowFoodCompanyShelfItemRepository { get; }
+        public ISowFoodCompanyStaffAppraiserRepository SowFoodCompanyStaffAppraiserRepository { get; }
+        public ISowFoodCompanyStaffAttendanceRepository SowFoodCompanyStaffAttendanceRepository { get; }
+        public ISowFoodCompanyStaffRepository SowFoodCompanyStaffRepository { get; }
+        #endregion
         Task SaveChangesAsync();
     }
 }
