@@ -342,5 +342,23 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
             return Ok(response);
         }
+
+        [HttpGet("GetVendorAndProducts")]
+        public async Task<IActionResult> GetVendorAndProducts([FromQuery] PaginationFilter filter)
+        {
+            var response = await _serviceManager.IWaivedProductService.GetVendorAndProducts(filter);
+            if (!response.Status)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
     }
 }

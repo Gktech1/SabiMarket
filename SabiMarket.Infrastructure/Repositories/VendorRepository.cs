@@ -23,7 +23,7 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<Vendor> GetVendorWithApplicationUser(string id, bool trackChanges) =>
             await FindByCondition(v => v.Id == id, trackChanges)
-                .Include(v => v.User)  
+                .Include(v => v.User)
                 .FirstOrDefaultAsync();
 
         public async Task<Vendor> GetVendorByUserId(string userId, bool trackChanges) =>
@@ -46,11 +46,12 @@ namespace SabiMarket.Infrastructure.Repositories
         }
 
 
-            public async Task<PaginatorDto<IEnumerable<Vendor>>> GetVendorsWithPagination(
-            PaginationFilter paginationFilter, bool trackChanges)
+        public async Task<PaginatorDto<IEnumerable<Vendor>>> GetVendorsWithPagination(
+        PaginationFilter paginationFilter, bool trackChanges)
         {
             var query = FindAll(trackChanges)
-                .Include(v => v.User)  
+                .Include(v => v.User)
+                .Include(p => p.Products)
                 .OrderBy(v => v.User.FirstName);
             return await query.Paginate(paginationFilter);
         }

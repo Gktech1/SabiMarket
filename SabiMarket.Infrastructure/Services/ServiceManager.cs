@@ -12,12 +12,13 @@ namespace SabiMarket.Infrastructure.Services
 {
     public class ServiceManager : IServiceManager
     {
+        //private readonly IHttpContextAccessor _contextAccessor;
         private readonly Lazy<IWaivedProductService> _waivedProductService;
         private readonly Lazy<ISubscriptionService> _subscriptionService;
         private readonly Lazy<ISubscriptionPlanService> _subscriptionPlanService;
         public ServiceManager(IRepositoryManager repositoryManager, IHttpContextAccessor contextAccessor, ApplicationDbContext applicationDbContext)
         {
-            _waivedProductService = new Lazy<IWaivedProductService>(() => new WaivedProductService(repositoryManager));
+            _waivedProductService = new Lazy<IWaivedProductService>(() => new WaivedProductService(repositoryManager, contextAccessor));
             _subscriptionService = new Lazy<ISubscriptionService>(() => new SubscriptionService(contextAccessor, repositoryManager, applicationDbContext));
             _subscriptionPlanService = new Lazy<ISubscriptionPlanService>(() => new SubscriptionPlanService(repositoryManager));
         }
