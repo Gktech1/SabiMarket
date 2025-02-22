@@ -21,6 +21,7 @@ using AutoMapper.QueryableExtensions;
 using FluentValidation.Results;
 using Azure.Core;
 using CloudinaryDotNet.Actions;
+using Microsoft.EntityFrameworkCore;
 
 public class AdminService : IAdminService
 {
@@ -1148,10 +1149,47 @@ public class AdminService : IAdminService
                 role.NormalizedName = updateRoleDto.Name.ToUpper();
             }
 
-            // Track changes for permissions
             var originalPermissions = role.Permissions.Select(p => p.Name).ToList();
             var addedPermissions = updateRoleDto.Permissions.Except(originalPermissions).ToList();
             var removedPermissions = originalPermissions.Except(updateRoleDto.Permissions).ToList();
+
+            /*            if (addedPermissions.Any() || removedPermissions.Any())
+                        {
+                            if (addedPermissions.Any())
+                                changes.Add($"Added permissions: {string.Join(", ", addedPermissions)}");
+                            if (removedPermissions.Any())
+                                changes.Add($"Removed permissions: {string.Join(", ", removedPermissions)}");
+
+                            // First, remove permissions that should be removed
+                            var permissionsToRemove = role.Permissions
+                                .Where(p => removedPermissions.Contains(p.Name))
+                                .ToList();
+
+                            foreach (var permission in permissionsToRemove)
+                            {
+                                _dbContext.RolePermissions.Remove(permission);
+                            }
+
+                            // Then add new permissions
+                            var permissionsToAdd = addedPermissions.Select(p => new RolePermission
+                            {
+                                Id = Guid.NewGuid().ToString(),
+                                RoleId = roleId,
+                                Name = p,
+                                IsGranted = true
+                            }).ToList();
+
+                            await _dbContext.RolePermissions.AddRangeAsync(permissionsToAdd);
+
+                            // Save changes immediately to handle the permissions
+                            await _dbContext.SaveChangesAsync();
+
+                            // Refresh the role's permissions
+                            role.Permissions = role.Permissions
+                                .Where(p => !removedPermissions.Contains(p.Name))
+                                .Concat(permissionsToAdd)
+                                .ToList();
+                        }*/
 
             if (addedPermissions.Any() || removedPermissions.Any())
             {
@@ -1160,39 +1198,68 @@ public class AdminService : IAdminService
                 if (removedPermissions.Any())
                     changes.Add($"Removed permissions: {string.Join(", ", removedPermissions)}");
 
-                // Create new permissions list
-                var updatedPermissions = new List<RolePermission>();
+                // Remove old permissions
+                var permissionsToRemove = role.Permissions
+                    .Where(p => removedPermissions.Contains(p.Name))
+                    .ToList();
 
-                // Keep existing permissions that weren't removed
-                foreach (var permission in role.Permissions)
-                {
-                    if (!removedPermissions.Contains(permission.Name))
-                    {
-                        updatedPermissions.Add(permission);
-                    }
-                }
+                _repository.AdminRepository.DeleteRolePermissions(permissionsToRemove);
 
                 // Add new permissions
-                foreach (var newPermission in addedPermissions)
+                var permissionsToAdd = addedPermissions.Select(p => new RolePermission
                 {
-                    updatedPermissions.Add(new RolePermission
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        RoleId = roleId,
-                        Name = newPermission,
-                        IsGranted = true
-                    });
-                }
+                    Id = Guid.NewGuid().ToString(),
+                    RoleId = roleId,
+                    Name = p,
+                    IsGranted = true
+                }).ToList();
 
-                // Update role's permissions
-                role.Permissions = updatedPermissions;
+                await _repository.AdminRepository.AddRolePermissionsAsync(permissionsToAdd);
+
+                // Save changes to handle permissions
+                await _repository.SaveChangesAsync();
+
+                // Update the role's permissions collection
+                role.Permissions = role.Permissions
+                    .Where(p => !removedPermissions.Contains(p.Name))
+                    .Concat(permissionsToAdd)
+                    .ToList();
             }
 
-            // Only proceed with update if there are changes
+            // Update other role properties
+          /*  if (role.Name != updateRoleDto.Name)
+            {
+                if (await _repository.AdminRepository.RoleExistsAsync(updateRoleDto.Name, roleId))
+                {
+                    await CreateAuditLog(
+                        "Role Update Failed",
+                        $"Role name already exists: {updateRoleDto.Name}",
+                        "Role Management"
+                    );
+                    return ResponseFactory.Fail<RoleResponseDto>("Role name already exists");
+                }
+
+                changes.Add($"Name: {role.Name} → {updateRoleDto.Name}");
+                role.Name = updateRoleDto.Name;
+                role.NormalizedName = updateRoleDto.Name.ToUpper();
+            }*/
+
+            // Update description if changed
+            if (role.Description != updateRoleDto.Description)
+            {
+                changes.Add($"Description: {role.Description} → {updateRoleDto.Description}");
+                role.Description = updateRoleDto.Description;
+            }
+
+            // Update IsActive status if changed
+            if (role.IsActive != updateRoleDto.IsActive)
+            {
+                changes.Add($"Active Status: {role.IsActive} → {updateRoleDto.IsActive}");
+                role.IsActive = updateRoleDto.IsActive;
+            }
+
             if (changes.Any())
             {
-                _logger.LogInformation("Applying changes: {@Changes}", changes);
-
                 role.LastModifiedBy = userId;
                 role.LastModifiedAt = DateTime.UtcNow;
 
@@ -1205,15 +1272,11 @@ public class AdminService : IAdminService
                     "Role Management"
                 );
             }
-            else
-            {
-                _logger.LogInformation("No changes detected for role {RoleId}", roleId);
-            }
 
             var responseDto = _mapper.Map<RoleResponseDto>(role);
             return ResponseFactory.Success(responseDto, changes.Any()
                 ? "Role updated successfully"
-                : "No changes were made to role");
+                : "No changes were made to role");           
         }
         catch (Exception ex)
         {

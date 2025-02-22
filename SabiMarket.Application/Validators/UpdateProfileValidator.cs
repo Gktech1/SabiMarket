@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+﻿/*using FluentValidation;
 using SabiMarket.Application.DTOs.Requests;
 
 public class UpdateProfileValidator : AbstractValidator<UpdateProfileDto>
@@ -31,4 +31,4 @@ public class UpdateProfileValidator : AbstractValidator<UpdateProfileDto>
                 .WithMessage("Invalid profile image URL format");
         });
     }
-}
+}*/

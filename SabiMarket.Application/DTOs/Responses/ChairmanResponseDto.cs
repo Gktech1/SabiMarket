@@ -7,6 +7,7 @@
         public string Email { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string MarketId { get; set; } = string.Empty;
+        public string LocalGovernmentId { get; set; } = string.Empty;
         public string MarketName { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string DefaultPassword { get; set; } = string.Empty;

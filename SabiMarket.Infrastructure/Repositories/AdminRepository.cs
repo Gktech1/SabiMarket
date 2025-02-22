@@ -284,4 +284,14 @@ public class AdminRepository : GeneralRepository<Admin>, IAdminRepository
             .Include(r => r.Permissions)
             .ToListAsync();
     }
+
+    public async Task AddRolePermissionsAsync(IEnumerable<RolePermission> permissions)
+    {
+        await _dbContext.Set<RolePermission>().AddRangeAsync(permissions);
+    }
+
+    public void DeleteRolePermissions(IEnumerable<RolePermission> permissions)
+    {
+        _dbContext.Set<RolePermission>().RemoveRange(permissions);
+    }
 }
