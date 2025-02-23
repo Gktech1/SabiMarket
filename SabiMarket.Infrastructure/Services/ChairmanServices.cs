@@ -347,7 +347,7 @@ namespace SabiMarket.Infrastructure.Services
 
                 var result = await _repository.ChairmanRepository.GetChairmanById(chairmanId, trackChanges: false);
 
-                if(result is null)
+                if (result is null)
                 {
                     await CreateAuditLog(
                     "Chairman Details Query",
@@ -1434,7 +1434,7 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Set default values
-                chairmanDto.UserId = userId;    
+                chairmanDto.UserId = userId;
                 chairmanDto.Title = "Honorable";
                 chairmanDto.Office = "Chairman";
                 chairmanDto.Password = GenerateDefaultPassword(chairmanDto.FullName);
@@ -1473,59 +1473,53 @@ namespace SabiMarket.Infrastructure.Services
             var randomNumbers = random.Next(1000, 9999).ToString();
             return $"{firstName}@{randomNumbers}";
         }
+
         public async Task<BaseResponse<bool>> UpdateChairmanProfile(string chairmanId, UpdateProfileDto profileDto)
         {
             var correlationId = Guid.NewGuid().ToString();
             try
             {
-                await CreateAuditLog(
-                    "Profile Update",
-                    $"CorrelationId: {correlationId} - Updating chairman profile: {chairmanId}",
-                    "Chairman Management"
-                );
-
-               /* var validationResult = await _updateProfileValidator.ValidateAsync(profileDto);
-                if (!validationResult.IsValid)
+                // Get the chairman with tracking
+                var chairman = await _repository.ChairmanRepository.GetChairmanById(chairmanId, true);
+                if (chairman == null)
                 {
-                    await CreateAuditLog(
-                        "Update Failed",
-                        $"CorrelationId: {correlationId} - Validation failed",
-                        "Chairman Management"
-                    );
-                    return ResponseFactory.Fail<bool>(
-                        new ValidationException(validationResult.Errors),
-                        "Validation failed");
-                }*/
-               if(string.IsNullOrEmpty(chairmanId))
-               {
-                    await CreateAuditLog(
-                        $"{chairmanId}: ChairmanId is null",
-                        $"CorrelationId: {correlationId} - {chairmanId} : chairmanId is null",
-                        "Chairman Management"
-                    );
-
-                    return ResponseFactory.Fail<bool>("chairman is not found");
+                    return ResponseFactory.Fail<bool>("Chairman not found");
                 }
 
-                var chairman = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, true);
-                _mapper.Map(profileDto, chairman);
+                // Validate existing LocalGovernmentId from chairman
+                var localGovernmentExists = await _repository.LocalGovernmentRepository
+                    .LocalGovernmentExist(chairman.LocalGovernmentId);
+
+                if (!localGovernmentExists)
+                {
+                    return ResponseFactory.Fail<bool>("Invalid Local Government ID");
+                }
+
+                // Only update fields that are not null, empty, or "string" literal
+                if (!string.IsNullOrEmpty(profileDto.FullName) && profileDto.FullName != "string")
+                    chairman.FullName = profileDto.FullName;
+
+                if (!string.IsNullOrEmpty(profileDto.EmailAddress) && profileDto.EmailAddress != "string")
+                    chairman.Email = profileDto.EmailAddress;
+
+                if (chairman.User != null)
+                {
+                    if (!string.IsNullOrEmpty(profileDto.PhoneNumber) && profileDto.PhoneNumber != "string")
+                        chairman.User.PhoneNumber = profileDto.PhoneNumber;
+
+                    if (!string.IsNullOrEmpty(profileDto.Address) && profileDto.Address != "string")
+                        chairman.User.Address = profileDto.Address;
+
+                    if (!string.IsNullOrEmpty(profileDto.ProfileImageUrl) && profileDto.ProfileImageUrl != "string")
+                        chairman.User.ProfileImageUrl = profileDto.ProfileImageUrl;
+                }
+
                 await _repository.SaveChangesAsync();
-
-                await CreateAuditLog(
-                    "Profile Updated",
-                    $"CorrelationId: {correlationId} - Profile updated successfully",
-                    "Chairman Management"
-                );
-
                 return ResponseFactory.Success(true, "Profile updated successfully");
             }
             catch (Exception ex)
             {
-                await CreateAuditLog(
-                    "Update Failed",
-                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                    "Chairman Management"
-                );
+                _logger.LogError(ex, "Error updating chairman profile: {ChairmanId}", chairmanId);
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
@@ -2023,3 +2017,61 @@ namespace SabiMarket.Infrastructure.Services
     }
 }
 
+
+
+/*public async Task<BaseResponse<bool>> UpdateChairmanProfile(string chairmanId, UpdateProfileDto profileDto)
+{
+    var correlationId = Guid.NewGuid().ToString();
+    try
+    {
+        await CreateAuditLog(
+            "Profile Update",
+            $"CorrelationId: {correlationId} - Updating chairman profile: {chairmanId}",
+            "Chairman Management"
+        );
+
+       *//* var validationResult = await _updateProfileValidator.ValidateAsync(profileDto);
+        if (!validationResult.IsValid)
+        {
+            await CreateAuditLog(
+                "Update Failed",
+                $"CorrelationId: {correlationId} - Validation failed",
+                "Chairman Management"
+            );
+            return ResponseFactory.Fail<bool>(
+                new ValidationException(validationResult.Errors),
+                "Validation failed");
+        }*//*
+       if(string.IsNullOrEmpty(chairmanId))
+       {
+            await CreateAuditLog(
+                $"{chairmanId}: ChairmanId is null",
+                $"CorrelationId: {correlationId} - {chairmanId} : chairmanId is null",
+                "Chairman Management"
+            );
+
+            return ResponseFactory.Fail<bool>("chairman is not found");
+        }
+
+        var chairman = await _repository.ChairmanRepository.GetChairmanById(chairmanId, true);
+        _mapper.Map(profileDto, chairman);
+        await _repository.SaveChangesAsync();
+
+        await CreateAuditLog(
+            "Profile Updated",
+            $"CorrelationId: {correlationId} - Profile updated successfully",
+            "Chairman Management"
+        );
+
+        return ResponseFactory.Success(true, "Profile updated successfully");
+    }
+    catch (Exception ex)
+    {
+        await CreateAuditLog(
+            "Update Failed",
+            $"CorrelationId: {correlationId} - Error: {ex.Message}",
+            "Chairman Management"
+        );
+        return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+    }
+}*/

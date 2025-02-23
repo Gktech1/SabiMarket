@@ -13,6 +13,12 @@ namespace SabiMarket.Domain.Entities.LocalGovernmentAndMArket
         public string LocalGovernmentId { get; set; }
 
         [Required]
+        [StringLength(50)]
+        public string MarketType { get; set; }
+
+        public string CaretakerId { get; set; }
+
+        [Required]
         public string ChairmanId { get; set; }
 
         [Required]
@@ -51,6 +57,10 @@ namespace SabiMarket.Domain.Entities.LocalGovernmentAndMArket
         [ForeignKey("LocalGovernmentId")]
         [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual LocalGovernment LocalGovernment { get; set; }
+        
+        [ForeignKey("CaretakerId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
+        public virtual Caretaker Caretaker { get; set; }
 
         public virtual ICollection<Trader> Traders { get; set; } = new List<Trader>();
         public virtual ICollection<Caretaker> Caretakers { get; set; } = new List<Caretaker>();

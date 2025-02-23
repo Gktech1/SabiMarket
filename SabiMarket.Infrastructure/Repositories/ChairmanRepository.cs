@@ -20,10 +20,39 @@ namespace SabiMarket.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        /* public async Task<Chairman> GetChairmanById(string userId, bool trackChanges)
+         {
+             return await FindByCondition(c => c.Id == userId, trackChanges)
+                 .Include(c => c.Market)
+                 .FirstOrDefaultAsync();
+         }*/
+
         public async Task<Chairman> GetChairmanById(string userId, bool trackChanges)
         {
             return await FindByCondition(c => c.Id == userId, trackChanges)
                 .Include(c => c.Market)
+                .Include(c => c.User)
+                .Include(c => c.LocalGovernment)  // Make sure to include LocalGovernment
+                .Select(c => new Chairman
+                {
+                    Id = c.Id,
+                    UserId = c.UserId,
+                    MarketId = c.MarketId,
+                    LocalGovernmentId = c.LocalGovernmentId, // Explicitly select LocalGovernmentId
+                    FullName = c.FullName,
+                    Email = c.Email,
+                    Title = c.Title,
+                    Office = c.Office,
+                    TotalRecords = c.TotalRecords,
+                    TermStart = c.TermStart,
+                    TermEnd = c.TermEnd,
+                    LastLoginAt = c.LastLoginAt,
+                    User = c.User,
+                    Market = c.Market,
+                    LocalGovernment = c.LocalGovernment,
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt
+                })
                 .FirstOrDefaultAsync();
         }
 
