@@ -18,7 +18,7 @@ namespace SabiMarket.Infrastructure.Services
         private readonly Lazy<ISubscriptionPlanService> _subscriptionPlanService;
         public ServiceManager(IRepositoryManager repositoryManager, IHttpContextAccessor contextAccessor, ApplicationDbContext applicationDbContext)
         {
-            _waivedProductService = new Lazy<IWaivedProductService>(() => new WaivedProductService(repositoryManager, contextAccessor));
+            _waivedProductService = new Lazy<IWaivedProductService>(() => new WaivedProductService(repositoryManager, contextAccessor, applicationDbContext));
             _subscriptionService = new Lazy<ISubscriptionService>(() => new SubscriptionService(contextAccessor, repositoryManager, applicationDbContext));
             _subscriptionPlanService = new Lazy<ISubscriptionPlanService>(() => new SubscriptionPlanService(repositoryManager));
         }
