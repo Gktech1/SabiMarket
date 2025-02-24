@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SabiMarket.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SabiMarket.Infrastructure.Data;
 namespace SabiMarket.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250223143643_UpdateMarketenity")]
+    partial class UpdateMarketenity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -157,9 +160,6 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.Property<string>("CaretakerId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("CaretakerId1")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("ChairmanId")
                         .HasColumnType("nvarchar(450)");
 
@@ -225,8 +225,6 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CaretakerId");
-
-                    b.HasIndex("CaretakerId1");
 
                     b.HasIndex("ChairmanId")
                         .IsUnique()
@@ -1894,13 +1892,9 @@ namespace SabiMarket.Infrastructure.Migrations
             modelBuilder.Entity("Market", b =>
                 {
                     b.HasOne("SabiMarket.Domain.Entities.MarketParticipants.Caretaker", "Caretaker")
-                        .WithMany()
+                        .WithMany("Markets")
                         .HasForeignKey("CaretakerId")
                         .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("SabiMarket.Domain.Entities.MarketParticipants.Caretaker", null)
-                        .WithMany("Markets")
-                        .HasForeignKey("CaretakerId1");
 
                     b.HasOne("SabiMarket.Domain.Entities.Administration.Chairman", "Chairman")
                         .WithOne("Market")

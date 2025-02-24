@@ -20,5 +20,6 @@ namespace SabiMarket.Application.Interfaces
         void DeleteCaretaker(Caretaker caretaker);
         Task<int> GetCaretakerCountAsync(DateTime? startDate = null, DateTime? endDate = null);
         Task<IEnumerable<Caretaker>> GetAllCaretakers(bool trackChanges);
+        Task<bool> ExistsAsync(string id);
     }
 }

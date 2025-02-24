@@ -9,7 +9,7 @@ using SabiMarket.Application.IServices;
 [Route("api/[controller]")]
 [ApiController]
 [Produces("application/json")]
-[Authorize(Policy = PolicyNames.RequireCaretakerOnly)]
+[Authorize(Policy = PolicyNames.RequireMarketManagement)]
 public class CaretakerController : ControllerBase
 {
     private readonly ICaretakerService _caretakerService;
@@ -24,7 +24,6 @@ public class CaretakerController : ControllerBase
     }
 
     [HttpPost("createcaretaker")]
-    [Authorize(Policy = PolicyNames.RequireAdminOnly)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status500InternalServerError)]

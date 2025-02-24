@@ -13,6 +13,8 @@
 
         // Market Details
         public string MarketId { get; set; }
+
+        public string DefaultPassword { get; set; }    
         public MarketResponseDto Market { get; set; }
 
         // Associated Entities

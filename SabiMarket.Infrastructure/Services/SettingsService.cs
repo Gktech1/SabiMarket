@@ -204,7 +204,7 @@ namespace SabiMarket.Infrastructure.Services
                     PhoneNumber = user.PhoneNumber ?? string.Empty,
                     EmailAddress = user.Email ?? string.Empty,
                     Gender = user.Gender,
-                    Market = marketInfo?.Name ?? string.Empty,
+                    Market = marketInfo?.MarketName ?? string.Empty,
                     LGA = marketInfo?.LocalGovernment?.LGA ?? string.Empty,
                     Address = user.Address ?? string.Empty,
                     DateAdded = user.CreatedAt,
