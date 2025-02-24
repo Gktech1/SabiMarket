@@ -46,14 +46,17 @@ public class MappingProfile : Profile
 
 
         CreateMap<Chairman, ChairmanResponseDto>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
-            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
-            .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
-            .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.Name))
-            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.LastLoginAt))
-            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt));
-
+          .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+          .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
+          .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+          .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber))
+          .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+          .ForMember(dest => dest.LocalGovernmentId, opt => opt.MapFrom(src => src.LocalGovernmentId))
+          .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market != null ? src.Market.Name : string.Empty))
+          .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.User.IsActive ? "Active" : "Inactive"))
+          .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+          .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt));
+        
         CreateMap<Admin, AdminDashboardStatsDto>()
            .ForMember(dest => dest.RegisteredLGAs, opt => opt.MapFrom(src => src.RegisteredLGAs))
            .ForMember(dest => dest.ActiveChairmen, opt => opt.MapFrom(src => src.ActiveChairmen))
