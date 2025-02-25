@@ -360,5 +360,149 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
             return Ok(response);
         }
+
+        [HttpPost("RegisterCustomerPurchase")]
+        public async Task<IActionResult> RegisterCustomerPurchase(CustomerPurchaseDto dto)
+        {
+            var response = await _serviceManager.IWaivedProductService.RegisterCustomerPurchase(dto);
+            if (!response.Status)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPost("ConfirmCustomerPurchase")]
+        public async Task<IActionResult> ConfirmCustomerPurchase(string id)
+        {
+            var response = await _serviceManager.IWaivedProductService.ConfirmCustomerPurchase(id);
+            if (!response.Status)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPost("CreateProductCategory")]
+        public async Task<IActionResult> CreateProductCategory(string categoryName, string description)
+        {
+            var response = await _serviceManager.IWaivedProductService.CreateProductCategory(categoryName, description);
+            if (!response.Status)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPost("GetAllProductCategories")]
+        public async Task<IActionResult> GetAllProductCategories()
+        {
+            var response = await _serviceManager.IWaivedProductService.GetAllProductCategories();
+            if (!response.Status)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPost("CreateCustomerComplaint")]
+        public async Task<IActionResult> CreateComplaint(string vendorId, string comPlaintMsg, string imageUrl)
+        {
+            var response = await _serviceManager.IWaivedProductService.CreateComplaint(vendorId, comPlaintMsg, imageUrl);
+            if (!response.Status)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPost("UpdateCustomerComplaint")]
+        public async Task<IActionResult> UpdateComplaint(string complaintId, string vendorId, string comPlaintMsg, string imageUrl)
+        {
+            var response = await _serviceManager.IWaivedProductService.UpdateComplaint(complaintId, vendorId, comPlaintMsg, imageUrl);
+            if (!response.Status)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("GetCustomerComplaintById")]
+        public async Task<IActionResult> UpdateComplaint([FromQuery] string complaintId)
+        {
+            var response = await _serviceManager.IWaivedProductService.GetCustomerFeedbackById(complaintId);
+            if (!response.Status)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("GetCustomerComplaints")]
+        public async Task<IActionResult> GetCustomerComplaint([FromQuery] PaginationFilter filter)
+        {
+            var response = await _serviceManager.IWaivedProductService.GetAllComplaint(filter);
+            if (!response.Status)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
     }
 }

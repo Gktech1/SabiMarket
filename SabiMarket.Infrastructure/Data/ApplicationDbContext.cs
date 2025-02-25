@@ -36,7 +36,7 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<CustomerFeedback> CustomerFeedbacks { get; set; }
         public DbSet<Advertisement> Advertisements { get; set; }
         public DbSet<AdvertPayment> AdvertPayments { get; set; }
-        public DbSet<AdvertisementLanguage> AdvertisementLanguage { get; set; }   
+        public DbSet<AdvertisementLanguage> AdvertisementLanguage { get; set; }
         public DbSet<AdvertisementView> AdvertisementViews { get; set; }
         public DbSet<ProductCategory> ProductCategories { get; set; }
         public DbSet<Chairman> Chairmen { get; set; }
@@ -53,6 +53,7 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<SowFoodCompanyStaffAppraiser> SowFoodStaffAppraisers { get; set; }
         public DbSet<SowFoodCompanyStaffAttendance> SowFoodStaffAttendances { get; set; }
         public DbSet<SowFoodCompany> SowFoodCompanies { get; set; }
+        public DbSet<CustomerPurchase> CustomerPurchases { get; set; }
 
         #endregion
 

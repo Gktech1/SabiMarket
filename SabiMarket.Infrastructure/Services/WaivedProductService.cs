@@ -1,10 +1,15 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
+using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories;
+using SabiMarket.Domain.Entities.OrdersAndFeedback;
+using SabiMarket.Domain.Entities.Supporting;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
 using SabiMarket.Domain.Exceptions;
+using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
 using Serilog;
 
@@ -13,12 +18,14 @@ namespace SabiMarket.Infrastructure.Services;
 
 public class WaivedProductService : IWaivedProductService
 {
+    private readonly ApplicationDbContext _applicationDbContext;
     private readonly IRepositoryManager _repositoryManager;
     private readonly IHttpContextAccessor _contextAccessor;
-    public WaivedProductService(IRepositoryManager repositoryManager, IHttpContextAccessor contextAccessor)
+    public WaivedProductService(IRepositoryManager repositoryManager, IHttpContextAccessor contextAccessor, ApplicationDbContext applicationDbContext)
     {
         _repositoryManager = repositoryManager;
         _contextAccessor = contextAccessor;
+        _applicationDbContext = applicationDbContext;
     }
 
     public async Task<BaseResponse<string>> CreateWaivedProduct(CreateWaivedProductDto dto)
@@ -34,7 +41,8 @@ public class WaivedProductService : IWaivedProductService
                 Price = dto.Price,
                 Category = dto.Category,
                 CurrencyType = dto.CurrencyType,
-                VendorId = loggedInUser.Id
+                VendorId = loggedInUser.Id,
+                IsActive = true
                 //OriginalPrice = dto.OriginalPrice,
                 //StockQuantity = dto.StockQuantity,
                 //WaivedPrice = dto.WaivedPrice,
@@ -60,7 +68,7 @@ public class WaivedProductService : IWaivedProductService
             return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaivedProduct>>>(new NotFoundException("No Record Found."), "Record not found.");
         }
 
-        return ResponseFactory.Success<PaginatorDto<IEnumerable<WaivedProduct>>>(waivedProducts);
+        return ResponseFactory.Success(waivedProducts);
     }
     public async Task<BaseResponse<WaivedProduct>> GetWaivedProductById(string Id)
     {
@@ -116,6 +124,175 @@ public class WaivedProductService : IWaivedProductService
             return ResponseFactory.Fail<PaginatorDto<IEnumerable<Vendor>>>(new Exception("An Error occured."), "Try again later.");
 
         }
+    }
+    public async Task<BaseResponse<string>> RegisterCustomerPurchase(CustomerPurchaseDto dto)
+    {
+        try
+        {
+            var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+            var purchase = new CustomerPurchase
+            {
+                IsActive = true,
+                ProofOfPayment = dto.ProofOfPayment,
+                WaivedProductId = dto.WaivedProductId,
+                DeliveryInfo = dto.DeliveryInfo,
+            };
+            _applicationDbContext.CustomerPurchases.Add(purchase);
+            await _repositoryManager.SaveChangesAsync();
+            return ResponseFactory.Success("Success", "Customer purchase created successfully.");
+
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Exception occured while creating purchase record" + ex.Message);
+            return ResponseFactory.Fail<string>("An Error Occurred. Try again later");
+
+
+        }
+    }
+    public async Task<BaseResponse<string>> ConfirmCustomerPurchase(string id)
+    {
+        try
+        {
+            var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+            var purchase = _applicationDbContext.CustomerPurchases.Find(id);
+            if (purchase == null)
+            {
+                return ResponseFactory.Fail<string>($"Purchase with the Id: {id} could not be found");
+            }
+            purchase.IsPaymentConfirmed = true;
+            await _repositoryManager.SaveChangesAsync();
+            return ResponseFactory.Success("Success", "Customer purchase created successfully.");
+
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Exception occured while confirming purchase record" + ex.Message);
+            return ResponseFactory.Fail<string>("An Error Occurred. Try again later");
+        }
+    }
+
+    public async Task<BaseResponse<string>> CreateProductCategory(string categoryName, string description)
+    {
+        try
+        {
+            var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+            var category = new ProductCategory
+            {
+                IsActive = true,
+                Name = categoryName,
+                Description = description
+            };
+            _applicationDbContext.ProductCategories.Add(category);
+            await _repositoryManager.SaveChangesAsync();
+            return ResponseFactory.Success("Success", "Category created successfully.");
+
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Exception occured while creating product category" + ex.Message);
+            return ResponseFactory.Fail<string>("An Error Occurred. Try again later");
+        }
+    }
+
+    public async Task<BaseResponse<List<ProductCategoryDto>>> GetAllProductCategories()
+    {
+
+        var productCategory = await _applicationDbContext.ProductCategories.Where(x => x.IsActive).Select(x => new ProductCategoryDto
+        {
+            CategoryId = x.Id,
+            CategoryName = x.Name,
+        }).ToListAsync();
+
+        if (productCategory == null)
+        {
+            return ResponseFactory.Fail<List<ProductCategoryDto>>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+
+        return ResponseFactory.Success(productCategory);
+    }
+
+    ///
+    public async Task<BaseResponse<string>> CreateComplaint(string vendorId, string compalaint, string? imageUrl)
+    {
+        try
+        {
+            var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+            var vendor = _applicationDbContext.Vendors.FirstOrDefault(v => v.Id == vendorId);
+            if (vendor == null)
+            {
+                return ResponseFactory.Fail<string>(new NotFoundException($"Vendor with Id: {vendorId} not Found."), "Vendor not found.");
+            }
+            var complaint = new CustomerFeedback
+            {
+                Comment = compalaint,
+                CustomerId = loggedInUser.Id,
+                Rating = 0,
+                ImageUrl = imageUrl,
+                VendorCode = vendor.VendorCode,
+                VendorId = vendorId,
+                IsActive = true
+            };
+            _applicationDbContext.CustomerFeedbacks.Add(complaint);
+            await _repositoryManager.SaveChangesAsync();
+            return ResponseFactory.Success("Success", "Feedback Created Successfully.");
+        }
+        catch (Exception)
+        {
+
+            return ResponseFactory.Fail<string>("An Error Occurred. Try again later");
+
+        }
+    }
+
+    public async Task<BaseResponse<string>> UpdateComplaint(string complaintId, string vendorId, string complaintMsg, string? imageUrl)
+    {
+        var complaint = _applicationDbContext.CustomerFeedbacks.Find(complaintId);
+        if (complaint == null)
+        {
+            return ResponseFactory.Fail<string>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+        complaint.VendorId = vendorId;
+        complaint.Comment = complaintMsg;
+        complaint.ImageUrl = imageUrl;
+        await _repositoryManager.SaveChangesAsync();
+        return ResponseFactory.Success("Success");
+    }
+    public async Task<BaseResponse<string>> DeleteComplaint(string complaintId, string vendorId, string complaintMsg, string imageUrl)
+    {
+        var complaint = _applicationDbContext.CustomerFeedbacks.Find(complaintId);
+        if (complaint == null)
+        {
+            return ResponseFactory.Fail<string>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+        _applicationDbContext.CustomerFeedbacks.Remove(complaint);
+        await _repositoryManager.SaveChangesAsync();
+        return ResponseFactory.Success("Success");
+    }
+
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedback>>>> GetAllComplaint(PaginationFilter filter)
+    {
+        var cusComplaint = await _applicationDbContext.CustomerFeedbacks.Paginate(filter);
+        if (cusComplaint == null)
+        {
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<CustomerFeedback>>>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+
+        return ResponseFactory.Success(cusComplaint);
+    }
+    public async Task<BaseResponse<CustomerFeedback>> GetCustomerFeedbackById(string Id)
+    {
+        var cusComplaint = _applicationDbContext.CustomerFeedbacks.Find(Id);
+        if (cusComplaint == null)
+        {
+            return ResponseFactory.Fail<CustomerFeedback>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+
+        return ResponseFactory.Success(cusComplaint);
     }
 
 }
