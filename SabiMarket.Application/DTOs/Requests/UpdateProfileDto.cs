@@ -12,5 +12,4 @@ namespace SabiMarket.Application.DTOs.Requests
         public string? ProfileImageUrl { get; set; } = string.Empty; 
     }
 
-
 }

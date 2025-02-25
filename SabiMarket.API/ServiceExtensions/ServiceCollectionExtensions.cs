@@ -67,6 +67,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<CreateRoleRequestDto>, CreateRoleRequestValidator>();
         services.AddScoped<IValidator<UpdateRoleRequestDto>, UpdateRoleRequestValidator>();  // Add this line
         services.AddScoped<IChairmanService, ChairmanService>();
+        services.AddScoped<ICaretakerService, CaretakerService>();
         services.AddScoped<IAdminService, AdminService>();
         services.AddValidatorsFromAssemblyContaining<CreateChairmanRequestDtoValidator>();
         services.AddScoped<IValidator<UpdateLevyRequestDto>, UpdateLevyRequestDtoValidator>();
@@ -76,9 +77,17 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<UpdateAdminProfileDto>, UpdateAdminProfileValidator>();
         services.AddScoped<IValidator<CreateRoleRequestDto>, CreateRoleValidator>();
         services.AddScoped<IValidator<UpdateRoleRequestDto>, UpdateRoleValidator>();
+        services.AddScoped<IValidator<CreateMarketRequestDto>, CreateMarketRequestValidator>();
+        services.AddScoped<IValidator<CaretakerForCreationRequestDto>, CreateCaretakerValidator>();
+        services.AddScoped<IValidator<UpdateMarketRequestDto>, UpdateMarketRequestValidator>();
+        services.AddScoped<IValidator<CaretakerForCreationRequestDto>, CaretakerForCreationRequestDtoValidator>();
 
         // Add other services
         services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<IRepositoryManager, RepositoryManager>();
+        services.AddScoped<ICaretakerRepository, CaretakerRepository>();  // Add this line
+        services.AddScoped<IMarketRepository, MarketRepository>();        // Add this if needed
+        services.AddScoped<IChairmanRepository, ChairmanRepository>();    // Add this if needed
         services.AddScoped<IRepositoryManager, RepositoryManager>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddHttpContextAccessor();
