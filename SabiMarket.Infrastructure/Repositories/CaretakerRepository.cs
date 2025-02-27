@@ -43,13 +43,26 @@ namespace SabiMarket.Infrastructure.Repositories
                     .ThenInclude(t => t.Market)
                 .FirstOrDefaultAsync();
 
+        /* public async Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersWithPagination(
+             PaginationFilter paginationFilter, bool trackChanges)
+         {
+             var query = FindAll(trackChanges)
+                 .Include(a => a.Markets)
+                 .Include(a => a.GoodBoys)
+                 .Include(a => a.AssignedTraders)
+                 .OrderBy(c => c.CreatedAt);
+
+             return await query.Paginate(paginationFilter);
+         }*/
+
         public async Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersWithPagination(
-            PaginationFilter paginationFilter, bool trackChanges)
+    PaginationFilter paginationFilter, bool trackChanges)
         {
             var query = FindAll(trackChanges)
                 .Include(a => a.Markets)
                 .Include(a => a.GoodBoys)
                 .Include(a => a.AssignedTraders)
+                .Include(a => a.User) // Include User to populate firstName, lastName, email, etc.
                 .OrderBy(c => c.CreatedAt);
 
             return await query.Paginate(paginationFilter);

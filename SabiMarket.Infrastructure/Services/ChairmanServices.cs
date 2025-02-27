@@ -2025,12 +2025,28 @@ namespace SabiMarket.Infrastructure.Services
         }
         private string GenerateDefaultPassword(string fullName)
         {
-            var firstName = fullName.Split(' ')[0];
+            var nameParts = fullName.Split(' '); // Split the full name into first name and last name
+            var firstName = nameParts[0];
+            var lastName = nameParts.Length > 1 ? nameParts[1] : ""; // Handle cases where only one name is provided
+
             var random = new Random();
-            var randomNumbers = random.Next(1000, 9999).ToString();
-            return $"{firstName}@{randomNumbers}";
+            var randomNumbers = random.Next(100, 999).ToString(); // Generate a 3-digit random number
+
+            // Combine first name, last name, and random number
+            var password = $"{firstName}{lastName}{randomNumbers}";
+
+            // Ensure the password is exactly 10 characters long
+            return password.Length == 10 ? password : password.Substring(0, 10); // Trim to 10 characters if necessary
         }
 
+        /*  private string GenerateDefaultPassword(string fullName)
+          {
+              var firstName = fullName.Split(' ')[0];
+              var random = new Random();
+              var randomNumbers = random.Next(1000, 9999).ToString();
+              return $"{firstName}@{randomNumbers}";
+          }
+  */
         public async Task<BaseResponse<bool>> UpdateChairmanProfile(string chairmanId, UpdateProfileDto profileDto)
         {
             var correlationId = Guid.NewGuid().ToString();

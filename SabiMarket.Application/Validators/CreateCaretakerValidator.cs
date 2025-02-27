@@ -35,9 +35,5 @@ public class CreateCaretakerValidator : AbstractValidator<CaretakerForCreationRe
         RuleFor(x => x.LocalGovernmentId)
             .MaximumLength(50).WithMessage("Local Government ID cannot exceed 50 characters.")
             .When(x => !string.IsNullOrEmpty(x.LocalGovernmentId));
-
-        RuleFor(x => x.ChairmanId)
-            .MaximumLength(50).WithMessage("Chairman ID cannot exceed 50 characters.")
-            .When(x => !string.IsNullOrEmpty(x.ChairmanId));
     }
 }

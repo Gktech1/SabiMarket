@@ -199,7 +199,8 @@ namespace SabiMarket.Infrastructure.Services
                     MarketId = request.MarketId,
                     ChairmanId = chairman.Id,  // Set the ChairmanId here
                     LocalGovernmentId = request.LocalGovernmentId,
-                    IsBlocked = false,
+                    IsBlocked = false, 
+                    IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     User = user
                 };
@@ -385,11 +386,20 @@ namespace SabiMarket.Infrastructure.Services
 
         private string GenerateDefaultPassword(string fullName)
         {
-            var firstName = fullName.Split(' ')[0];
+            var nameParts = fullName.Split(' '); // Split the full name into first name and last name
+            var firstName = nameParts[0];
+            var lastName = nameParts.Length > 1 ? nameParts[1] : ""; // Handle cases where only one name is provided
+
             var random = new Random();
-            var randomNumbers = random.Next(1000, 9999).ToString();
-            return $"{firstName}@{randomNumbers}";
+            var randomNumbers = random.Next(100, 999).ToString(); // Generate a 3-digit random number
+
+            // Combine first name, last name, and random number
+            var password = $"{firstName}{lastName}{randomNumbers}";
+
+            // Ensure the password is exactly 10 characters long
+            return password.Length == 10 ? password : password.Substring(0, 10); // Trim to 10 characters if necessary
         }
+
 
 
         /*  public async Task<BaseResponse<CaretakerResponseDto>> CreateCaretaker(CaretakerForCreationRequestDto caretakerDto)
