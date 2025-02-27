@@ -18,8 +18,8 @@
         public MarketResponseDto Market { get; set; }
 
         // Associated Entities
-        public ICollection<GoodBoyResponseDto> GoodBoys { get; set; }
-        public ICollection<TraderResponseDto> AssignedTraders { get; set; }
+       // public ICollection<GoodBoyResponseDto> GoodBoys { get; set; }
+       // public ICollection<TraderResponseDto> AssignedTraders { get; set; }
 
         // Audit Fields
         public DateTime CreatedAt { get; set; }

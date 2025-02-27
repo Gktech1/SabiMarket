@@ -8,7 +8,7 @@ namespace SabiMarket.Domain.Enum
 {
     public enum MarketTypeEnum
     {
-        Shop,
+        Shop = 1,
         Kiosk,
         OpenSpace
 

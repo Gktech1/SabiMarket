@@ -109,26 +109,16 @@ namespace SabiMarket.Infrastructure.Services
         {
             var correlationId = Guid.NewGuid().ToString();
             var userId = _currentUser.GetUserId();
+
             try
             {
-                await CreateAuditLog(
-                    "Caretaker Creation",
-                    $"CorrelationId: {correlationId} - Creating new caretaker: {request.FullName}",
-                    "Caretaker Management"
-                );
-
                 // Validate request
                 var validationResult = await _createCaretakerValidator.ValidateAsync(request);
                 if (!validationResult.IsValid)
                 {
-                    await CreateAuditLog(
-                        "Creation Failed",
-                        $"CorrelationId: {correlationId} - Validation failed",
-                        "Caretaker Management"
-                    );
                     return ResponseFactory.Fail<CaretakerResponseDto>(
                         new ValidationException(validationResult.Errors),
-                        "Validation failed"
+                        "Invalid caretaker data"
                     );
                 }
 
@@ -136,11 +126,6 @@ namespace SabiMarket.Infrastructure.Services
                 var existingUser = await _userManager.FindByEmailAsync(request.EmailAddress);
                 if (existingUser != null)
                 {
-                    await CreateAuditLog(
-                        "Creation Failed",
-                        $"CorrelationId: {correlationId} - Email already registered",
-                        "Caretaker Management"
-                    );
                     return ResponseFactory.Fail<CaretakerResponseDto>(
                         new BadRequestException("Email address is already registered"),
                         "Email already exists"
@@ -151,11 +136,6 @@ namespace SabiMarket.Infrastructure.Services
                 var existingCaretaker = await _repository.CaretakerRepository.CaretakerExists(userId, request.MarketId);
                 if (existingCaretaker)
                 {
-                    await CreateAuditLog(
-                        "Creation Failed",
-                        $"CorrelationId: {correlationId} - Market already has a caretaker",
-                        "Caretaker Management"
-                    );
                     return ResponseFactory.Fail<CaretakerResponseDto>(
                         new BadRequestException("Market already has an assigned caretaker"),
                         "Caretaker already exists for this market"
@@ -183,11 +163,6 @@ namespace SabiMarket.Infrastructure.Services
                 var createUserResult = await _userManager.CreateAsync(user, defaultPassword);
                 if (!createUserResult.Succeeded)
                 {
-                    await CreateAuditLog(
-                        "Creation Failed",
-                        $"CorrelationId: {correlationId} - Failed to create user account",
-                        "Caretaker Management"
-                    );
                     return ResponseFactory.Fail<CaretakerResponseDto>(
                         new Exception(string.Join(", ", createUserResult.Errors.Select(e => e.Description))),
                         "Failed to create user account"
@@ -200,29 +175,36 @@ namespace SabiMarket.Infrastructure.Services
                 {
                     // Rollback user creation if role assignment fails
                     await _userManager.DeleteAsync(user);
-                    await CreateAuditLog(
-                        "Creation Failed",
-                        $"CorrelationId: {correlationId} - Failed to assign caretaker role",
-                        "Caretaker Management"
-                    );
                     return ResponseFactory.Fail<CaretakerResponseDto>(
                         new Exception("Failed to assign caretaker role"),
                         "Role assignment failed"
                     );
                 }
 
+                // Get Chairman details
+                var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                if (chairman == null)
+                {
+                    return ResponseFactory.Fail<CaretakerResponseDto>(
+                        new NotFoundException("Chairman not found"),
+                        "Chairman does not exist"
+                    );
+                }
+
                 // Create Caretaker entity
                 var caretaker = new Caretaker
                 {
+                    Id = Guid.NewGuid().ToString(),
                     UserId = user.Id,
                     MarketId = request.MarketId,
-                    ChairmanId = request.ChairmanId,
+                    ChairmanId = chairman.Id,  // Set the ChairmanId here
                     LocalGovernmentId = request.LocalGovernmentId,
                     IsBlocked = false,
                     CreatedAt = DateTime.UtcNow,
                     User = user
                 };
 
+                // Add caretaker to the repository
                 _repository.CaretakerRepository.CreateCaretaker(caretaker);
                 await _repository.SaveChangesAsync();
 
@@ -230,27 +212,176 @@ namespace SabiMarket.Infrastructure.Services
                 var response = _mapper.Map<CaretakerResponseDto>(caretaker);
                 response.DefaultPassword = defaultPassword;
 
-                await CreateAuditLog(
-                    "Caretaker Created",
-                    $"CorrelationId: {correlationId} - Caretaker created successfully with ID: {caretaker.Id}",
-                    "Caretaker Management"
-                );
-
                 return ResponseFactory.Success(response,
                     "Caretaker created successfully. Please note down the default password.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating caretaker");
-                await CreateAuditLog(
-                    "Creation Failed",
-                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                    "Caretaker Management"
-                );
                 return ResponseFactory.Fail<CaretakerResponseDto>(ex, "An unexpected error occurred");
             }
         }
 
+
+        /* public async Task<BaseResponse<CaretakerResponseDto>> CreateCaretaker(CaretakerForCreationRequestDto request)
+         {
+             var correlationId = Guid.NewGuid().ToString();
+             var userId = _currentUser.GetUserId();
+             try
+             {
+                 await CreateAuditLog(
+                     "Caretaker Creation",
+                     $"CorrelationId: {correlationId} - Creating new caretaker: {request.FullName}",
+                     "Caretaker Management"
+                 );
+
+                 // Validate request
+                 var validationResult = await _createCaretakerValidator.ValidateAsync(request);
+                 if (!validationResult.IsValid)
+                 {
+                     await CreateAuditLog(
+                         "Creation Failed",
+                         $"CorrelationId: {correlationId} - Validation failed",
+                         "Caretaker Management"
+                     );
+                     return ResponseFactory.Fail<CaretakerResponseDto>(
+                         new ValidationException(validationResult.Errors),
+                         "Validation failed"
+                     );
+                 }
+
+                 // Check if user already exists by email
+                 var existingUser = await _userManager.FindByEmailAsync(request.EmailAddress);
+                 if (existingUser != null)
+                 {
+                     await CreateAuditLog(
+                         "Creation Failed",
+                         $"CorrelationId: {correlationId} - Email already registered",
+                         "Caretaker Management"
+                     );
+                     return ResponseFactory.Fail<CaretakerResponseDto>(
+                         new BadRequestException("Email address is already registered"),
+                         "Email already exists"
+                     );
+                 }
+
+                 // Check if the market already has a caretaker
+                 var existingCaretaker = await _repository.CaretakerRepository.CaretakerExists(userId, request.MarketId);
+                 if (existingCaretaker)
+                 {
+                     await CreateAuditLog(
+                         "Creation Failed",
+                         $"CorrelationId: {correlationId} - Market already has a caretaker",
+                         "Caretaker Management"
+                     );
+                     return ResponseFactory.Fail<CaretakerResponseDto>(
+                         new BadRequestException("Market already has an assigned caretaker"),
+                         "Caretaker already exists for this market"
+                     );
+                 }
+
+                 // Create ApplicationUser
+                 var defaultPassword = GenerateDefaultPassword(request.FullName);
+                 var user = new ApplicationUser
+                 {
+                     Id = Guid.NewGuid().ToString(),
+                     UserName = request.EmailAddress,
+                     Email = request.EmailAddress,
+                     PhoneNumber = request.PhoneNumber,
+                     FirstName = request.FullName.Split(' ')[0],
+                     LastName = request.FullName.Split(' ').Length > 1 ? string.Join(" ", request.FullName.Split(' ').Skip(1)) : "",
+                     EmailConfirmed = true,
+                     IsActive = true,
+                     CreatedAt = DateTime.UtcNow,
+                     Gender = request.Gender,
+                     ProfileImageUrl = "",
+                     LocalGovernmentId = request.LocalGovernmentId
+                 };
+
+                 var createUserResult = await _userManager.CreateAsync(user, defaultPassword);
+                 if (!createUserResult.Succeeded)
+                 {
+                     await CreateAuditLog(
+                         "Creation Failed",
+                         $"CorrelationId: {correlationId} - Failed to create user account",
+                         "Caretaker Management"
+                     );
+                     return ResponseFactory.Fail<CaretakerResponseDto>(
+                         new Exception(string.Join(", ", createUserResult.Errors.Select(e => e.Description))),
+                         "Failed to create user account"
+                     );
+                 }
+
+                 // Assign role
+                 var roleResult = await _userManager.AddToRoleAsync(user, UserRoles.Caretaker);
+                 if (!roleResult.Succeeded)
+                 {
+                     // Rollback user creation if role assignment fails
+                     await _userManager.DeleteAsync(user);
+                     await CreateAuditLog(
+                         "Creation Failed",
+                         $"CorrelationId: {correlationId} - Failed to assign caretaker role",
+                         "Caretaker Management"
+                     );
+                     return ResponseFactory.Fail<CaretakerResponseDto>(
+                         new Exception("Failed to assign caretaker role"),
+                         "Role assignment failed"
+                     );
+                 }
+
+                 // Ensure ChairmanId exists in the database
+                 var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                 if (chairman == null)
+                 {
+                     await CreateAuditLog(
+                         "Creation Failed",
+                         $"CorrelationId: {correlationId} - Chairman not found with Id: {userId}",
+                         "Caretaker Management"
+                     );
+                     return ResponseFactory.Fail<CaretakerResponseDto>(new NotFoundException("Chairman not found"), "Chairman does not exist");
+                 }
+
+                 // Create Caretaker entity
+                 var caretaker = new Caretaker
+                 {
+                     Id = Guid.NewGuid().ToString(),
+                     UserId = user.Id,
+                     MarketId = request.MarketId,
+                     ChairmanId = chairman.Id,  // Ensure ChairmanId exists
+                     LocalGovernmentId = request.LocalGovernmentId,
+                     IsBlocked = false,
+                     CreatedAt = DateTime.UtcNow,
+                     User = user
+                 };
+
+                 _repository.CaretakerRepository.CreateCaretaker(caretaker);
+                 await _repository.SaveChangesAsync();
+
+                 // Map response
+                 var response = _mapper.Map<CaretakerResponseDto>(caretaker);
+                 response.DefaultPassword = defaultPassword;
+
+                 await CreateAuditLog(
+                     "Caretaker Created",
+                     $"CorrelationId: {correlationId} - Caretaker created successfully with ID: {caretaker.Id}",
+                     "Caretaker Management"
+                 );
+
+                 return ResponseFactory.Success(response,
+                     "Caretaker created successfully. Please note down the default password.");
+             }
+             catch (Exception ex)
+             {
+                 _logger.LogError(ex, "Error creating caretaker");
+                 await CreateAuditLog(
+                     "Creation Failed",
+                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                     "Caretaker Management"
+                 );
+                 return ResponseFactory.Fail<CaretakerResponseDto>(ex, "An unexpected error occurred");
+             }
+         }
+ */
 
         private string GenerateDefaultPassword(string fullName)
         {

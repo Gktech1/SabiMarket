@@ -97,8 +97,8 @@ namespace SabiMarket.Infrastructure.Repositories
             return await query.Paginate(paginationFilter);
         }
 
-        public async Task<bool> CaretakerExists(string userId, string marketId) =>
-            await FindByCondition(x => x.UserId == userId && x.MarketId == marketId,
+        public async Task<bool> CaretakerExists(string chairmanId, string marketId) =>
+            await FindByCondition(x => x.UserId == chairmanId && x.MarketId == marketId,
                 trackChanges: false).AnyAsync();
 
         public void CreateCaretaker(Caretaker caretaker) => Create(caretaker);
