@@ -379,7 +379,8 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>> GetChairmen(PaginationFilter paginationFilter)
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>> GetChairmen(
+    string? searchTerm, PaginationFilter paginationFilter)
         {
             var correlationId = Guid.NewGuid().ToString();
             try
@@ -390,7 +391,55 @@ namespace SabiMarket.Infrastructure.Services
                     "Chairman Management"
                 );
 
-                var chairmenPage = await _repository.ChairmanRepository.GetChairmenWithPaginationAsync(paginationFilter, false);
+                // Fetch the paginated chairmen
+                var chairmenPage = await _repository.ChairmanRepository
+                    .GetChairmenWithPaginationAsync(paginationFilter, trackChanges: false, searchTerm);
+
+                // Log the number of chairmen retrieved
+                await CreateAuditLog(
+                    "Chairmen List Retrieved",
+                    $"CorrelationId: {correlationId} - Retrieved {chairmenPage.PageItems.Count()} chairmen",
+                    "Chairman Management"
+                );
+
+                // Map the chairmen entities to response DTOs
+                var chairmanDtos = _mapper.Map<IEnumerable<ChairmanResponseDto>>(chairmenPage.PageItems);
+
+                // Create and return the paginated response
+                var response = new PaginatorDto<IEnumerable<ChairmanResponseDto>>
+                {
+                    PageItems = chairmanDtos,
+                    CurrentPage = chairmenPage.CurrentPage,
+                    PageSize = chairmenPage.PageSize,
+                    NumberOfPages = chairmenPage.NumberOfPages
+                };
+
+                return ResponseFactory.Success(response, "Chairmen retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Chairmen List Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Chairman Management"
+                );
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<ChairmanResponseDto>>>(ex, "Error retrieving chairmen");
+            }
+        }
+
+
+        /*public async Task<BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>> GetChairmen(string? searchTerm, PaginationFilter paginationFilter)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Chairmen List Query",
+                    $"CorrelationId: {correlationId} - Retrieving chairmen list - Page: {paginationFilter.PageNumber}, Size: {paginationFilter.PageSize}",
+                    "Chairman Management"
+                );
+
+                var chairmenPage = await _repository.ChairmanRepository.GetChairmenWithPaginationAsync(paginationFilter, false, searchTerm);
 
                 await CreateAuditLog(
                     "Chairmen List Retrieved",
@@ -415,7 +464,7 @@ namespace SabiMarket.Infrastructure.Services
                 );
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<ChairmanResponseDto>>>(ex, "Error retrieving chairmen");
             }
-        }
+        }*/
 
         public async Task<BaseResponse<bool>> AssignCaretakerToChairman(string chairmanId, string caretakerId)
         {
