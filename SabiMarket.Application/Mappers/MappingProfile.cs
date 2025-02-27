@@ -44,18 +44,19 @@ public class MappingProfile : Profile
           .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
           .ForMember(dest => dest.User, opt => opt.Ignore());
 
-
         CreateMap<Chairman, ChairmanResponseDto>()
-          .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-          .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
-          .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
-          .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber))
+          .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
+              string.IsNullOrEmpty(src.FullName) ? $"{src.User.FirstName} {src.User.LastName}" : src.FullName))
+          .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email ?? string.Empty)) // Handle nullable Email
+          .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber ?? string.Empty)) // Handle nullable PhoneNumber
+          .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.MarketName)) // Assuming Market.Name is available
+          .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.User.IsActive))  // Assuming IsActive is in User
           .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
           .ForMember(dest => dest.LocalGovernmentId, opt => opt.MapFrom(src => src.LocalGovernmentId))
-          .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market != null ? src.Market.MarketName : string.Empty))
-          .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.User.IsActive ? "Active" : "Inactive"))
           .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-          .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt));
+          .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+          .ForMember(dest => dest.DefaultPassword, opt => opt.Ignore());  // DefaultPassword should not be included in the DTO
+
 
         CreateMap<Admin, AdminDashboardStatsDto>()
            .ForMember(dest => dest.RegisteredLGAs, opt => opt.MapFrom(src => src.RegisteredLGAs))

@@ -9,7 +9,7 @@
         public string MarketId { get; set; } = string.Empty;
         public string LocalGovernmentId { get; set; } = string.Empty;
         public string MarketName { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
+        public bool IsActive { get; set; } 
         public string DefaultPassword { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }  
         public DateTime? UpdatedAt { get; set; }  
