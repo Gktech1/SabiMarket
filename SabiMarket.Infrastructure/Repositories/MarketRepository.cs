@@ -22,7 +22,11 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges) => await FindAll(trackChanges).Include(a => a.Caretaker)
             .Include(a => a.Traders)
+            .Include(m => m.Chairman)
+            .Include(m => m.Caretaker)
+            .Include(a => a.LocalGovernment)
             .Include(a => a.MarketSections).ToListAsync();
+            
 
         public async Task<Market> GetMarketById(string id, bool trackChanges) => await FindByCondition(x => x.Id == id, trackChanges)
             .Include(a => a.Caretaker)

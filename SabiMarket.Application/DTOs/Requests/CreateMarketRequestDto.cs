@@ -32,8 +32,8 @@ namespace SabiMarket.Application.DTOs.Requests
         public string ContactEmail { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
-        public ICollection<CaretakerResponseDto> Caretakers { get; set; }
-        public ICollection<TraderResponseDto> Traders { get; set; }
+       // public ICollection<CaretakerResponseDto> Caretakers { get; set; }
+       // public ICollection<TraderResponseDto> Traders { get; set; }
         public decimal TotalRevenue { get; set; }
         public decimal ComplianceRate { get; set; }
     }

@@ -509,6 +509,8 @@ namespace SabiMarket.Infrastructure.Services
         public async Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();
+            var userId = _currentUser.GetUserId();
+
             try
             {
                 // Validate request
@@ -521,15 +523,13 @@ namespace SabiMarket.Infrastructure.Services
                     );
                 }
 
+                // Map request to Market entity
                 var market = _mapper.Map<Market>(request);
 
-                // Verify caretaker exists only if CaretakerId is provided
-                // Only set market.CaretakerId if request.CaretakerId has a value
-                if (!string.IsNullOrEmpty(request.CaretakerId) && request.CaretakerId != "string")
+                // Verify Caretaker exists if provided
+                if (!string.IsNullOrWhiteSpace(request.CaretakerId) && request.CaretakerId != "string")
                 {
-                    // Verify caretaker exists
                     var caretaker = await _repository.CaretakerRepository.GetCaretakerById(request.CaretakerId, false);
-
                     if (caretaker == null)
                     {
                         return ResponseFactory.Fail<MarketResponseDto>(
@@ -537,35 +537,56 @@ namespace SabiMarket.Infrastructure.Services
                             "Invalid caretaker"
                         );
                     }
-
-                    market.CaretakerId = request.CaretakerId;
+                    market.CaretakerId = caretaker.Id;
                 }
                 else
                 {
-                    // Ensure CaretakerId is null, not empty string
                     market.CaretakerId = null;
                 }
 
+                // Get Chairman details
+                var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                if (chairman == null)
+                {
+                    return ResponseFactory.Fail<MarketResponseDto>(
+                        new NotFoundException("Chairman not found"),
+                        "Invalid chairman"
+                    );
+                }
 
+                // Ensure Chairman has a Local Government
+                var localGovernment = await _repository.LocalGovernmentRepository.GetLocalGovernmentById(chairman.LocalGovernmentId, false);
+                if (localGovernment == null)
+                {
+                    return ResponseFactory.Fail<MarketResponseDto>(
+                        new NotFoundException("Local Government not found"),
+                        "Invalid Local Government"
+                    );
+                }
+
+                // Log market creation attempt
                 await CreateAuditLog(
                     "Market Creation",
                     $"CorrelationId: {correlationId} - Creating new market: {request.MarketName}",
                     "Market Management"
                 );
 
-               
-                // Set default values for required fields
-               // market.LocalGovernmentId = ""; // Assuming caretaker has this
-                market.Id = Guid.NewGuid().ToString();   
+                // Set Market properties
+                market.Id = Guid.NewGuid().ToString();
                 market.IsActive = true;
-                market.Location = "";
-                market.LocalGovernmentName = string.Empty;  
+                market.MarketName = request.MarketName;
+                market.Location= request.MarketName; 
+                market.LocalGovernmentId = chairman.LocalGovernmentId;
+                market.LocalGovernmentName = localGovernment.Name; // Ensure this is correctly assigned
                 market.StartDate = DateTime.UtcNow;
-                market.MarketCapacity = 0; // Can be updated later
+                market.MarketCapacity = 0;
+                market.ChairmanId = chairman.Id;
 
+                // Save Market
                 _repository.MarketRepository.AddMarket(market);
                 await _repository.SaveChangesAsync();
 
+                // Log success
                 await CreateAuditLog(
                     "Market Created",
                     $"CorrelationId: {correlationId} - Market created successfully with ID: {market.Id}",
@@ -576,6 +597,7 @@ namespace SabiMarket.Infrastructure.Services
             }
             catch (Exception ex)
             {
+                // Log failure
                 await CreateAuditLog(
                     "Market Creation Failed",
                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
@@ -585,6 +607,176 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+
+        /* public async Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request)
+         {
+             var correlationId = Guid.NewGuid().ToString();
+             var userId = _currentUser.GetUserId();
+
+             try
+             {
+                 // Validate request
+                 var validationResult = await _createMarketValidator.ValidateAsync(request);
+                 if (!validationResult.IsValid)
+                 {
+                     return ResponseFactory.Fail<MarketResponseDto>(
+                         new ValidationException(validationResult.Errors),
+                         "Invalid market data"
+                     );
+                 }
+
+                 var market = _mapper.Map<Market>(request);
+
+                 // Verify caretaker exists only if CaretakerId is provided
+                 if (!string.IsNullOrWhiteSpace(request.CaretakerId) && request.CaretakerId != "string")
+                 {
+                     var caretaker = await _repository.CaretakerRepository.GetCaretakerById(request.CaretakerId, false);
+                     if (caretaker == null)
+                     {
+                         return ResponseFactory.Fail<MarketResponseDto>(
+                             new NotFoundException("Caretaker not found"),
+                             "Invalid caretaker"
+                         );
+                     }
+                     market.CaretakerId = request.CaretakerId;
+                 }
+                 else
+                 {
+                     // Ensure CaretakerId is null if not provided
+                     market.CaretakerId = null;
+                 }
+
+                 // Get Local Government and Chairman Details 
+                 var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                 if (chairman == null)
+                 {
+                     return ResponseFactory.Fail<MarketResponseDto>(
+                         new NotFoundException("Chairman not found"),
+                         "Invalid chairman"
+                     );
+                 }
+
+                 market.ChairmanId = chairman.Id; // Assign only if chairman exists
+
+                 await CreateAuditLog(
+                     "Market Creation",
+                     $"CorrelationId: {correlationId} - Creating new market: {request.MarketName}",
+                     "Market Management"
+                 );
+
+                 // Set default values for required fields
+                 market.Id = Guid.NewGuid().ToString();
+                 market.IsActive = true;
+                 market.Location = request.MarketName;
+                 market.MarketName = request.MarketName;
+                 market.LocalGovernmentName = chairman.LocalGovernment.Name;
+                 market.StartDate = DateTime.UtcNow;
+                 market.MarketCapacity = 0;
+                 market.LocalGovernmentId = chairman.LocalGovernmentId;
+                 market.Chairman = chairman; 
+                 market.Chairman.UserId = userId; 
+
+                 _repository.MarketRepository.AddMarket(market);
+                 await _repository.SaveChangesAsync();
+
+                 await CreateAuditLog(
+                     "Market Created",
+                     $"CorrelationId: {correlationId} - Market created successfully with ID: {market.Id}",
+                     "Market Management"
+                 );
+
+                 return ResponseFactory.Success(_mapper.Map<MarketResponseDto>(market), "Market created successfully");
+             }
+             catch (Exception ex)
+             {
+                 await CreateAuditLog(
+                     "Market Creation Failed",
+                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                     "Market Management"
+                 );
+                 return ResponseFactory.Fail<MarketResponseDto>(ex, "Error creating market");
+             }
+         }*/
+
+        /*    public async Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request)
+            {
+                var correlationId = Guid.NewGuid().ToString();
+                try
+                {
+                    // Validate request
+                    var validationResult = await _createMarketValidator.ValidateAsync(request);
+                    if (!validationResult.IsValid)
+                    {
+                        return ResponseFactory.Fail<MarketResponseDto>(
+                            new ValidationException(validationResult.Errors),
+                            "Invalid market data"
+                        );
+                    }
+
+                    var market = _mapper.Map<Market>(request);
+
+                    // Verify caretaker exists only if CaretakerId is provided
+                    // Only set market.CaretakerId if request.CaretakerId has a value
+                    if (!string.IsNullOrEmpty(request.CaretakerId) && request.CaretakerId != "string")
+                    {
+                        // Verify caretaker exists
+                        var caretaker = await _repository.CaretakerRepository.GetCaretakerById(request.CaretakerId, false);
+
+                        if (caretaker == null)
+                        {
+                            return ResponseFactory.Fail<MarketResponseDto>(
+                                new NotFoundException("Caretaker not found"),
+                                "Invalid caretaker"
+                            );
+                        }
+
+                        market.CaretakerId = request.CaretakerId;
+                    }
+                    else
+                    {
+                        // Ensure CaretakerId is null, not empty string
+                        market.CaretakerId = null;
+                    }
+
+
+                    await CreateAuditLog(
+                        "Market Creation",
+                        $"CorrelationId: {correlationId} - Creating new market: {request.MarketName}",
+                        "Market Management"
+                    );
+
+
+                    // Set default values for required fields
+                   // market.LocalGovernmentId = ""; // Assuming caretaker has this
+                    market.Id = Guid.NewGuid().ToString();   
+                    market.IsActive = true;
+                    market.Location = "";
+                    market.LocalGovernmentName = string.Empty;  
+                    market.StartDate = DateTime.UtcNow;
+                    market.MarketCapacity = 0; // Can be updated later
+
+                    _repository.MarketRepository.AddMarket(market);
+                    await _repository.SaveChangesAsync();
+
+                    await CreateAuditLog(
+                        "Market Created",
+                        $"CorrelationId: {correlationId} - Market created successfully with ID: {market.Id}",
+                        "Market Management"
+                    );
+
+                    return ResponseFactory.Success(_mapper.Map<MarketResponseDto>(market), "Market created successfully");
+                }
+                catch (Exception ex)
+                {
+                    await CreateAuditLog(
+                        "Market Creation Failed",
+                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                        "Market Management"
+                    );
+                    return ResponseFactory.Fail<MarketResponseDto>(ex, "Error creating market");
+                }
+            }
+    */
         public async Task<BaseResponse<bool>> UpdateMarket(string marketId, UpdateMarketRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1795,6 +1987,10 @@ namespace SabiMarket.Infrastructure.Services
                     Title = "Honorable",
                     Office = "Chairman",
                     LocalGovernmentId = request.LocalGovernmentId,
+                    FullName = request.FullName,
+                    Email = request.Email,  
+                    TermStart = DateTime.UtcNow,
+                    TermEnd = DateTime.UtcNow.AddYears(8),
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     User = user
@@ -1829,12 +2025,28 @@ namespace SabiMarket.Infrastructure.Services
         }
         private string GenerateDefaultPassword(string fullName)
         {
-            var firstName = fullName.Split(' ')[0];
+            var nameParts = fullName.Split(' '); // Split the full name into first name and last name
+            var firstName = nameParts[0];
+            var lastName = nameParts.Length > 1 ? nameParts[1] : ""; // Handle cases where only one name is provided
+
             var random = new Random();
-            var randomNumbers = random.Next(1000, 9999).ToString();
-            return $"{firstName}@{randomNumbers}";
+            var randomNumbers = random.Next(100, 999).ToString(); // Generate a 3-digit random number
+
+            // Combine first name, last name, and random number
+            var password = $"{firstName}{lastName}{randomNumbers}";
+
+            // Ensure the password is exactly 10 characters long
+            return password.Length == 10 ? password : password.Substring(0, 10); // Trim to 10 characters if necessary
         }
 
+        /*  private string GenerateDefaultPassword(string fullName)
+          {
+              var firstName = fullName.Split(' ')[0];
+              var random = new Random();
+              var randomNumbers = random.Next(1000, 9999).ToString();
+              return $"{firstName}@{randomNumbers}";
+          }
+  */
         public async Task<BaseResponse<bool>> UpdateChairmanProfile(string chairmanId, UpdateProfileDto profileDto)
         {
             var correlationId = Guid.NewGuid().ToString();
