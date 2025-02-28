@@ -33,20 +33,29 @@ public class WaivedProductService : IWaivedProductService
         try
         {
             var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+            var verifyVendor = ValiateVendor(loggedInUser.Id);
+            if (!verifyVendor.Item1)
+            {
+                return ResponseFactory.Fail<string>(verifyVendor.Item2);
+
+            }
+            var validateCategory = await _applicationDbContext.ProductCategories.AnyAsync(x => x.Id.ToLower() == dto.CategoryId.ToLower());
+            if (!validateCategory)
+            {
+                return ResponseFactory.Fail<string>("Product category is not valid.");
+
+            }
             var waivedProd = new WaivedProduct
             {
                 IsAvailbleForUrgentPurchase = dto.IsAvailbleForUrgentPurchase,
                 ImageUrl = dto.ImageUrl,
                 ProductName = dto.ProductName,
                 Price = dto.Price,
-                Category = dto.Category,
+                ProductCategoryId = dto.CategoryId,
                 CurrencyType = dto.CurrencyType,
-                VendorId = loggedInUser.Id,
+                VendorId = verifyVendor.Item2,
                 IsActive = true
-                //OriginalPrice = dto.OriginalPrice,
-                //StockQuantity = dto.StockQuantity,
-                //WaivedPrice = dto.WaivedPrice,
-                //ProductCode = dto.Name + DateTime.Now.Ticks.ToString().Substring(-0, 5)
             };
             _repositoryManager.WaivedProductRepository.AddWaivedProduct(waivedProd);
             await _repositoryManager.SaveChangesAsync();
@@ -59,7 +68,31 @@ public class WaivedProductService : IWaivedProductService
 
         }
     }
+    private Tuple<bool, string> ValiateVendor(string userId)
+    {
+        var getVendorDetails = _applicationDbContext.Vendors.FirstOrDefault(x => x.UserId == userId);
+        if (getVendorDetails is null || getVendorDetails.Id is null)
+        {
+            return Tuple.Create(false, "Vendor not found.");
 
+        }
+        if (!getVendorDetails.IsActive)
+        {
+            return Tuple.Create(false, "Vendor is disabled.");
+
+        }
+        if (!getVendorDetails.IsSubscriptionActive)
+        {
+            return Tuple.Create(false, "Vendor does not have an active subscription.");
+
+        }
+        if (!getVendorDetails.IsVerified)
+        {
+            return Tuple.Create(false, "Vendor is not verified.");
+
+        }
+        return Tuple.Create(true, getVendorDetails.Id);
+    }
     public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string? category, PaginationFilter filter)
     {
         var waivedProducts = await _repositoryManager.WaivedProductRepository.GetPagedWaivedProduct(category, filter);
@@ -94,7 +127,7 @@ public class WaivedProductService : IWaivedProductService
         product.Price = dto.Price;
         product.CurrencyType = dto.CurrencyType;
         product.UpdatedAt = DateTime.UtcNow.AddHours(1);
-        product.Category = dto.Category;
+        product.ProductCategoryId = dto.CategoryId;
 
         //product.StockQuantity = dto.StockQuantity;
         //product.OriginalPrice = dto.OriginalPrice;

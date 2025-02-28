@@ -17,12 +17,12 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<WaivedProduct> GetWaivedProductById(string id, bool trackChanges) => await FindByCondition(x => x.Id == id, trackChanges).FirstOrDefaultAsync();
 
-        public async Task<PaginatorDto<IEnumerable<WaivedProduct>>> GetPagedWaivedProduct(string category, PaginationFilter paginationFilter)
+        public async Task<PaginatorDto<IEnumerable<WaivedProduct>>> GetPagedWaivedProduct(string categoryId, PaginationFilter paginationFilter)
         {
-            if (category is not null)
+            if (categoryId is not null)
             {
                 return await FindAll(false)
-                            .Where(l => l.Category.ToLower() == category.ToLower())
+                            .Where(l => l.ProductCategoryId.ToLower() == categoryId.ToLower())
                             .Paginate(paginationFilter);
             }
             else

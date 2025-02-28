@@ -62,7 +62,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> CreateWaivedProducts(CreateWaivedProductDto dto)
         {
             var response = await _serviceManager.IWaivedProductService.CreateWaivedProduct(dto);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch

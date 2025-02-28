@@ -12,18 +12,13 @@ namespace SabiMarket.Application.DTOs
 {
     public class CreateWaivedProductDto
     {
-        public string VendorId { get; set; }
         public string ProductName { get; set; }
         public string ImageUrl { get; set; }
         public decimal Price { get; set; }
         public bool IsAvailbleForUrgentPurchase { get; set; }
-        public string Category { get; set; }
+        public string CategoryId { get; set; }
         public CurrencyTypeEnum CurrencyType { get; set; }
 
-        //public decimal OriginalPrice { get; set; }
-        //public decimal WaivedPrice { get; set; }
-        //public string Description { get; set; }
-        //public int StockQuantity { get; set; }
     }
     public class ProductDetailsDto
     {
@@ -44,7 +39,7 @@ namespace SabiMarket.Application.DTOs
         public string ProductId { get; set; }
         public string ProductName { get; set; }
         public bool IsAvailbleForUrgentPurchase { get; set; }
-        public string Category { get; set; }
+        public string CategoryId { get; set; }
         public string ImageUrl { get; set; }
         public CurrencyTypeEnum CurrencyType { get; set; }
         public decimal Price { get; set; }
