@@ -406,9 +406,9 @@ public class ChairmanController : ControllerBase
     [HttpGet("chairmen")]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetChairmen([FromQuery] PaginationFilter paginationFilter)
+    public async Task<IActionResult> GetChairmen([FromQuery] string? searchTerm, [FromQuery] PaginationFilter paginationFilter)
     {
-        var response = await _chairmanService.GetChairmen(paginationFilter);
+        var response = await _chairmanService.GetChairmen(searchTerm, paginationFilter);
         return Ok(response);
     }
 

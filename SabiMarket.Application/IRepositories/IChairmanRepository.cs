@@ -7,7 +7,8 @@ namespace SabiMarket.Application.IRepositories
     {
         Task<Chairman> GetChairmanByIdAsync(string userId, bool trackChanges);
         Task<Chairman> GetChairmanByMarketIdAsync(string marketId, bool trackChanges);
-        Task<PaginatorDto<IEnumerable<Chairman>>> GetChairmenWithPaginationAsync(PaginationFilter paginationFilter, bool trackChanges);
+        Task<PaginatorDto<IEnumerable<Chairman>>> GetChairmenWithPaginationAsync(
+       PaginationFilter paginationFilter, bool trackChanges, string? searchTerm);
         Task<bool> ChairmanExistsAsync(string userId, string marketId);
         void CreateChairman(Chairman chairman);
         void DeleteChairman(Chairman chairman);

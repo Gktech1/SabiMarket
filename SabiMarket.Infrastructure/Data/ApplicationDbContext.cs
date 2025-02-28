@@ -57,6 +57,7 @@ namespace SabiMarket.Infrastructure.Data
 
         #endregion
 
+
         /*    protected override void OnModelCreating(ModelBuilder builder)
             {
                 base.OnModelCreating(builder);
@@ -1328,6 +1329,18 @@ namespace SabiMarket.Infrastructure.Data
         #endregion
 
     }*/
+
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Market>()
+                .HasOne(m => m.Caretaker)
+                .WithMany() // No navigation back from Caretaker
+                .HasForeignKey(m => m.CaretakerId)
+                .IsRequired(false) // This is the key change to make the relationship optional
+                .OnDelete(DeleteBehavior.NoAction); // Prevent cascading deletes
+            base.OnModelCreating(modelBuilder);
+        }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

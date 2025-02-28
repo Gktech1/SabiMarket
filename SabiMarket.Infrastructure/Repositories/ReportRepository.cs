@@ -64,16 +64,15 @@ namespace SabiMarket.Infrastructure.Repositories
             var totalTraders = await _context.Traders.CountAsync();
             var totalCaretakers = await _context.Caretakers.CountAsync();
 
-            // Get active markets
+            // Get active markets - modified to check for non-null CaretakerId or having traders
             var activeMarkets = await _context.Markets
-                .Where(m => m.Traders.Any() || m.Caretakers.Any())
+                .Where(m => m.Traders.Any() || m.CaretakerId != null)
                 .CountAsync();
 
             // Get payment transactions and revenue
             var levyPayments = await _context.LevyPayments
                 .Where(lp => lp.PaymentDate >= startDate && lp.PaymentDate <= endDate)
                 .ToListAsync();
-
             var paymentTransactions = levyPayments.Count;
             var totalRevenue = levyPayments.Sum(lp => lp.Amount);
 
@@ -100,15 +99,57 @@ namespace SabiMarket.Infrastructure.Repositories
                 ComplianceRate = complianceRate
             };
         }
+        /*    public async Task<Report> GetMetricsAsync(DateTime startDate, DateTime endDate)
+            {
+                // Get total traders and caretakers
+                var totalTraders = await _context.Traders.CountAsync();
+                var totalCaretakers = await _context.Caretakers.CountAsync();
+
+                // Get active markets
+                var activeMarkets = await _context.Markets
+                    .Where(m => m.Traders.Any() || m.Caretaker.Any())
+                    .CountAsync();
+
+                // Get payment transactions and revenue
+                var levyPayments = await _context.LevyPayments
+                    .Where(lp => lp.PaymentDate >= startDate && lp.PaymentDate <= endDate)
+                    .ToListAsync();
+
+                var paymentTransactions = levyPayments.Count;
+                var totalRevenue = levyPayments.Sum(lp => lp.Amount);
+
+                // Calculate compliance rate
+                var tradersWithPayments = await _context.LevyPayments
+                    .Where(lp => lp.PaymentDate >= startDate && lp.PaymentDate <= endDate)
+                    .Select(lp => lp.TraderId)
+                    .Distinct()
+                    .CountAsync();
+
+                var complianceRate = totalTraders > 0
+                    ? (decimal)tradersWithPayments / totalTraders * 100
+                    : 0;
+
+                return new Report
+                {
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    TotalTraders = totalTraders,
+                    TotalCaretakers = totalCaretakers,
+                    TotalRevenueGenerated = totalRevenue,
+                    PaymentTransactions = paymentTransactions,
+                    ActiveMarkets = activeMarkets,
+                    ComplianceRate = complianceRate
+                };
+            }*/
         public async Task<IEnumerable<Report>> GetLevyPaymentsBreakdown(int year)
         {
             var payments = await _context.LevyPayments
                 .Where(x => x.PaymentDate.Year == year)
-                .GroupBy(x => new { x.MarketId, x.Market.Name, Month = x.PaymentDate.Month })
+                .GroupBy(x => new { x.MarketId, x.Market.MarketName, Month = x.PaymentDate.Month })
                 .Select(g => new Report
                 {
                     MarketId = g.Key.MarketId,
-                    MarketName = g.Key.Name,
+                    MarketName = g.Key.MarketName,
                     MonthlyRevenue = g.Sum(x => x.Amount),
                     Month = g.Key.Month,
                     Year = year
@@ -132,7 +173,7 @@ namespace SabiMarket.Infrastructure.Repositories
             return new Report
             {
                 MarketId = marketId,
-                MarketName = market.Name,
+                MarketName = market.MarketName,
                 TotalTraders = market.Traders?.Count ?? 0,
                 CompliantTraders = tradersWithPayments,
                 ComplianceRate = market.Traders?.Count > 0
@@ -147,7 +188,7 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Select(m => new Report
                 {
                     MarketId = m.Id,
-                    MarketName = m.Name,
+                    MarketName = m.MarketName,
                     TotalLevyCollected = m.Traders
                         .SelectMany(t => t.LevyPayments)
                         .Sum(lp => lp.Amount)

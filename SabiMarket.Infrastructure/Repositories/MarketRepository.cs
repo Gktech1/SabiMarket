@@ -20,21 +20,25 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public void DeleteMarket(Market market) => Delete(market);
 
-        public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges) => await FindAll(trackChanges).Include(a => a.Caretakers)
+        public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges) => await FindAll(trackChanges).Include(a => a.Caretaker)
             .Include(a => a.Traders)
-            .Include(a => a.Sections).ToListAsync();
+            .Include(m => m.Chairman)
+            .Include(m => m.Caretaker)
+            .Include(a => a.LocalGovernment)
+            .Include(a => a.MarketSections).ToListAsync();
+            
 
         public async Task<Market> GetMarketById(string id, bool trackChanges) => await FindByCondition(x => x.Id == id, trackChanges)
-            .Include(a => a.Caretakers)
+            .Include(a => a.Caretaker)
             .Include(a => a.Traders)
-            .Include(a => a.Sections)
+            .Include(a => a.MarketSections)
             .Include(a => a.LocalGovernment)
             .FirstOrDefaultAsync();
 
         public async Task<Market> GetMarketByUserId(string userId, bool trackChanges) => await FindByCondition(x => x.Id == userId, trackChanges)
-           .Include(a => a.Caretakers)
+           .Include(a => a.Caretaker)
            .Include(a => a.Traders)
-           .Include(a => a.Sections)
+           .Include(a => a.MarketSections)
            .Include(a => a.LocalGovernment)
            .FirstOrDefaultAsync();
 
@@ -42,16 +46,16 @@ namespace SabiMarket.Infrastructure.Repositories
         {
             return FindAll(trackChanges: false)
                 .Include(m => m.Chairman)
-                .Include(m => m.Caretakers)
+                .Include(m => m.Caretaker)
                 .Include(m => m.Traders)
                 .Include(m => m.LocalGovernment);
         }
         public async Task<PaginatorDto<IEnumerable<Market>>> GetPagedMarket(PaginationFilter paginationFilter)
         {
             return await FindAll(false)
-                        .Include(a => a.Caretakers)
+                        .Include(a => a.Caretaker)
                         .Include(a => a.Traders)
-                        .Include(a => a.Sections)
+                        .Include(a => a.MarketSections)
                         .Include(a => a.LocalGovernment)
                         .Paginate(paginationFilter);
         }
@@ -60,7 +64,7 @@ namespace SabiMarket.Infrastructure.Repositories
         {
             return await FindAll(false)
                            .Where(a => a.LocalGovernment.Name.Contains(searchString) ||
-                           a.Name.Contains(searchString))
+                           a.MarketName.Contains(searchString))
                            .Paginate(paginationFilter);
         }
 
@@ -69,9 +73,9 @@ namespace SabiMarket.Infrastructure.Repositories
             var query = FindByCondition(m => m.Id == marketId, trackChanges);
 
             query = query
-                .Include(a => a.Caretakers)
+                .Include(a => a.Caretaker)
                 .Include(a => a.Traders)
-                .Include(a => a.Sections)
+                .Include(a => a.MarketSections)
                 .Include(a => a.LocalGovernment);
 
             return await query.FirstOrDefaultAsync();
@@ -82,7 +86,7 @@ namespace SabiMarket.Infrastructure.Repositories
                 var market = await FindByCondition(m => m.Id == marketId, trackChanges: false)
                     .Include(m => m.Traders)
                     .Include(m => m.LocalGovernment)
-                    .Include(m => m.Sections)
+                    .Include(m => m.MarketSections)
                     .FirstOrDefaultAsync();
 
                 if (market == null)
@@ -99,7 +103,7 @@ namespace SabiMarket.Infrastructure.Repositories
                 var marketRevenue = new Market
                 {
                     Id = market.Id,
-                    MarketName = market.Name,
+                    MarketName = market.MarketName,
                     TotalRevenue = levyPayments.Sum(lp => lp.Amount),
                     PaymentTransactions = levyPayments.Count,
                     Location = market.Location,
@@ -123,7 +127,7 @@ namespace SabiMarket.Infrastructure.Repositories
             var market = await FindByCondition(m => m.Id == marketId, trackChanges: false)
                 .Include(m => m.Traders)
                 .Include(m => m.LocalGovernment)
-                .Include(m => m.Sections)
+                .Include(m => m.MarketSections)
                 .FirstOrDefaultAsync();
 
             if (market == null)
@@ -145,7 +149,7 @@ namespace SabiMarket.Infrastructure.Repositories
             var marketCompliance = new Market
             {
                 Id = market.Id,
-                MarketName = market.Name,
+                MarketName = market.MarketName,
                 Location = market.Location,
                 LocalGovernmentName = market.LocalGovernment?.Name,
                 TotalTraders = totalTraders,

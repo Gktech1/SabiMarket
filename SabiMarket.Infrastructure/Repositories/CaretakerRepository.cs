@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using iText.Commons.Actions.Contexts;
+using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Domain.Entities.LevyManagement;
@@ -22,11 +23,11 @@ namespace SabiMarket.Infrastructure.Repositories
             return FindAll(trackChanges: false)
                 .Include(c => c.User)
                 .Include(c => c.Chairman)
-                .Include(c => c.Market);
+                .Include(c => c.Markets);
         }
         public async Task<Caretaker> GetCaretakerById(string userId, bool trackChanges) =>
          await FindByCondition(x => x.UserId == userId, trackChanges)
-             .Include(a => a.Market)
+             .Include(a => a.Markets)
              .Include(a => a.GoodBoys)
                  .ThenInclude(gb => gb.LevyPayments)
              .Include(a => a.AssignedTraders)
@@ -35,20 +36,33 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<Caretaker> GetCaretakerByMarketId(string marketId, bool trackChanges) =>
             await FindByCondition(x => x.MarketId == marketId, trackChanges)
-                .Include(a => a.Market)
+                .Include(a => a.Markets)
                 .Include(a => a.GoodBoys)
                     .ThenInclude(gb => gb.LevyPayments)
                 .Include(a => a.AssignedTraders)
                     .ThenInclude(t => t.Market)
                 .FirstOrDefaultAsync();
 
+        /* public async Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersWithPagination(
+             PaginationFilter paginationFilter, bool trackChanges)
+         {
+             var query = FindAll(trackChanges)
+                 .Include(a => a.Markets)
+                 .Include(a => a.GoodBoys)
+                 .Include(a => a.AssignedTraders)
+                 .OrderBy(c => c.CreatedAt);
+
+             return await query.Paginate(paginationFilter);
+         }*/
+
         public async Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersWithPagination(
-            PaginationFilter paginationFilter, bool trackChanges)
+    PaginationFilter paginationFilter, bool trackChanges)
         {
             var query = FindAll(trackChanges)
-                .Include(a => a.Market)
+                .Include(a => a.Markets)
                 .Include(a => a.GoodBoys)
                 .Include(a => a.AssignedTraders)
+                .Include(a => a.User) // Include User to populate firstName, lastName, email, etc.
                 .OrderBy(c => c.CreatedAt);
 
             return await query.Paginate(paginationFilter);
@@ -96,8 +110,8 @@ namespace SabiMarket.Infrastructure.Repositories
             return await query.Paginate(paginationFilter);
         }
 
-        public async Task<bool> CaretakerExists(string userId, string marketId) =>
-            await FindByCondition(x => x.UserId == userId && x.MarketId == marketId,
+        public async Task<bool> CaretakerExists(string chairmanId, string marketId) =>
+            await FindByCondition(x => x.UserId == chairmanId && x.MarketId == marketId,
                 trackChanges: false).AnyAsync();
 
         public void CreateCaretaker(Caretaker caretaker) => Create(caretaker);
@@ -131,10 +145,19 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<IEnumerable<Caretaker>> GetAllCaretakers(bool trackChanges) =>
             await FindAll(trackChanges)
-                .Include(c => c.Market)
+                .Include(c => c.Markets)
                 .Include(c => c.GoodBoys)
                 .Include(c => c.AssignedTraders)
                 .ToListAsync();
+
+        public async Task<bool> ExistsAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                return false;
+
+            return await _repositoryContext.Caretakers
+                .AnyAsync(c => c.Id == id);
+        }
     }
 }
 
