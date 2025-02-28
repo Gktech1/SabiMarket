@@ -100,6 +100,7 @@ public static class ServiceCollectionExtensions
         services.AddAutoMapper(typeof(Program).Assembly);
         // Current approach - easily replaceable
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddHttpClient<ISmsService, AfricasTalkingSmsService>();
 
         return services;
     }

@@ -87,8 +87,12 @@ namespace SabiMarket.Infrastructure.Services
                     return ResponseFactory.Success(true, "If your phone number exists in our system, an OTP has been sent");
                 }
 
-                // Generate OTP (6-digit code)
-                var otp = new Random().Next(100000, 999999).ToString();
+                // Check environment (use ENV variable to determine Dev or Production)
+                var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+                bool isDevelopment = environment == "Development";
+
+                // Generate OTP: Use static OTP in Dev, Random OTP in Live
+                var otp = isDevelopment ? "777777" : new Random().Next(100000, 999999).ToString();
 
                 // Store OTP in user tokens with expiration
                 await _userManager.SetAuthenticationTokenAsync(user, "PasswordReset", "OTP", otp);
@@ -96,7 +100,6 @@ namespace SabiMarket.Infrastructure.Services
                     DateTime.UtcNow.AddMinutes(5).ToString("o")); // 5-minute expiry
 
                 // Send SMS with OTP
-
                 bool smsSent = await _smsService.SendSMS(
                     phoneNumber,
                     $"Your password reset OTP is: {otp}. Valid for 5 minutes."
@@ -104,9 +107,8 @@ namespace SabiMarket.Infrastructure.Services
 
                 if (!smsSent)
                 {
-                   _logger.LogWarning($"Failed to send SMS to {phoneNumber}");
-                    return ResponseFactory.Success(true, $"OTP is {otp} and was sent successfully to your phone");
-                    
+                    _logger.LogWarning($"Failed to send SMS to {phoneNumber}");
+                   // return ResponseFactory.Success(true, $"OTP is {otp} and was sent successfully to your phone");
                 }
 
                 return ResponseFactory.Success(true, "OTP was sent successfully to your phone");
@@ -116,7 +118,8 @@ namespace SabiMarket.Infrastructure.Services
                 _logger.LogError(ex, "Error sending password reset OTP via SMS");
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
-        } 
+        }
+
 
         public async Task<BaseResponse<bool>> VerifyPasswordResetOTP(string phoneNumber, string otp)
         {
