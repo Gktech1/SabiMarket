@@ -131,12 +131,15 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<IEnumerable<LevyPayment>> GetByMarketAndOccupancyAsync(string marketId, MarketTypeEnum traderOccupancy)
         {
-            return await _context.LevyPayments
+            var result = await _context.LevyPayments
                 .Where(lp => lp.MarketId == marketId || lp.Trader.TraderOccupancy == traderOccupancy)
                 .Include(lp => lp.Market)
                 .Include(lp => lp.Trader)
                 .ToListAsync();
+
+            return result.Any() ? result : null; // Return null if no records are found
         }
+
 
 
         public async Task<IQueryable<LevyPayment>> GetMarketLevySetups(string marketId)

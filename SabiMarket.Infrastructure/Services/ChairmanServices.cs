@@ -1254,7 +1254,7 @@ namespace SabiMarket.Infrastructure.Services
 
                 var existingLevy = await _repository.LevyPaymentRepository.GetByMarketAndOccupancyAsync(request.MarketId, request.TraderOccupancy);
 
-                if (existingLevy.Count() > 1 || existingLevy == null)
+                if (existingLevy != null || existingLevy.Any())
                 {
                     return ResponseFactory.Fail<bool>("Levy setup already exists for this market and trader occupancy.");
                 }
