@@ -83,32 +83,29 @@ namespace SabiMarket.Infrastructure.Services
                 var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
                 if (user == null)
                 {
-                    // For security reasons, don't reveal that the user doesn't exist
                     return ResponseFactory.Success(true, "If your phone number exists in our system, an OTP has been sent");
                 }
 
-                // Check environment (use ENV variable to determine Dev or Production)
+                // Check environment
                 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
                 bool isDevelopment = environment == "Development";
 
-                // Generate OTP: Use static OTP in Dev, Random OTP in Live
+                // Generate OTP
                 var otp = isDevelopment ? "777777" : new Random().Next(100000, 999999).ToString();
+                var otpExpiry = DateTime.UtcNow.AddMinutes(5);
 
-                // Store OTP in user tokens with expiration
-                await _userManager.SetAuthenticationTokenAsync(user, "PasswordReset", "OTP", otp);
-                await _userManager.SetAuthenticationTokenAsync(user, "PasswordReset", "OTPExpiry",
-                    DateTime.UtcNow.AddMinutes(5).ToString("o")); // 5-minute expiry
+                // Store OTP inside a custom field (SecurityStamp for now)
+                user.SecurityStamp = $"{otp}|{otpExpiry:o}";
+                await _userManager.UpdateAsync(user);
 
-                // Send SMS with OTP
-                bool smsSent = await _smsService.SendSMS(
-                    phoneNumber,
-                    $"Your password reset OTP is: {otp}. Valid for 5 minutes."
-                );
+                _logger.LogInformation($"Generated OTP: {otp} (Expires: {otpExpiry})"); // Debugging
 
+                // Send SMS
+                bool smsSent = await _smsService.SendSMS(phoneNumber, $"Your password reset OTP is: {otp}. Valid for 10 minutes.");
                 if (!smsSent)
                 {
                     _logger.LogWarning($"Failed to send SMS to {phoneNumber}");
-                   // return ResponseFactory.Success(true, $"OTP is {otp} and was sent successfully to your phone");
+                    //return ResponseFactory.Fail<bool>(new Exception("Failed to send OTP"), "Could not send OTP");
                 }
 
                 return ResponseFactory.Success(true, "OTP was sent successfully to your phone");
@@ -120,7 +117,6 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-
         public async Task<BaseResponse<bool>> VerifyPasswordResetOTP(string phoneNumber, string otp)
         {
             try
@@ -128,45 +124,38 @@ namespace SabiMarket.Infrastructure.Services
                 var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
                 if (user == null)
                 {
-                    return ResponseFactory.Fail<bool>(
-                        new NotFoundException("Invalid phone number or OTP"),
-                        "Verification failed");
+                    return ResponseFactory.Fail<bool>(new NotFoundException("Invalid phone number or OTP"), "Verification failed");
                 }
 
-                // Retrieve stored OTP and expiry
-                var storedOTP = await _userManager.GetAuthenticationTokenAsync(user, "PasswordReset", "OTP");
-                var expiryString = await _userManager.GetAuthenticationTokenAsync(user, "PasswordReset", "OTPExpiry");
-
-                if (string.IsNullOrEmpty(storedOTP) || string.IsNullOrEmpty(expiryString))
+                // Retrieve stored OTP and expiry from SecurityStamp
+                var securityStamp = user.SecurityStamp;
+                if (string.IsNullOrEmpty(securityStamp) || !securityStamp.Contains("|"))
                 {
-                    return ResponseFactory.Fail<bool>(
-                        new BadRequestException("No active OTP found"),
-                        "Verification failed");
+                    return ResponseFactory.Fail<bool>(new BadRequestException("No active OTP found"), "Verification failed");
+                }
+
+                var parts = securityStamp.Split('|');
+                if (parts.Length != 2 || !DateTime.TryParse(parts[1], out var expiry))
+                {
+                    return ResponseFactory.Fail<bool>(new BadRequestException("Invalid OTP format"), "Verification failed");
                 }
 
                 // Check expiration
-                if (DateTime.TryParse(expiryString, out var expiry) && expiry < DateTime.UtcNow)
+                if (expiry < DateTime.UtcNow)
                 {
-                    return ResponseFactory.Fail<bool>(
-                        new BadRequestException("OTP has expired"),
-                        "Verification failed");
+                    return ResponseFactory.Fail<bool>(new BadRequestException("OTP has expired"), "Verification failed");
                 }
 
                 // Verify OTP
-                if (storedOTP != otp)
+                if (parts[0] != otp)
                 {
-                    return ResponseFactory.Fail<bool>(
-                        new BadRequestException("Invalid OTP"),
-                        "Verification failed");
+                    return ResponseFactory.Fail<bool>(new BadRequestException("Invalid OTP"), "Verification failed");
                 }
 
-                // Generate a reset token
+                // Generate a password reset token (DO NOT store manually)
                 var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-                // Store the reset token temporarily
-                await _userManager.SetAuthenticationTokenAsync(user, "PasswordReset", "ResetToken", resetToken);
-
-                return ResponseFactory.Success(true, "OTP verified successfully");
+                return ResponseFactory.Success(true, $"OTP verified successfully: {resetToken}");
             }
             catch (Exception ex)
             {
@@ -187,14 +176,24 @@ namespace SabiMarket.Infrastructure.Services
                         "Password reset failed");
                 }
 
-                // Retrieve stored reset token
-                var resetToken = await _userManager.GetAuthenticationTokenAsync(user, "PasswordReset", "ResetToken");
-                if (string.IsNullOrEmpty(resetToken))
+                // Retrieve stored reset token from SecurityStamp
+                var storedData = user.SecurityStamp;
+                if (string.IsNullOrEmpty(storedData) || !storedData.Contains("|"))
                 {
                     return ResponseFactory.Fail<bool>(
                         new BadRequestException("Invalid or expired verification session"),
                         "Password reset failed");
                 }
+
+                var parts = storedData.Split('|');
+                if (parts.Length != 2)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new BadRequestException("Invalid reset token format"),
+                        "Password reset failed");
+                }
+
+                var resetToken = parts[0];
 
                 // Reset password
                 var result = await _userManager.ResetPasswordAsync(user, resetToken, newPassword);
@@ -205,10 +204,9 @@ namespace SabiMarket.Infrastructure.Services
                         "Password reset failed");
                 }
 
-                // Clean up tokens
-                await _userManager.RemoveAuthenticationTokenAsync(user, "PasswordReset", "OTP");
-                await _userManager.RemoveAuthenticationTokenAsync(user, "PasswordReset", "OTPExpiry");
-                await _userManager.RemoveAuthenticationTokenAsync(user, "PasswordReset", "ResetToken");
+                // Clean up SecurityStamp (remove stored token)
+                user.SecurityStamp = null;
+                await _userManager.UpdateAsync(user);
 
                 return ResponseFactory.Success(true, "Password reset successfully");
             }
@@ -218,43 +216,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
-
-      /*  public async Task<BaseResponse<bool>> ChangePassword(string userId, ChangePasswordDto changePasswordDto)
-        {
-            try
-            {
-                var validationResult = await _changePasswordValidator.ValidateAsync(changePasswordDto);
-                if (!validationResult.IsValid)
-                {
-                    return ResponseFactory.Fail<bool>(
-                        new FluentValidation.ValidationException(validationResult.Errors),
-                        "Validation failed");
-                }
-                var user = await _userManager.FindByIdAsync(userId);
-                if (user == null)
-                {
-                    return ResponseFactory.Fail<bool>(
-                        new NotFoundException("User not found"),
-                        "User not found");
-                }
-                var result = await _userManager.ChangePasswordAsync(user,
-                    changePasswordDto.CurrentPassword,
-                    changePasswordDto.NewPassword);
-                if (!result.Succeeded)
-                {
-                    return ResponseFactory.Fail<bool>(
-                        new BadRequestException(result.Errors.First().Description),
-                        "Password change failed");
-                }
-                return ResponseFactory.Success(true, "Password changed successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during password change");
-                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-            }
-        }*/
-
         public async Task<BaseResponse<bool>> LogoutUser(string userId)
         {
             try
@@ -490,3 +451,184 @@ namespace SabiMarket.Infrastructure.Services
     }
 }
 
+
+
+/* public async Task<BaseResponse<bool>> SendPasswordResetOTPBySMS(string phoneNumber)
+       {
+           try
+           {
+               // Find user by phone number
+               var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+               if (user == null)
+               {
+                   // For security reasons, don't reveal that the user doesn't exist
+                   return ResponseFactory.Success(true, "If your phone number exists in our system, an OTP has been sent");
+               }
+
+               // Check environment (use ENV variable to determine Dev or Production)
+               var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+               bool isDevelopment = environment == "Development";
+
+               // Generate OTP: Use static OTP in Dev, Random OTP in Live
+               var otp = isDevelopment ? "777777" : new Random().Next(100000, 999999).ToString();
+
+               // Store OTP in user tokens with expiration
+               await _userManager.SetAuthenticationTokenAsync(user, "PasswordReset", "OTP", otp);
+               await _userManager.SetAuthenticationTokenAsync(user, "PasswordReset", "OTPExpiry",
+                   DateTime.UtcNow.AddMinutes(10).ToString("o")); // 10-minute expiry
+
+               // Send SMS with OTP
+               bool smsSent = await _smsService.SendSMS(
+                   phoneNumber,
+                   $"Your password reset OTP is: {otp}. Valid for 10 minutes."
+               );
+
+               if (!smsSent)
+               {
+                   _logger.LogWarning($"Failed to send SMS to {phoneNumber}");
+                  // return ResponseFactory.Success(true, $"OTP is {otp} and was sent successfully to your phone");
+               }
+
+               return ResponseFactory.Success(true, "OTP was sent successfully to your phone");
+           }
+           catch (Exception ex)
+           {
+               _logger.LogError(ex, "Error sending password reset OTP via SMS");
+               return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+           }
+       }
+*/
+
+/*public async Task<BaseResponse<bool>> VerifyPasswordResetOTP(string phoneNumber, string otp)
+{
+    try
+    {
+        var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+        if (user == null)
+        {
+            return ResponseFactory.Fail<bool>(
+                new NotFoundException("Invalid phone number or OTP"),
+                "Verification failed");
+        }
+
+        // Retrieve stored OTP and expiry
+        var storedOTP = await _userManager.GetAuthenticationTokenAsync(user, "PasswordReset", "OTP");
+        var expiryString = await _userManager.GetAuthenticationTokenAsync(user, "PasswordReset", "OTPExpiry");
+
+        if (string.IsNullOrEmpty(storedOTP) || string.IsNullOrEmpty(expiryString))
+        {
+            return ResponseFactory.Fail<bool>(
+                new BadRequestException("No active OTP found"),
+                "Verification failed");
+        }
+
+        // Check expiration
+        if (DateTime.TryParse(expiryString, out var expiry) && expiry < DateTime.UtcNow)
+        {
+            return ResponseFactory.Fail<bool>(
+                new BadRequestException("OTP has expired"),
+                "Verification failed");
+        }
+
+        // Verify OTP
+        if (storedOTP != otp)
+        {
+            return ResponseFactory.Fail<bool>(
+                new BadRequestException("Invalid OTP"),
+                "Verification failed");
+        }
+
+        // Generate a reset token
+        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+        // Store the reset token temporarily
+        await _userManager.SetAuthenticationTokenAsync(user, "PasswordReset", "ResetToken", resetToken);
+
+        return ResponseFactory.Success(true, "OTP verified successfully");
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error verifying password reset OTP");
+        return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+    }
+}
+*/
+/* public async Task<BaseResponse<bool>> ResetPasswordAfterOTP(string phoneNumber, string newPassword)
+ {
+     try
+     {
+         var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+         if (user == null)
+         {
+             return ResponseFactory.Fail<bool>(
+                 new NotFoundException("User not found"),
+                 "Password reset failed");
+         }
+
+         // Retrieve stored reset token
+         var resetToken = await _userManager.GetAuthenticationTokenAsync(user, "PasswordReset", "ResetToken");
+         if (string.IsNullOrEmpty(resetToken))
+         {
+             return ResponseFactory.Fail<bool>(
+                 new BadRequestException("Invalid or expired verification session"),
+                 "Password reset failed");
+         }
+
+         // Reset password
+         var result = await _userManager.ResetPasswordAsync(user, resetToken, newPassword);
+         if (!result.Succeeded)
+         {
+             return ResponseFactory.Fail<bool>(
+                 new BadRequestException(result.Errors.First().Description),
+                 "Password reset failed");
+         }
+
+         // Clean up tokens
+         await _userManager.RemoveAuthenticationTokenAsync(user, "PasswordReset", "OTP");
+         await _userManager.RemoveAuthenticationTokenAsync(user, "PasswordReset", "OTPExpiry");
+         await _userManager.RemoveAuthenticationTokenAsync(user, "PasswordReset", "ResetToken");
+
+         return ResponseFactory.Success(true, "Password reset successfully");
+     }
+     catch (Exception ex)
+     {
+         _logger.LogError(ex, "Error during password reset");
+         return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+     }
+ }*/
+
+/*  public async Task<BaseResponse<bool>> ChangePassword(string userId, ChangePasswordDto changePasswordDto)
+  {
+      try
+      {
+          var validationResult = await _changePasswordValidator.ValidateAsync(changePasswordDto);
+          if (!validationResult.IsValid)
+          {
+              return ResponseFactory.Fail<bool>(
+                  new FluentValidation.ValidationException(validationResult.Errors),
+                  "Validation failed");
+          }
+          var user = await _userManager.FindByIdAsync(userId);
+          if (user == null)
+          {
+              return ResponseFactory.Fail<bool>(
+                  new NotFoundException("User not found"),
+                  "User not found");
+          }
+          var result = await _userManager.ChangePasswordAsync(user,
+              changePasswordDto.CurrentPassword,
+              changePasswordDto.NewPassword);
+          if (!result.Succeeded)
+          {
+              return ResponseFactory.Fail<bool>(
+                  new BadRequestException(result.Errors.First().Description),
+                  "Password change failed");
+          }
+          return ResponseFactory.Success(true, "Password changed successfully");
+      }
+      catch (Exception ex)
+      {
+          _logger.LogError(ex, "Error during password change");
+          return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+      }
+  }*/
