@@ -393,11 +393,37 @@ namespace SabiMarket.Infrastructure.Services
             var random = new Random();
             var randomNumbers = random.Next(100, 999).ToString(); // Generate a 3-digit random number
 
-            // Combine first name, last name, and random number
-            var password = $"{firstName}{lastName}{randomNumbers}";
+            // Special characters pool
+            var specialChars = "!@#$%^&*()-_=+[]{}|;:,.<>?";
+            var specialChar1 = specialChars[random.Next(specialChars.Length)];
+            var specialChar2 = specialChars[random.Next(specialChars.Length)];
 
-            // Ensure the password is exactly 10 characters long
-            return password.Length == 10 ? password : password.Substring(0, 10); // Trim to 10 characters if necessary
+            // Generate random uppercase letters
+            var uppercaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var uppercaseLetter = uppercaseLetters[random.Next(uppercaseLetters.Length)];
+
+            // Combine first name, last name, random number, and special characters
+            // Make sure at least one character in the name parts is uppercase
+            var firstNameProcessed = char.ToUpper(firstName[0]) + firstName.Substring(1).ToLower();
+            var lastNameProcessed = !string.IsNullOrEmpty(lastName)
+                ? char.ToUpper(lastName[0]) + lastName.Substring(1).ToLower()
+                : "";
+
+            // Combine all elements with special characters and uppercase
+            var password = $"{firstNameProcessed}{specialChar1}{lastNameProcessed}{randomNumbers}{uppercaseLetter}{specialChar2}";
+
+            // Ensure password has minimum complexity
+            if (password.Length < 8)
+            {
+                // Add additional random characters for very short names
+                var additionalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+                while (password.Length < 8)
+                {
+                    password += additionalChars[random.Next(additionalChars.Length)];
+                }
+            }
+
+            return password;
         }
 
 

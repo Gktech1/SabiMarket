@@ -57,6 +57,22 @@ public class MappingProfile : Profile
           .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
           .ForMember(dest => dest.DefaultPassword, opt => opt.Ignore());  // DefaultPassword should not be included in the DTO
 
+        CreateMap<LevySetupRequestDto, LevyPayment>()
+            .ForMember(dest => dest.Period, opt => opt.MapFrom(src => src.PaymentFrequencyDays))
+            .ForMember(dest => dest.Amount, opt => opt.MapFrom(src => src.Amount))
+            .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+            .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(_ => PaymentStatusEnum.Pending)) // Defaulting to Pending
+            .ForMember(dest => dest.PaymentMethod, opt => opt.Ignore()) // Assuming it's set later
+            .ForMember(dest => dest.TraderId, opt => opt.Ignore()) // Assuming it comes from context
+            .ForMember(dest => dest.GoodBoyId, opt => opt.Ignore()) // Assuming it comes from context
+            .ForMember(dest => dest.ChairmanId, opt => opt.Ignore()) // Assuming it comes from context
+            .ForMember(dest => dest.TransactionReference, opt => opt.Ignore()) // Assuming it's set elsewhere
+            .ForMember(dest => dest.PaymentDate, opt => opt.Ignore()) // Set on processing
+            .ForMember(dest => dest.CollectionDate, opt => opt.Ignore()) // Set on processing
+            .ForMember(dest => dest.Notes, opt => opt.Ignore()) // Optional
+            .ForMember(dest => dest.QRCodeScanned, opt => opt.Ignore()) // Optional
+            .ForMember(dest => dest.HasIncentive, opt => opt.Ignore()) // Optional
+            .ForMember(dest => dest.IncentiveAmount, opt => opt.Ignore()); // Optional
 
         CreateMap<Admin, AdminDashboardStatsDto>()
            .ForMember(dest => dest.RegisteredLGAs, opt => opt.MapFrom(src => src.RegisteredLGAs))

@@ -15,6 +15,7 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     Task<decimal> GetTotalLeviesAsync(DateTime startDate, DateTime endDate);
     void DeleteLevyPayment(LevyPayment levy);
     Task<IEnumerable<LevyPayment>> GetAllLevySetupsAsync(bool trackChanges);
+    Task<IEnumerable<LevyPayment>> GetByMarketAndOccupancyAsync(string marketId, MarketTypeEnum traderOccupancy);
     Task<LevyPayment> GetMarketLevySetup(string marketId, PaymentPeriodEnum period);
     Task<IQueryable<LevyPayment>> GetMarketLevySetups(string marketId);
 }

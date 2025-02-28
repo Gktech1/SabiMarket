@@ -1243,6 +1243,62 @@ namespace SabiMarket.Infrastructure.Services
         public async Task<BaseResponse<bool>> ConfigureLevySetup(LevySetupRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();
+            var userId = _currentUser.GetUserId();
+            try
+            {
+                await CreateAuditLog(
+                    "Levy Setup Configuration",
+                    $"CorrelationId: {correlationId} - Configuring new levy setup for {request.MarketId} ({request.MarketType})",
+                    "Levy Management"
+                );
+
+                var existingLevy = await _repository.LevyPaymentRepository.GetByMarketAndOccupancyAsync(request.MarketId, request.TraderOccupancy);
+
+                if (existingLevy != null || existingLevy.Any())
+                {
+                    return ResponseFactory.Fail<bool>("Levy setup already exists for this market and trader occupancy.");
+                }
+                var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                if (chairman == null)
+                {
+                    return ResponseFactory.Fail<bool>("Chairman not found");
+                }
+
+                var levySetup = _mapper.Map<LevyPayment>(request);
+
+                levySetup.ChairmanId = chairman.Id; 
+                levySetup.TraderId = "";  
+                levySetup.GoodBoyId = "";
+                levySetup.Notes = "Initial Levy Setup by the Chairman";
+                levySetup.TransactionReference = "";
+                levySetup.QRCodeScanned = "";
+
+                _repository.LevyPaymentRepository.AddPayment(levySetup);
+                await _repository.SaveChangesAsync();
+
+                await CreateAuditLog(
+                    "Levy Setup Configured",
+                    $"CorrelationId: {correlationId} - Levy setup configured successfully for {request.MarketId}",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(true, "Levy setup configured successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Levy Setup Configuration Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}\nStackTrace: {ex.StackTrace}",
+                    "Levy Management"
+                );
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+            }
+        }
+
+
+     /*   public async Task<BaseResponse<bool>> ConfigureLevySetup(LevySetupRequestDto request)
+        {
+            var correlationId = Guid.NewGuid().ToString();
             try
             {
                 await CreateAuditLog(
@@ -1273,7 +1329,7 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
-
+*/
         public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> SearchMarkets(string searchTerm)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -2081,11 +2137,37 @@ namespace SabiMarket.Infrastructure.Services
             var random = new Random();
             var randomNumbers = random.Next(100, 999).ToString(); // Generate a 3-digit random number
 
-            // Combine first name, last name, and random number
-            var password = $"{firstName}{lastName}{randomNumbers}";
+            // Special characters pool
+            var specialChars = "!@#$%^&*()-_=+[]{}|;:,.<>?";
+            var specialChar1 = specialChars[random.Next(specialChars.Length)];
+            var specialChar2 = specialChars[random.Next(specialChars.Length)];
 
-            // Ensure the password is exactly 10 characters long
-            return password.Length == 10 ? password : password.Substring(0, 10); // Trim to 10 characters if necessary
+            // Generate random uppercase letters
+            var uppercaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var uppercaseLetter = uppercaseLetters[random.Next(uppercaseLetters.Length)];
+
+            // Combine first name, last name, random number, and special characters
+            // Make sure at least one character in the name parts is uppercase
+            var firstNameProcessed = char.ToUpper(firstName[0]) + firstName.Substring(1).ToLower();
+            var lastNameProcessed = !string.IsNullOrEmpty(lastName)
+                ? char.ToUpper(lastName[0]) + lastName.Substring(1).ToLower()
+                : "";
+
+            // Combine all elements with special characters and uppercase
+            var password = $"{firstNameProcessed}{specialChar1}{lastNameProcessed}{randomNumbers}{uppercaseLetter}{specialChar2}";
+
+            // Ensure password has minimum complexity
+            if (password.Length < 8)
+            {
+                // Add additional random characters for very short names
+                var additionalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+                while (password.Length < 8)
+                {
+                    password += additionalChars[random.Next(additionalChars.Length)];
+                }
+            }
+
+            return password;
         }
 
         /*  private string GenerateDefaultPassword(string fullName)
