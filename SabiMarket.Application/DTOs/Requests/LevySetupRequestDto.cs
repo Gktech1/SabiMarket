@@ -1,19 +1,21 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using SabiMarket.Domain.Enum;
+using System.ComponentModel.DataAnnotations;
 
 namespace SabiMarket.Application.DTOs.Requests
 {
     public class LevySetupRequestDto
     {
-        [Required]
-        public string TraderOccupancy { get; set; }  // e.g., Shop, Kiosk, Open Space
+        public string MarketId { get; set; }  // Example: "Ketu Market"
 
-        [Required]
-        public int PaymentFrequencyDays { get; set; }
+        public MarketTypeEnum MarketType { get; set; } // Example: "Open"
 
-        [Required]
-        [Range(0.01, double.MaxValue)]
-        public decimal Amount { get; set; }
+        public MarketTypeEnum TraderOccupancy { get; set; }  // Example: "Shop", "Kiosk", "Open Space"
+
+        public PaymentPeriodEnum PaymentFrequencyDays { get; set; }
+
+        public decimal Amount { get; set; }  // Readonly in Edit Mode
     }
+
     public class AuditLogDto
     {
         public string Id { get; set; }

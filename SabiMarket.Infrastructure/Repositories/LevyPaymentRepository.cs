@@ -119,15 +119,25 @@ namespace SabiMarket.Infrastructure.Repositories
         }
 
         // Added method to get all configurations for a market
-   /*     public async Task<IEnumerable<LevyPayment>> GetMarketLevySetups(string marketId)
+        /*     public async Task<IEnumerable<LevyPayment>> GetMarketLevySetups(string marketId)
+             {
+                 return await _context.LevyPayments
+                     .Where(lp => lp.MarketId == marketId)
+                     .GroupBy(lp => lp.Period)
+                     .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
+                     .OrderBy(lp => lp.Period)
+                     .ToListAsync();
+             }*/
+
+        public async Task<IEnumerable<LevyPayment>> GetByMarketAndOccupancyAsync(string marketId, MarketTypeEnum traderOccupancy)
         {
             return await _context.LevyPayments
-                .Where(lp => lp.MarketId == marketId)
-                .GroupBy(lp => lp.Period)
-                .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
-                .OrderBy(lp => lp.Period)
+                .Where(lp => lp.MarketId == marketId || lp.Trader.TraderOccupancy == traderOccupancy)
+                .Include(lp => lp.Market)
+                .Include(lp => lp.Trader)
                 .ToListAsync();
-        }*/
+        }
+
 
         public async Task<IQueryable<LevyPayment>> GetMarketLevySetups(string marketId)
         {

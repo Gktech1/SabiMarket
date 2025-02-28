@@ -1243,6 +1243,62 @@ namespace SabiMarket.Infrastructure.Services
         public async Task<BaseResponse<bool>> ConfigureLevySetup(LevySetupRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();
+            var userId = _currentUser.GetUserId();
+            try
+            {
+                await CreateAuditLog(
+                    "Levy Setup Configuration",
+                    $"CorrelationId: {correlationId} - Configuring new levy setup for {request.MarketId} ({request.MarketType})",
+                    "Levy Management"
+                );
+
+                var existingLevy = await _repository.LevyPaymentRepository.GetByMarketAndOccupancyAsync(request.MarketId, request.TraderOccupancy);
+
+                if (existingLevy.Count() > 1 || existingLevy == null)
+                {
+                    return ResponseFactory.Fail<bool>("Levy setup already exists for this market and trader occupancy.");
+                }
+                var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                if (chairman == null)
+                {
+                    return ResponseFactory.Fail<bool>("Chairman not found");
+                }
+
+                var levySetup = _mapper.Map<LevyPayment>(request);
+
+                levySetup.ChairmanId = chairman.Id; 
+                levySetup.TraderId = "";  
+                levySetup.GoodBoyId = "";
+                levySetup.Notes = "Initial Levy Setup by the Chairman";
+                levySetup.TransactionReference = "";
+                levySetup.QRCodeScanned = "";
+
+                _repository.LevyPaymentRepository.AddPayment(levySetup);
+                await _repository.SaveChangesAsync();
+
+                await CreateAuditLog(
+                    "Levy Setup Configured",
+                    $"CorrelationId: {correlationId} - Levy setup configured successfully for {request.MarketId}",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(true, "Levy setup configured successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Levy Setup Configuration Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}\nStackTrace: {ex.StackTrace}",
+                    "Levy Management"
+                );
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+            }
+        }
+
+
+     /*   public async Task<BaseResponse<bool>> ConfigureLevySetup(LevySetupRequestDto request)
+        {
+            var correlationId = Guid.NewGuid().ToString();
             try
             {
                 await CreateAuditLog(
@@ -1273,7 +1329,7 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
-
+*/
         public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> SearchMarkets(string searchTerm)
         {
             var correlationId = Guid.NewGuid().ToString();
