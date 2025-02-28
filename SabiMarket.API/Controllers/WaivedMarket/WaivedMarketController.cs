@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
+using SabiMarket.API.ServiceExtensions;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
@@ -11,7 +12,8 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Produces("application/json")]
+    [Authorize(Policy = PolicyNames.RequireVendorOnly)]
     public class WaivedMarketController : ControllerBase
     {
         private readonly IServiceManager _serviceManager;
