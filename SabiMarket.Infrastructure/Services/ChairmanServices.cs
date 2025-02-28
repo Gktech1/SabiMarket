@@ -23,6 +23,7 @@ using ValidationException = FluentValidation.ValidationException;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using iText.Commons.Actions.Contexts;
+using Microsoft.Extensions.Configuration.UserSecrets;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -55,7 +56,8 @@ namespace SabiMarket.Infrastructure.Services
             IValidator<UpdateLevyRequestDto> updateLevyValidator,
             ICurrentUserService currentUser,
             IHttpContextAccessor httpContextAccessor,
-            IValidator<CreateMarketRequestDto> createMarketValidator)
+            IValidator<CreateMarketRequestDto> createMarketValidator,
+            IValidator<CreateAssistantOfficerRequestDto> createAssistOfficerValidator)
         {
             _repository = repository;
             _logger = logger;
@@ -68,6 +70,7 @@ namespace SabiMarket.Infrastructure.Services
             _currentUser = currentUser;
             _httpContextAccessor = httpContextAccessor;
             _createMarketValidator = createMarketValidator;
+            _createAssistOfficerValidator = createAssistOfficerValidator;
         }
 
         private string GetCurrentIpAddress()
@@ -77,9 +80,13 @@ namespace SabiMarket.Infrastructure.Services
         private async Task CreateAuditLog(string activity, string details, string module = "Chairman Management")
         {
             var userId = _currentUser.GetUserId();
+            if(userId == null)
+            {
+                return;
+            }
             var auditLog = new AuditLog
             {
-                UserId = userId,
+                UserId = userId ?? "",
                 Activity = activity,
                 Module = module,
                 Details = details,
@@ -1656,6 +1663,8 @@ namespace SabiMarket.Infrastructure.Services
         public async Task<BaseResponse<AssistantOfficerResponseDto>> CreateAssistantOfficer(CreateAssistantOfficerRequestDto officerDto)
         {
             var correlationId = Guid.NewGuid().ToString();
+            var userId = _currentUser.GetUserId();
+
             try
             {
                 await CreateAuditLog(
@@ -1677,7 +1686,28 @@ namespace SabiMarket.Infrastructure.Services
                         "Validation failed");
                 }
 
+                // Check if officer already exists with the same email
+               /* var existingOfficerByEmail = await _repository.AssistCenterOfficerRepository.GetByEmailAsync(officerDto.Email);
+                if (existingOff-kih.noicerByEmail != null)
+                {
+                    await CreateAuditLog(
+                        "Assistant Officer Creation Failed",
+                        $"CorrelationId: {correlationId} - Officer with email {officerDto.Email} already exists",
+                        "Officer Management"
+                    );
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>($"An officer with email {officerDto.Email} already exists");
+                }*/
+
+                // Get Chairman details
+                var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                if (chairman == null)
+                {
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>("Chairman not found");
+                }
+
                 var officer = _mapper.Map<AssistCenterOfficer>(officerDto);
+                officer.ChairmanId = chairman.Id;
+                officer.UserId = userId;    
                 _repository.AssistCenterOfficerRepository.AddAssistCenterOfficer(officer);
                 await _repository.SaveChangesAsync();
 

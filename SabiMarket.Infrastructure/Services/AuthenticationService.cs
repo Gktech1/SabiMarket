@@ -298,12 +298,12 @@ namespace SabiMarket.Infrastructure.Services
                         {
                             Id = Guid.NewGuid().ToString(),
                             UserId = user.Id,
-                            LocalGovernmentId = request.VendorDetails.LocalGovernmentId.ToString(),
+                            LocalGovernmentId = request.VendorDetails.LocalGovernmentId.ToString() ?? "",
                             BusinessName = request.VendorDetails.BusinessName,
                             BusinessAddress = request.Address,
                             BusinessDescription = request.VendorDetails.BusinessDescription,
                             VendorCode = $"V-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
-                            Type = VendorTypeEnum.Other,
+                            Type = request.VendorDetails.VendorTypeEnum,
                             IsVerified = false,
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow
@@ -325,7 +325,7 @@ namespace SabiMarket.Infrastructure.Services
                         {
                             Id = Guid.NewGuid().ToString(),
                             UserId = user.Id,
-                            LocalGovernmentId = request.CustomerDetails.LocalGovernmentId.ToString(),
+                            LocalGovernmentId = request.CustomerDetails.LocalGovernmentId.ToString() ?? "",
                             FullName = $"{request.FirstName} {request.LastName}",
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow
