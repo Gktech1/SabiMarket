@@ -81,9 +81,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<CaretakerForCreationRequestDto>, CreateCaretakerValidator>();
         services.AddScoped<IValidator<UpdateMarketRequestDto>, UpdateMarketRequestValidator>();
         services.AddScoped<IValidator<CaretakerForCreationRequestDto>, CaretakerForCreationRequestDtoValidator>();
+        services.AddScoped<ISettingsService, SettingsService>();
 
         // Add other services
         services.AddScoped<IAdminService, AdminService>();
+        services.AddSingleton<ISmsService, AfricasTalkingSmsService>();
         services.AddScoped<IRepositoryManager, RepositoryManager>();
         services.AddScoped<ICaretakerRepository, CaretakerRepository>();  // Add this line
         services.AddScoped<IMarketRepository, MarketRepository>();        // Add this if needed
