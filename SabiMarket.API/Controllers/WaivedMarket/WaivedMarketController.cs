@@ -28,7 +28,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetWaivedProductById([FromQuery] string id)
         {
             var response = await _serviceManager.IWaivedProductService.GetWaivedProductById(id);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -46,7 +46,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetWaivedProducts([FromQuery] string? category, [FromQuery] PaginationFilter filter)
         {
             var response = await _serviceManager.IWaivedProductService.GetAllWaivedProducts(category, filter);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -82,7 +82,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> UpdateWaivedProducts(UpdateWaivedProductDto dto)
         {
             var response = await _serviceManager.IWaivedProductService.UpdateProduct(dto);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -100,7 +100,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> UploadFiles(IFormFile file)
         {
             var response = await _cloudinaryService.UploadImage(file, "SabiMaket");
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -118,7 +118,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> CreateSubscription(CreateSubscriptionDto dto)
         {
             var response = await _serviceManager.ISubscriptionService.CreateSubscription(dto);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -136,7 +136,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> CheckActiveVendorSubscription([FromQuery] string userId)
         {
             var response = await _serviceManager.ISubscriptionService.CheckActiveVendorSubscription(userId);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -154,7 +154,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> CheckActiveCustomerSubscription([FromQuery] string userId)
         {
             var response = await _serviceManager.ISubscriptionService.CheckActiveCustomerSubscription(userId);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -172,7 +172,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> AdminConfirmSubscriptionPayment(string subscriptionId)
         {
             var response = await _serviceManager.ISubscriptionService.AdminConfirmSubscriptionPayment(subscriptionId);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -190,7 +190,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> UserConfirmSubscriptionPayment(string subscriptionId)
         {
             var response = await _serviceManager.ISubscriptionService.UserConfirmSubscriptionPayment(subscriptionId);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -208,7 +208,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetSubscriptionById([FromQuery] string subscriptionId)
         {
             var response = await _serviceManager.ISubscriptionService.GetSubscriptionById(subscriptionId);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -226,7 +226,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetAllSubscription([FromQuery] PaginationFilter filter)
         {
             var response = await _serviceManager.ISubscriptionService.GetAllSubscription(filter);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -244,7 +244,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> SearchSubscription([FromQuery] string searchString, [FromQuery] PaginationFilter filter)
         {
             var response = await _serviceManager.ISubscriptionService.SearchSubscription(searchString, filter);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -261,7 +261,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> SubscriptionDashBoardDetails()
         {
             var response = await _serviceManager.ISubscriptionService.SubscriptionDashBoardDetails();
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -278,7 +278,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> CreateSubscriptionPlan(CreateSubscriptionPlanDto dto)
         {
             var response = await _serviceManager.ISubscriptionPlanService.CreateSubscriptionPlan(dto);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -295,7 +295,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> UpdateSubscriptionPlan(UpdateSubscriptionPlanDto dto)
         {
             var response = await _serviceManager.ISubscriptionPlanService.UpdateSubscriptionPlan(dto);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -313,7 +313,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetAllSubscriptionPlans(PaginationFilter filter)
         {
             var response = await _serviceManager.ISubscriptionPlanService.GetAllSubscriptionPlans(filter);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -331,7 +331,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetSubscriptionPlanById(string subscriptionPlanId)
         {
             var response = await _serviceManager.ISubscriptionPlanService.GetSubscriptionPlanById(subscriptionPlanId);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -349,7 +349,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetVendorAndProducts([FromQuery] PaginationFilter filter)
         {
             var response = await _serviceManager.IWaivedProductService.GetVendorAndProducts(filter);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -367,7 +367,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> RegisterCustomerPurchase(CustomerPurchaseDto dto)
         {
             var response = await _serviceManager.IWaivedProductService.RegisterCustomerPurchase(dto);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -385,7 +385,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> ConfirmCustomerPurchase(string id)
         {
             var response = await _serviceManager.IWaivedProductService.ConfirmCustomerPurchase(id);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -403,7 +403,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> CreateProductCategory(string categoryName, string description)
         {
             var response = await _serviceManager.IWaivedProductService.CreateProductCategory(categoryName, description);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -421,7 +421,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetAllProductCategories()
         {
             var response = await _serviceManager.IWaivedProductService.GetAllProductCategories();
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -439,7 +439,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> CreateComplaint(string vendorId, string comPlaintMsg, string imageUrl)
         {
             var response = await _serviceManager.IWaivedProductService.CreateComplaint(vendorId, comPlaintMsg, imageUrl);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -457,7 +457,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> UpdateComplaint(string complaintId, string vendorId, string comPlaintMsg, string imageUrl)
         {
             var response = await _serviceManager.IWaivedProductService.UpdateComplaint(complaintId, vendorId, comPlaintMsg, imageUrl);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -475,7 +475,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> UpdateComplaint([FromQuery] string complaintId)
         {
             var response = await _serviceManager.IWaivedProductService.GetCustomerFeedbackById(complaintId);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
@@ -493,7 +493,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetCustomerComplaint([FromQuery] PaginationFilter filter)
         {
             var response = await _serviceManager.IWaivedProductService.GetAllComplaint(filter);
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
                 return response.Error?.StatusCode switch
