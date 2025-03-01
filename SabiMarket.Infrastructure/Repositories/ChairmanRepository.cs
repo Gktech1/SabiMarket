@@ -30,36 +30,52 @@ namespace SabiMarket.Infrastructure.Repositories
                  .Include(c => c.Market)
                  .FirstOrDefaultAsync();
          }*/
-
-        public async Task<Chairman> GetChairmanById(string userId, bool trackChanges)
+        public async Task<Chairman> GetChairmanById(string chairmanId, bool trackChanges)
         {
-            return await FindByCondition(c => c.UserId == userId, trackChanges)
+            var query = FindByCondition(c => c.Id == chairmanId, trackChanges)
                 .Include(c => c.Market)
                 .Include(c => c.User)
-                .Include(c => c.LocalGovernment)  // Make sure to include LocalGovernment
-                .Select(c => new Chairman
-                {
-                    Id = c.Id,
-                    UserId = c.UserId,
-                    MarketId = c.MarketId,
-                    LocalGovernmentId = c.LocalGovernmentId, // Explicitly select LocalGovernmentId
-                    FullName = c.FullName,
-                    Email = c.Email,
-                    Title = c.Title,
-                    Office = c.Office,
-                    TotalRecords = c.TotalRecords,
-                    TermStart = c.TermStart,
-                    TermEnd = c.TermEnd,
-                    LastLoginAt = c.LastLoginAt,
-                    User = c.User,
-                    Market = c.Market,
-                    LocalGovernment = c.LocalGovernment,
-                    CreatedAt = c.CreatedAt,
-                    UpdatedAt = c.UpdatedAt
-                })
-                .FirstOrDefaultAsync();
+                .Include(c => c.LocalGovernment); // Ensure LocalGovernment is properly included
+
+            // If tracking is disabled, use AsNoTracking() to prevent unnecessary tracking
+            if (!trackChanges)
+            {
+                query = (Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<Chairman, LocalGovernment>)query.AsNoTracking();
+            }
+
+            return await query.FirstOrDefaultAsync();
         }
 
+
+        /*  public async Task<Chairman> GetChairmanById(string chairmanId, bool trackChanges)
+          {
+              return await FindByCondition(c => c.Id == chairmanId, trackChanges)
+                  .Include(c => c.Market)
+                  .Include(c => c.User)
+                  .Include(c => c.LocalGovernment)  // Make sure to include LocalGovernment
+                  .Select(c => new Chairman
+                  {
+                      Id = c.Id,
+                      UserId = c.UserId,
+                      MarketId = c.MarketId,
+                      LocalGovernmentId = c.LocalGovernmentId, // Explicitly select LocalGovernmentId
+                      FullName = c.FullName,
+                      Email = c.Email,
+                      Title = c.Title,
+                      Office = c.Office,
+                      TotalRecords = c.TotalRecords,
+                      TermStart = c.TermStart,
+                      TermEnd = c.TermEnd,
+                      LastLoginAt = c.LastLoginAt,
+                      User = c.User,
+                      Market = c.Market,
+                      LocalGovernment = c.LocalGovernment,
+                      CreatedAt = c.CreatedAt,
+                      UpdatedAt = c.UpdatedAt
+                  })
+                  .FirstOrDefaultAsync();
+          }
+  */
         public async Task<Chairman> GetChairmanByMarketIdAsync(string marketId, bool trackChanges)
         {
             return await FindByCondition(c => c.MarketId == marketId, trackChanges)

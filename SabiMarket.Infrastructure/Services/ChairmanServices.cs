@@ -410,7 +410,25 @@ namespace SabiMarket.Infrastructure.Services
                 );
 
                 // Map the chairmen entities to response DTOs
-                var chairmanDtos = _mapper.Map<IEnumerable<ChairmanResponseDto>>(chairmenPage.PageItems);
+                //var chairmanDtos = _mapper.Map<IEnumerable<ChairmanResponseDto>>(chairmenPage.PageItems);
+
+                var chairmanDtos = chairmenPage.PageItems.Select(c => new ChairmanResponseDto
+                {
+                    Id = c.Id,
+                    FullName = string.IsNullOrEmpty(c.FullName)
+        ? (c.User != null ? $"{c.User.FirstName} {c.User.LastName}" : string.Empty)
+        : c.FullName,
+                    Email = c.User != null ? c.User.Email ?? string.Empty : string.Empty,
+                    PhoneNumber = c.User != null ? c.User.PhoneNumber ?? string.Empty : string.Empty,
+                    MarketName = c.Market != null ? c.Market.MarketName : string.Empty,
+                    IsActive = c.User != null && c.User.IsActive,
+                    MarketId = c.MarketId,
+                    LocalGovernmentId = c.LocalGovernmentId,
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt,
+                    DefaultPassword = null  // Explicitly setting it to null if not needed
+                }).ToList();
+
 
                 // Create and return the paginated response
                 var response = new PaginatorDto<IEnumerable<ChairmanResponseDto>>
@@ -2656,7 +2674,7 @@ namespace SabiMarket.Infrastructure.Services
                 );
 
                 // Get chairman with tracking for deletion
-                var chairman = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, true);
+                var chairman = await _repository.ChairmanRepository.GetChairmanById(chairmanId, true);
                 if (chairman == null)
                 {
                     await CreateAuditLog(

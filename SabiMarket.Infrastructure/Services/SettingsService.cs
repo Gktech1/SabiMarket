@@ -81,6 +81,7 @@ namespace SabiMarket.Infrastructure.Services
             {
                 // Find user by phone number
                 var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+                //var user = await _userManager.FindByNameAsync(phoneNumber); // Ensure consistent lookup
                 if (user == null)
                 {
                     return ResponseFactory.Success(true, "If your phone number exists in our system, an OTP has been sent");
@@ -90,8 +91,11 @@ namespace SabiMarket.Infrastructure.Services
                 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
                 bool isDevelopment = environment == "Development";
 
+                // Generate OTP: Use static OTP in Dev, Random OTP in Live
+                var otp = isDevelopment ? "777777" : new Random().Next(100000, 999999).ToString();
+
+
                 // Generate OTP and store it
-                var otp = "777777"; // Normally, generate a random OTP
                 user.PasswordResetToken = otp;
                 user.PasswordResetExpiry = DateTime.UtcNow.AddMinutes(5); // OTP expires in 5 minutes
 
@@ -119,7 +123,8 @@ namespace SabiMarket.Infrastructure.Services
         {
             try
             {
-                var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+                 var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+               // var user = await _userManager.FindByNameAsync(phoneNumber); // Ensure consistent lookup
                 if (user == null)
                 {
                     return ResponseFactory.Fail<bool>(new NotFoundException("Invalid phone number or OTP"), "Verification failed");
@@ -145,7 +150,8 @@ namespace SabiMarket.Infrastructure.Services
         {
             try
             {
-                var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+                 var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+                //var user = await _userManager.FindByNameAsync(phoneNumber); // Ensure consistent lookup
                 if (user == null)
                 {
                     return ResponseFactory.Fail<bool>(
