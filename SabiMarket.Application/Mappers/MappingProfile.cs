@@ -45,18 +45,43 @@ public class MappingProfile : Profile
           .ForMember(dest => dest.User, opt => opt.Ignore());
 
         CreateMap<Chairman, ChairmanResponseDto>()
-          .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
-              string.IsNullOrEmpty(src.FullName) ? $"{src.User.FirstName} {src.User.LastName}" : src.FullName))
-          .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email ?? string.Empty)) // Handle nullable Email
-          .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber ?? string.Empty)) // Handle nullable PhoneNumber
-          .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.MarketName)) // Assuming Market.Name is available
-          .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.User.IsActive))  // Assuming IsActive is in User
-          .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
-          .ForMember(dest => dest.LocalGovernmentId, opt => opt.MapFrom(src => src.LocalGovernmentId))
-          .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-          .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
-          .ForMember(dest => dest.DefaultPassword, opt => opt.Ignore());  // DefaultPassword should not be included in the DTO
+            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
+    src.User != null
+        ? string.IsNullOrEmpty(src.FullName) ? $"{src.User.FirstName} {src.User.LastName}" : src.FullName
+                    : string.Empty))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User != null ? src.User.Email : string.Empty))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User != null ? src.User.PhoneNumber : string.Empty))
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.User != null && src.User.IsActive))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email ?? string.Empty))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber ?? string.Empty))
+            .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.MarketName))
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.User.IsActive))
+            .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+            .ForMember(dest => dest.LocalGovernmentId, opt => opt.MapFrom(src => src.LocalGovernmentId))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+            .ForMember(dest => dest.DefaultPassword, opt => opt.Ignore());
 
+        CreateMap<Chairman, ChairmanResponseDto>();
+
+        // Ensure collection mapping
+        CreateMap<IEnumerable<Chairman>, IEnumerable<ChairmanResponseDto>>().ConvertUsing((src, dest, context) =>
+            src.Select(chairman => context.Mapper.Map<ChairmanResponseDto>(chairman)));
+
+
+        /*  CreateMap<Chairman, ChairmanResponseDto>()
+            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
+                string.IsNullOrEmpty(src.FullName) ? $"{src.User.FirstName} {src.User.LastName}" : src.FullName))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email ?? string.Empty)) // Handle nullable Email
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber ?? string.Empty)) // Handle nullable PhoneNumber
+            .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.MarketName)) // Assuming Market.Name is available
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.User.IsActive))  // Assuming IsActive is in User
+            .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+            .ForMember(dest => dest.LocalGovernmentId, opt => opt.MapFrom(src => src.LocalGovernmentId))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+            .ForMember(dest => dest.DefaultPassword, opt => opt.Ignore());  // DefaultPassword should not be included in the DTO
+  */
         CreateMap<LevySetupRequestDto, LevyPayment>()
             .ForMember(dest => dest.Period, opt => opt.MapFrom(src => src.PaymentFrequencyDays))
             .ForMember(dest => dest.Amount, opt => opt.MapFrom(src => src.Amount))
