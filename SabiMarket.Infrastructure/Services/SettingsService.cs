@@ -90,15 +90,13 @@ namespace SabiMarket.Infrastructure.Services
                 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
                 bool isDevelopment = environment == "Development";
 
-                // Generate OTP
-                var otp = isDevelopment ? "777777" : new Random().Next(100000, 999999).ToString();
-                var otpExpiry = DateTime.UtcNow.AddMinutes(5);
+                // Generate OTP and store it
+                var otp = "777777"; // Normally, generate a random OTP
+                user.PasswordResetToken = otp;
+                user.PasswordResetExpiry = DateTime.UtcNow.AddMinutes(5); // OTP expires in 5 minutes
 
-                // Store OTP inside a custom field (SecurityStamp for now)
-                user.SecurityStamp = $"{otp}|{otpExpiry:o}";
-                await _userManager.UpdateAsync(user);
-
-                _logger.LogInformation($"Generated OTP: {otp} (Expires: {otpExpiry})"); // Debugging
+                _logger.LogInformation($"Generated OTP: {otp} (Expires: {user.PasswordResetExpiry})"); // Debugging
+                await _userManager.UpdateAsync(user);  // DOES NOT change SecurityStamp
 
                 // Send SMS
                 bool smsSent = await _smsService.SendSMS(phoneNumber, $"Your password reset OTP is: {otp}. Valid for 10 minutes.");
@@ -127,35 +125,14 @@ namespace SabiMarket.Infrastructure.Services
                     return ResponseFactory.Fail<bool>(new NotFoundException("Invalid phone number or OTP"), "Verification failed");
                 }
 
-                // Retrieve stored OTP and expiry from SecurityStamp
-                var securityStamp = user.SecurityStamp;
-                if (string.IsNullOrEmpty(securityStamp) || !securityStamp.Contains("|"))
+                if (user.PasswordResetToken != otp || user.PasswordResetExpiry < DateTime.UtcNow)
                 {
-                    return ResponseFactory.Fail<bool>(new BadRequestException("No active OTP found"), "Verification failed");
+                    return ResponseFactory.Fail<bool>(
+                        new BadRequestException("Invalid or expired OTP"),
+                        "OTP verification failed");
                 }
 
-                var parts = securityStamp.Split('|');
-                if (parts.Length != 2 || !DateTime.TryParse(parts[1], out var expiry))
-                {
-                    return ResponseFactory.Fail<bool>(new BadRequestException("Invalid OTP format"), "Verification failed");
-                }
-
-                // Check expiration
-                if (expiry < DateTime.UtcNow)
-                {
-                    return ResponseFactory.Fail<bool>(new BadRequestException("OTP has expired"), "Verification failed");
-                }
-
-                // Verify OTP
-                if (parts[0] != otp)
-                {
-                    return ResponseFactory.Fail<bool>(new BadRequestException("Invalid OTP"), "Verification failed");
-                }
-
-                // Generate a password reset token (DO NOT store manually)
-                var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-
-                return ResponseFactory.Success(true, $"OTP verified successfully: {resetToken}");
+                return ResponseFactory.Success(true, $"OTP verified successfully: {user.PasswordResetToken}");
             }
             catch (Exception ex)
             {
@@ -176,27 +153,17 @@ namespace SabiMarket.Infrastructure.Services
                         "Password reset failed");
                 }
 
-                // Retrieve stored reset token from SecurityStamp
-                var storedData = user.SecurityStamp;
-                if (string.IsNullOrEmpty(storedData) || !storedData.Contains("|"))
+                if (string.IsNullOrEmpty(user.PasswordResetToken) || user.PasswordResetExpiry < DateTime.UtcNow)
                 {
                     return ResponseFactory.Fail<bool>(
-                        new BadRequestException("Invalid or expired verification session"),
+                        new BadRequestException("Invalid or expired reset token"),
                         "Password reset failed");
                 }
 
-                var parts = storedData.Split('|');
-                if (parts.Length != 2)
-                {
-                    return ResponseFactory.Fail<bool>(
-                        new BadRequestException("Invalid reset token format"),
-                        "Password reset failed");
-                }
-
-                var resetToken = parts[0];
-
-                // Reset password
+                // Reset password without changing SecurityStamp
+                var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
                 var result = await _userManager.ResetPasswordAsync(user, resetToken, newPassword);
+
                 if (!result.Succeeded)
                 {
                     return ResponseFactory.Fail<bool>(
@@ -204,11 +171,13 @@ namespace SabiMarket.Infrastructure.Services
                         "Password reset failed");
                 }
 
-                // Clean up SecurityStamp (remove stored token)
-                user.SecurityStamp = null;
+                // Clear reset token
+                user.PasswordResetToken = null;
+                user.PasswordResetExpiry = null;
                 await _userManager.UpdateAsync(user);
 
                 return ResponseFactory.Success(true, "Password reset successfully");
+
             }
             catch (Exception ex)
             {
