@@ -93,16 +93,117 @@ public class WaivedProductService : IWaivedProductService
         }
         return Tuple.Create(true, getVendorDetails.Id);
     }
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string? category, PaginationFilter filter)
+
+    /* public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(
+      string category,
+      PaginationFilter paginationFilter)
+     {
+         var correlationId = Guid.NewGuid().ToString();
+         try
+         {
+             var query = _applicationDbContext.WaivedProducts.AsQueryable();
+
+             if (!string.IsNullOrEmpty(category))
+             {
+                 query = query.Where(p => p.ProductCategoryId == category);
+             }
+
+             // Use the Paginate extension method
+             var paginatedResult = await query.Paginate(paginationFilter);
+            *//* // Create paginated response directly from entity
+             var paginatedResult = new PaginatorDto<IEnumerable<WaivedProduct>>
+             {
+                 PageItems = result.PageItems,
+                 PageSize = result.PageSize,
+                 CurrentPage = result.CurrentPage,
+                 NumberOfPages = result.NumberOfPages
+             };
+ *//*
+
+             return ResponseFactory.Success(paginatedResult, "Waived products retrieved successfully");
+         }
+         catch (Exception ex)
+         {
+
+             //_logger.LogError(ex, "Error retrieving waived products: {ErrorMessage}", ex.Message);
+
+             return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaivedProduct>>>(
+                 ex, "An unexpected error occurred while retrieving waived products"
+             );
+         }
+     }*/
+
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(
+    string category,
+    PaginationFilter paginationFilter)
     {
-        var waivedProducts = await _repositoryManager.WaivedProductRepository.GetPagedWaivedProduct(category, filter);
+        var correlationId = Guid.NewGuid().ToString();
+        try
+        {
+            // Fetch the waived products using pagination
+            var result = await GetWaivedProductsAsync(category, paginationFilter);
+
+            // Map WaivedProduct to WaivedProductDto
+            var waivedProductDtos = result.PageItems.Select(p => new WaivedProduct
+            {
+                Id = p.Id,
+                ProductName = p.ProductName,
+                ImageUrl = p.ImageUrl,
+                Price = p.Price,
+                IsAvailbleForUrgentPurchase = p.IsAvailbleForUrgentPurchase,
+                CurrencyType = p.CurrencyType,
+                VendorId = p.VendorId,
+                ProductCategoryId = p.ProductCategoryId
+            });
+
+            var paginatedResult = new PaginatorDto<IEnumerable<WaivedProduct>>
+            {
+                PageItems = waivedProductDtos,
+                PageSize = result.PageSize,
+                CurrentPage = result.CurrentPage,
+                NumberOfPages = result.NumberOfPages
+            };
+
+
+            return ResponseFactory.Success(paginatedResult, "Waived products retrieved successfully");
+        }
+        catch (Exception ex)
+        {
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaivedProduct>>>(ex,
+                "An unexpected error occurred while retrieving waived products");
+        }
+    }
+
+    private async Task<PaginatorDto<IEnumerable<WaivedProduct>>> GetWaivedProductsAsync(
+   string category,
+   PaginationFilter paginationFilter)
+    {
+        // Base query
+        var query = _applicationDbContext.WaivedProducts.AsNoTracking();
+
+        // Apply category filter if provided
+        if (!string.IsNullOrEmpty(category))
+        {
+            query = query.Where(p => p.ProductCategoryId == category);
+        }
+
+        // Order by product name
+        query = query.OrderBy(p => p.ProductName);
+
+        // Apply pagination
+        return await query.Paginate(paginationFilter);
+    }
+
+    /*public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string? category, PaginationFilter filter)
+    {
+        var waivedProducts = await _applicationDbContext.WaivedProducts.Paginate(fil);
         if (waivedProducts == null)
         {
             return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaivedProduct>>>(new NotFoundException("No Record Found."), "Record not found.");
         }
 
         return ResponseFactory.Success(waivedProducts);
-    }
+    }*/
     public async Task<BaseResponse<WaivedProduct>> GetWaivedProductById(string Id)
     {
         var waivedProduct = await _repositoryManager.WaivedProductRepository.GetWaivedProductById(Id, false);

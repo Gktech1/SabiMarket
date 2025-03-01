@@ -29,7 +29,7 @@ namespace SabiMarket.Infrastructure.Utilities
                 : count / pageResult.PageSize;
 
             pageResult.PageItems = await queryable.Skip((pageResult.CurrentPage - 1) * pageResult.PageSize)
-                .Take(pageResult.PageSize).ToListAsync();
+            .Take(pageResult.PageSize).ToListAsync();
 
             return pageResult;
         }
