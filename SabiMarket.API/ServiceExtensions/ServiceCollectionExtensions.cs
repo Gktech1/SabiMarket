@@ -27,7 +27,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
+   /* public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddIdentityConfiguration(); // Moved to a separate method
 
@@ -109,9 +109,9 @@ public static class ServiceCollectionExtensions
         });
 
         return services;
-    }
+    }*/
 
-    public static IServiceCollection AddIdentityConfiguration(this IServiceCollection services)
+    /*public static IServiceCollection AddIdentityConfiguration(this IServiceCollection services)
     {
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
         {
@@ -131,9 +131,9 @@ public static class ServiceCollectionExtensions
         .AddRoleManager<RoleManager<ApplicationRole>>();
 
         return services;
-    }
+    }*/
 
-  /*  public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
         // Add Identity configuration
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -215,7 +215,7 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-   */ public static IServiceCollection AddCustomAuthorization(this IServiceCollection services)
+    public static IServiceCollection AddCustomAuthorization(this IServiceCollection services)
     {
         services.AddAuthorization(options =>
         {

@@ -55,7 +55,7 @@ public class WaivedProductService : IWaivedProductService
                 ProductCategoryId = dto.CategoryId,
                 CurrencyType = dto.CurrencyType,
                 VendorId = verifyVendor.Item2,
-                IsActive = true
+                IsActive = true,
             };
             _repositoryManager.WaivedProductRepository.AddWaivedProduct(waivedProd);
             await _repositoryManager.SaveChangesAsync();
