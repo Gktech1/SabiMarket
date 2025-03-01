@@ -29,6 +29,81 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddIdentityConfiguration(); // Moved to a separate method
+
+        // Register Services
+        services.AddScoped<DatabaseSeeder>();
+        services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<IRepositoryManager, RepositoryManager>();
+        services.AddScoped<IServiceManager, ServiceManager>();
+        services.AddScoped<ICloudinaryService, CloudinaryService>();
+        services.AddScoped<ISettingsService, SettingsService>();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+        // Register Validators
+        services.AddScoped<IValidator<RegistrationRequestDto>, RegistrationRequestValidator>();
+        services.AddScoped<IValidator<LoginRequestDto>, LoginRequestValidator>();
+        services.AddScoped<IValidator<TokenRequestDto>, TokenRequestValidator>();
+        services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordValidator>();
+        services.AddScoped<IValidator<CreateGoodBoyDto>, CreateGoodBoyValidator>();
+        services.AddScoped<IValidator<CreateAdminRequestDto>, CreateAdminRequestValidator>();
+        services.AddScoped<IValidator<UpdateAdminProfileDto>, UpdateAdminProfileValidator>();
+        services.AddScoped<IValidator<CreateRoleRequestDto>, CreateRoleRequestValidator>();
+        services.AddScoped<IValidator<UpdateRoleRequestDto>, UpdateRoleRequestValidator>();
+        services.AddScoped<IValidator<CreateMarketRequestDto>, CreateMarketRequestValidator>();
+        services.AddScoped<IValidator<UpdateMarketRequestDto>, UpdateMarketRequestValidator>();
+        services.AddScoped<IValidator<CaretakerForCreationRequestDto>, CaretakerForCreationRequestDtoValidator>();
+        services.AddScoped<IValidator<CreateAssistantOfficerRequestDto>, CreateAssistantOfficerRequestDtoValidator>();
+
+        // Register Repositories
+        services.AddScoped<ICaretakerRepository, CaretakerRepository>();
+        services.AddScoped<IMarketRepository, MarketRepository>();
+        services.AddScoped<IChairmanRepository, ChairmanRepository>();
+
+        // SMS Service
+        services.AddScoped<ISmsService, AfricasTalkingSmsService>();
+        services.AddHttpClient<ISmsService, AfricasTalkingSmsService>();
+
+        // AutoMapper
+        services.AddAutoMapper(typeof(Program).Assembly);
+
+        // Validators from Assembly
+        services.AddValidatorsFromAssemblyContaining<CreateChairmanRequestDtoValidator>();
+        services.AddValidatorsFromAssemblyContaining<CreateLevyRequestDtoValidator>();
+
+        // Token Configuration
+        services.Configure<DataProtectionTokenProviderOptions>(options =>
+        {
+            options.TokenLifespan = TimeSpan.FromMinutes(10);
+        });
+
+        return services;
+    }
+
+    public static IServiceCollection AddIdentityConfiguration(this IServiceCollection services)
+    {
+        services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
+        {
+            options.Password.RequireDigit = false;
+            options.Password.RequireLowercase = false;
+            options.Password.RequireUppercase = false;
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequiredLength = 10;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.AllowedForNewUsers = true;
+            options.User.RequireUniqueEmail = true;
+            options.SignIn.RequireConfirmedEmail = true;
+        })
+        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddDefaultTokenProviders()
+        .AddRoleManager<RoleManager<ApplicationRole>>();
+
+        return services;
+    }
+
+  /*  public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
+    {
         // Add Identity configuration
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
         {
@@ -102,9 +177,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddHttpClient<ISmsService, AfricasTalkingSmsService>();
 
+        services.Configure<DataProtectionTokenProviderOptions>(options =>
+        {
+            options.TokenLifespan = TimeSpan.FromMinutes(10);
+        });
+
         return services;
     }
-    public static IServiceCollection AddCustomAuthorization(this IServiceCollection services)
+   */ public static IServiceCollection AddCustomAuthorization(this IServiceCollection services)
     {
         services.AddAuthorization(options =>
         {
