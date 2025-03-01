@@ -23,31 +23,67 @@ namespace SabiMarket.Infrastructure.Services
             _repositoryManager = repositoryManager;
             _applicationDbContext = applicationDbContext;
         }
+
         public async Task<BaseResponse<string>> CreateSubscription(CreateSubscriptionDto dto)
         {
-            var loggedInUser = Helper.GetUserDetails(_contextAccessor);
-            if (loggedInUser.Role.ToLower() != "officeattendant")
+            try
             {
-                return ResponseFactory.Fail<string>(new UnauthorizedException("UnIdentified User"), "Active User is Not Authorized.");
-            }
-            var subscription = new Subscription
-            {
-                SGId = dto.SGId,
-                Amount = dto.Amount,
-                SubscriptionActivatorId = loggedInUser.Id,
-                //PaymentMethod = dto.PaymentMethod,
-                ProofOfPayment = dto.ProofOfPayment,
-                SubscriptionStartDate = DateTime.UtcNow,
-                SubscriptionEndDate = DateTime.UtcNow.AddMonths(1),
-                SubscriberId = dto.SubscriberId,
-                //SubscriptionType = dto.SubscriptionType
-            };
-            _repositoryManager.SubscriptionRepository.AddSubscription(subscription);
-            await _repositoryManager.SaveChangesAsync();
+                var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+                var subscription = new Subscription
+                {
+                    SGId = dto.SGId,
+                    Amount = dto.Amount,
+                    SubscriptionActivatorId = loggedInUser.Id,
+                    ProofOfPayment = dto.ProofOfPayment ?? "",
+                    SubscriptionStartDate = DateTime.UtcNow,
+                    SubscriptionEndDate = DateTime.UtcNow.AddMonths(1),
+                    SubscriberId = loggedInUser.Id, // FIXED: Use an existing user ID
+                    IsSubscriberConfirmPayment = true,
+                    IsActive = true,
+                    IsAdminConfirmPayment = true,
+                };
 
-            return ResponseFactory.Success<string>("Success");
+                _repositoryManager.SubscriptionRepository.AddSubscription(subscription);
+                await _repositoryManager.SaveChangesAsync();
+
+                return ResponseFactory.Success<string>("Success", "Subscription was successful");
+
+            }
+            catch (Exception ex)
+            {
+                return ResponseFactory.Fail<string>($"Error: {ex.Message}");
+            }
         }
 
+
+        /* public async Task<BaseResponse<string>> CreateSubscription(CreateSubscriptionDto dto)
+         {
+             var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+           *//*  if (loggedInUser.Role.ToLower() != "officeattendant")
+             {
+                 return ResponseFactory.Fail<string>(new UnauthorizedException("UnIdentified User"), "Active User is Not Authorized.");
+             }*//*
+
+
+             var subscription = new Subscription
+             {
+                 SGId = dto.SGId,
+                 Amount = dto.Amount,
+                 SubscriptionActivatorId = loggedInUser.Id,
+                 //PaymentMethod = dto.PaymentMethod,
+                 ProofOfPayment = dto.ProofOfPayment ?? "",
+                 SubscriptionStartDate = DateTime.UtcNow,
+                 SubscriptionEndDate = DateTime.UtcNow.AddMonths(1),
+                 SubscriberId = Guid.NewGuid().ToString(),
+                 //SubscriberId = dto.SubscriberId,
+                 //SubscriptionType = dto.SubscriptionType
+             };
+             _repositoryManager.SubscriptionRepository.AddSubscription(subscription);
+             await _repositoryManager.SaveChangesAsync();
+
+             return ResponseFactory.Success<string>("Success");
+         }
+ */
         public async Task<BaseResponse<bool>> CheckActiveVendorSubscription(string userId)
         {
             var getUser = await _applicationDbContext.Vendors.Where(x => x.UserId == userId).FirstOrDefaultAsync();
