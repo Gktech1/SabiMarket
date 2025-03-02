@@ -11,5 +11,6 @@ namespace SabiMarket.Application.Interfaces
         Task<PaginatorDto<IEnumerable<AssistCenterOfficer>>> GetAssistantOfficersAsync(
     string chairmanId, PaginationFilter paginationFilter, bool trackChanges);
         Task<AssistCenterOfficer> GetByIdAsync(string officerId, bool trackChanges);
+        Task<AssistCenterOfficer> GetAssistantOfficerByIdAsync(string officerId, bool trackChanges);
     }
 }

@@ -132,21 +132,54 @@ public class MappingProfile : Profile
               .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.MarketName));
 
         CreateMap<CreateAssistantOfficerRequestDto, AssistCenterOfficer>()
-             .ForMember(dest => dest.UserLevel, opt => opt.MapFrom(src => src.Level))
-             .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
-             .ForMember(dest => dest.User, opt => opt.Ignore()) // Handle User creation separately
-             .ForMember(dest => dest.Market, opt => opt.Ignore())
-             .ForMember(dest => dest.Chairman, opt => opt.Ignore())
-             .ForMember(dest => dest.LocalGovernment, opt => opt.Ignore());
+         .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+         // No need to map UserLevel as it's not in the new DTO
+         .ForMember(dest => dest.User, opt => opt.Ignore()) // Handle User creation separately
+         .ForMember(dest => dest.Market, opt => opt.Ignore())
+         .ForMember(dest => dest.Chairman, opt => opt.Ignore())
+         .ForMember(dest => dest.LocalGovernment, opt => opt.Ignore())
+         .ForMember(dest => dest.UserId, opt => opt.Ignore()) // Set manually
+         .ForMember(dest => dest.ChairmanId, opt => opt.Ignore()) // Set manually
+         .ForMember(dest => dest.LocalGovernmentId, opt => opt.Ignore()) // Set manually
+         .ForMember(dest => dest.IsBlocked, opt => opt.MapFrom(src => false))
+         .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+         .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+         .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
+
+        CreateMap<AssistCenterOfficer, AssistantOfficerResponseDto>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
+                    src.User != null ? $"{src.User.FirstName} {src.User.LastName}".Trim() : ""))
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src =>
+                    src.User != null ? src.User.Email : ""))
+                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src =>
+                    src.User != null ? src.User.PhoneNumber : ""))
+                .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+                .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src =>
+                    src.Market != null ? src.Market.MarketName : ""))
+                .ForMember(dest => dest.Gender, opt => opt.MapFrom(src =>
+                    src.User != null ? src.User.Gender : ""))
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+                .ForMember(dest => dest.DefaultPassword, opt => opt.Ignore()); // Set manually in service
 
         // If you need to map from AssistCenterOfficer to CreateAssistantOfficerRequestDto
-        CreateMap<AssistCenterOfficer, CreateAssistantOfficerRequestDto>()
-            .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.User.FirstName))
-            .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.User.LastName))
-            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
-            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber))
-            .ForMember(dest => dest.Level, opt => opt.MapFrom(src => src.UserLevel))
-            .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId));
+        CreateMap<AssistCenterOfficer, AssistantOfficerResponseDto>()
+               .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+               .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
+                   src.User != null ? $"{src.User.FirstName} {src.User.LastName}".Trim() : ""))
+               .ForMember(dest => dest.Email, opt => opt.MapFrom(src =>
+                   src.User != null ? src.User.Email : ""))
+               .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src =>
+                   src.User != null ? src.User.PhoneNumber : ""))
+               .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+               .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src =>
+                   src.Market != null ? src.Market.MarketName : ""))
+               .ForMember(dest => dest.Gender, opt => opt.MapFrom(src =>
+                   src.User != null ? src.User.Gender : ""))
+               .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+               .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+               .ForMember(dest => dest.DefaultPassword, opt => opt.Ignore()); // This is set manually after mapping
 
         CreateMap<UpdateProfileDto, Chairman>()
            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))

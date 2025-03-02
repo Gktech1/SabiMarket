@@ -4,6 +4,7 @@ using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
+using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
 
@@ -30,52 +31,26 @@ namespace SabiMarket.Infrastructure.Repositories
                  .Include(c => c.Market)
                  .FirstOrDefaultAsync();
          }*/
-        public async Task<Chairman> GetChairmanById(string chairmanId, bool trackChanges)
+
+        public async Task<Chairman> GetChairmanById(string UserId, bool trackChanges)
         {
-            var query = FindByCondition(c => c.Id == chairmanId, trackChanges)
+            // Store the query type properly with a var to avoid explicit typing
+            var query = FindByCondition(c => c.UserId == UserId, trackChanges);
+
+            // Apply includes
+            var queryWithIncludes = query
                 .Include(c => c.Market)
                 .Include(c => c.User)
-                .Include(c => c.LocalGovernment); // Ensure LocalGovernment is properly included
+                .Include(c => c.LocalGovernment);
 
-            // If tracking is disabled, use AsNoTracking() to prevent unnecessary tracking
-            if (!trackChanges)
-            {
-                query = (Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<Chairman, LocalGovernment>)query.AsNoTracking();
-            }
+            // Apply AsNoTracking if needed
+            var finalQuery = trackChanges
+                ? queryWithIncludes
+                : queryWithIncludes.AsNoTracking();
 
-            return await query.FirstOrDefaultAsync();
+            // Execute the query
+            return await finalQuery.FirstOrDefaultAsync();
         }
-
-
-        /*  public async Task<Chairman> GetChairmanById(string chairmanId, bool trackChanges)
-          {
-              return await FindByCondition(c => c.Id == chairmanId, trackChanges)
-                  .Include(c => c.Market)
-                  .Include(c => c.User)
-                  .Include(c => c.LocalGovernment)  // Make sure to include LocalGovernment
-                  .Select(c => new Chairman
-                  {
-                      Id = c.Id,
-                      UserId = c.UserId,
-                      MarketId = c.MarketId,
-                      LocalGovernmentId = c.LocalGovernmentId, // Explicitly select LocalGovernmentId
-                      FullName = c.FullName,
-                      Email = c.Email,
-                      Title = c.Title,
-                      Office = c.Office,
-                      TotalRecords = c.TotalRecords,
-                      TermStart = c.TermStart,
-                      TermEnd = c.TermEnd,
-                      LastLoginAt = c.LastLoginAt,
-                      User = c.User,
-                      Market = c.Market,
-                      LocalGovernment = c.LocalGovernment,
-                      CreatedAt = c.CreatedAt,
-                      UpdatedAt = c.UpdatedAt
-                  })
-                  .FirstOrDefaultAsync();
-          }
-  */
         public async Task<Chairman> GetChairmanByMarketIdAsync(string marketId, bool trackChanges)
         {
             return await FindByCondition(c => c.MarketId == marketId, trackChanges)
@@ -115,23 +90,7 @@ namespace SabiMarket.Infrastructure.Repositories
             return result;
         }
 
-
-
-
-
-        /*  public async Task<PaginatorDto<IEnumerable<Chairman>>> GetChairmenWithPaginationAsync(
-       PaginationFilter paginationFilter, bool trackChanges)
-          {
-              return await FindPagedByCondition(
-                  expression: _ => true,
-                  paginationFilter: paginationFilter,
-                  trackChanges: trackChanges,
-                  orderBy: query => query
-                      .Include(c => c.User)
-                      .Include(c => c.Market)
-                      .Include(c => c.LocalGovernment)
-                      .OrderBy(c => c.CreatedAt));
-          }*/
+       
         public async Task<IEnumerable<Chairman>> SearchChairmenAsync(
             string searchTerm, PaginationFilter paginationFilter, bool trackChanges)
         {

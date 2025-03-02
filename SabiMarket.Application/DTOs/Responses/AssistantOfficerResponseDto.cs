@@ -14,6 +14,8 @@ namespace SabiMarket.Application.DTOs.Responses
         public string PhoneNumber { get; set; }
         public string MarketId { get; set; }
         public string MarketName { get; set; }
+        public string DefaultPassword { get; set; } 
+        public string Gender { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }

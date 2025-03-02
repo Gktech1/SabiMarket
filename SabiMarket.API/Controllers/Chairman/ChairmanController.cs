@@ -5,6 +5,7 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
+using SabiMarket.Domain.Exceptions;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -296,13 +297,62 @@ public class ChairmanController : ControllerBase
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
 
-    [HttpPost("assistant-officer")]
+    [HttpPost("createassistant-officer")]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateAssistantOfficer([FromBody] CreateAssistantOfficerRequestDto request)
     {
         var response = await _chairmanService.CreateAssistantOfficer(request);
         return !response.IsSuccessful ? BadRequest(response) : CreatedAtAction(nameof(GetAssistantOfficerById), new { id = response.Data.Id }, response);
+    }
+
+    [HttpPut("updateassistant-officer/{officerId}")]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateAssistantOfficer(string officerId, [FromBody] UpdateAssistantOfficerRequestDto request)
+    {
+        var response = await _chairmanService.UpdateAssistantOfficer(officerId, request);
+
+        if (!response.IsSuccessful)
+        {
+            _logger.LogWarning($"Update assistant officer failed: {response.Message}");
+
+            // Return specific status codes based on error types
+            if (response.Error is NotFoundException)
+                return NotFound(response);
+            else if (response.Error is BadRequestException)
+                return BadRequest(response);
+            else if (response.Error is UnauthorizedAccessException)
+                return Unauthorized(response);
+            else
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+        }
+
+        return Ok(response);
+    }
+
+    [HttpGet("assistant-officer/{officerId}")]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAssistantOfficer(string officerId)
+    {
+        var response = await _chairmanService.GetAssistantOfficerById(officerId);
+
+        if (!response.IsSuccessful)
+        {
+            _logger.LogWarning($"Get assistant officer failed: {response.Message}");
+
+            if (response.Error is NotFoundException)
+                return NotFound(response);
+            else
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+        }
+
+        return Ok(response);
     }
 
     [HttpPatch("assistant-officer/{officerId}/unblock")]

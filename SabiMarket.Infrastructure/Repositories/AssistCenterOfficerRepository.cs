@@ -34,47 +34,24 @@ namespace SabiMarket.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        /*public async Task<AssistCenterOfficer> GetByEmailAsync(string email, bool trackChanges = false)
+        public async Task<AssistCenterOfficer> GetAssistantOfficerByIdAsync(string officerId, bool trackChanges)
         {
-            if (string.IsNullOrWhiteSpace(email))
-                return null;
+            var query = FindByCondition(a => a.Id == officerId, trackChanges);
 
-            return await FindByCondition(a => a.Email.ToLower() == email.ToLower(), trackChanges)
-                .FirstOrDefaultAsync();
-        }
+            // Include related entities one by one
+            query = query.Include(a => a.User);
+            query = query.Include(a => a.Market);
+            query = query.Include(a => a.LocalGovernment);
 
-        public async Task<AssistCenterOfficer> GetByPhoneNumberAsync(string phoneNumber, bool trackChanges = false)
-        {
-            if (string.IsNullOrWhiteSpace(phoneNumber))
-                return null;
-
-            return await FindByCondition(a => a.PhoneNumber == phoneNumber, trackChanges)
-                .FirstOrDefaultAsync();
-        }
-
-        public async Task<bool> OfficerExistsAsync(string email = null, string phoneNumber = null)
-        {
-            if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(phoneNumber))
-                return false;
-
-            var query = FindAll(false).AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(email))
+            // Disable tracking if needed
+            if (!trackChanges)
             {
-                var existsByEmail = await query.AnyAsync(o => o.Email.ToLower() == email.ToLower());
-                if (existsByEmail)
-                    return true;
+                query = query.AsNoTracking();
             }
 
-            if (!string.IsNullOrWhiteSpace(phoneNumber))
-            {
-                var existsByPhone = await query.AnyAsync(o => o.PhoneNumber == phoneNumber);
-                if (existsByPhone)
-                    return true;
-            }
+            return await query.FirstOrDefaultAsync();
+        }
 
-            return false;
-        }*/
     }
 }
 
