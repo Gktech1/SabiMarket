@@ -10,16 +10,16 @@ namespace SabiMarket.Application.DTOs.Requests
     // DTOs for the password reset flow
     public class ForgotPasswordDto
     {
-        [Required]
-        [Phone]
-        public string PhoneNumber { get; set; }
+        public string? PhoneNumber { get; set; }
+
+        public string? EmailAddress { get; set; }       
     }
 
     public class VerifyOTPDto
     {
-        [Required]
-        [Phone]
-        public string PhoneNumber { get; set; }
+        public string? PhoneNumber { get; set; }
+        
+        public string? EmailAddress { get; set;}
 
         [Required]
         [StringLength(6, MinimumLength = 6)]
@@ -28,15 +28,15 @@ namespace SabiMarket.Application.DTOs.Requests
 
     public class ResetPasswordDto
     {
-        [Required]
-        [Phone]
-        public string PhoneNumber { get; set; }
+        public string? PhoneNumber { get; set; }
+       
+        public string? EmailAddress { get; set;}
 
         [Required]
         [StringLength(100, MinimumLength = 6)]
         public string NewPassword { get; set; }
 
         [Compare("NewPassword", ErrorMessage = "The password and confirmation password do not match.")]
-        public string ConfirmPassword { get; set; }
+        public string? ConfirmPassword { get; set; }
     }
 }
