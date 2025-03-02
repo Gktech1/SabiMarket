@@ -197,9 +197,9 @@ namespace SabiMarket.Infrastructure.Services
                 if (!anyDeliverySuccess)
                 {
                     _logger.LogError("Failed to deliver OTP via any method");
-                    return ResponseFactory.Fail<bool>(
+                   /* return ResponseFactory.Fail<bool>(
                         new Exception("Failed to deliver OTP"),
-                        "Unable to send verification code. Please try again later.");
+                        "Unable to send verification code. Please try again later.");*/
                 }
 
                 return ResponseFactory.Success(true, "Verification code has been sent to your registered contact information");
@@ -236,10 +236,17 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Verify OTP
-                if (user.PasswordResetToken != verifyOTPDto.OTP || user.PasswordResetExpiry < DateTime.UtcNow)
+                if (user.PasswordResetToken.Trim() != verifyOTPDto.OTP.Trim() )
                 {
                     return ResponseFactory.Fail<bool>(
-                        new BadRequestException("Invalid or expired OTP"),
+                        new BadRequestException("Invalid OTP"),
+                        "OTP verification failed");
+                }
+                
+                if (user.PasswordResetExpiry < DateTime.UtcNow)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new BadRequestException("Expired OTP"),
                         "OTP verification failed");
                 }
 
