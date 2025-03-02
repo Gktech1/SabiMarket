@@ -18,7 +18,7 @@ namespace SabiMarket.Application.IRepositories
         Task<bool> MarketHasChairmanAsync(string marketId, bool trackChanges);
         void UpdateChairman(Chairman chairman); 
         Task<IEnumerable<Chairman>> GetReportsByChairmanIdAsync(string chairmanId);
-        Task<Chairman> GetChairmanById(string chairmanId, bool trackChanges);
+        Task<Chairman> GetChairmanById(string UserId, bool trackChanges);
     }
 
 }

@@ -80,7 +80,7 @@ namespace SabiMarket.Infrastructure.Services
         private async Task CreateAuditLog(string activity, string details, string module = "Chairman Management")
         {
             var userId = _currentUser.GetUserId();
-            if(userId == null)
+            if (userId == null)
             {
                 return;
             }
@@ -152,116 +152,6 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        /*  public async Task<BaseResponse<PaginatorDto<IEnumerable<LGResponseDto>>>> GetLocalGovernmentAreas(
-      string searchTerm,
-      PaginationFilter paginationFilter)
-          {
-              var correlationId = Guid.NewGuid().ToString();
-              try
-              {
-                  await CreateAuditLog(
-                      "LGA List Query",
-                      $"CorrelationId: {correlationId} - Retrieving LGAs with search term: {searchTerm}",
-                      "LGA Management"
-                  );
-
-                  var result = await _repository.LocalGovernmentRepository.GetLocalGovernmentArea(
-                      searchTerm,
-                      paginationFilter);
-
-                  var lgaDtos = result.PageItems.Select(lga => new LGResponseDto
-                  {
-                      Id = lga.Id,
-                      LocalGovernmentArea = lga.Name,
-                      LGAChairman = lga.AssistCenterOfficers
-                          .FirstOrDefault()?.User != null ?
-                          $"{lga.AssistCenterOfficers.FirstOrDefault().User.FirstName} {lga.AssistCenterOfficers.FirstOrDefault().User.LastName}" :
-                          "Not Assigned"
-                  });
-
-                  var paginatedResult = new PaginatorDto<IEnumerable<LGResponseDto>>
-                  {
-                      PageItems = lgaDtos,
-                      PageSize = result.PageSize,
-                      CurrentPage = result.CurrentPage,
-                      NumberOfPages = result.NumberOfPages
-                  };
-
-                  await CreateAuditLog(
-                      "LGA List Retrieved",
-                      $"CorrelationId: {correlationId} - Successfully retrieved {lgaDtos.Count()} LGAs",
-                      "LGA Management"
-                  );
-
-                  return ResponseFactory.Success(paginatedResult, "Local Government Areas retrieved successfully");
-              }
-              catch (Exception ex)
-              {
-                  await CreateAuditLog(
-                      "LGA List Query Failed",
-                      $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                      "LGA Management"
-                  );
-                  _logger.LogError(ex, "Error retrieving LGAs: {ErrorMessage}", ex.Message);
-                  return ResponseFactory.Fail<PaginatorDto<IEnumerable<LGResponseDto>>>(ex,
-                      "An unexpected error occurred while retrieving Local Government Areas");
-              }
-          }*/
-        /*  public async Task<BaseResponse<PaginatorDto<IEnumerable<LGResponseDto>>>> GetLocalGovernmentAreas(
-            string searchTerm,
-              PaginationFilter paginationFilter)
-          {
-              var correlationId = Guid.NewGuid().ToString();
-              try
-              {
-                  await CreateAuditLog(
-                      "LGA List Query",
-                      $"CorrelationId: {correlationId} - Retrieving LGAs with search term: {searchTerm}",
-                      "LGA Management"
-                  );
-
-                  // Use existing repository method with minimal filtering
-                  var result = await _repository.LocalGovernmentRepository.GetLocalGovernmentArea(
-                      searchTerm, paginationFilter);
-                  // Map to simplified DTO structure matching UI
-                  var lgaDtos = result.PageItems.Select(lga => new LGResponseDto
-                  {
-                      Id = lga.Id,
-                      LocalGovernmentArea = lga.Name,
-                      LGAChairman = lga.AssistCenterOfficers
-                          .FirstOrDefault()?.User != null ?
-                          $"{lga.AssistCenterOfficers.FirstOrDefault().User.FirstName} {lga.AssistCenterOfficers.FirstOrDefault().User.LastName}" :
-                          "Not Assigned"
-                  });
-
-                  var paginatedResult = new PaginatorDto<IEnumerable<LGResponseDto>>
-                  {
-                      PageItems = lgaDtos,
-                      PageSize = result.PageSize,
-                      CurrentPage = result.CurrentPage,
-                      NumberOfPages = result.NumberOfPages
-                  };
-
-                  await CreateAuditLog(
-                      "LGA List Retrieved",
-                      $"CorrelationId: {correlationId} - Successfully retrieved {lgaDtos.Count()} LGAs",
-                      "LGA Management"
-                  );
-
-                  return ResponseFactory.Success(paginatedResult, "Local Government Areas retrieved successfully");
-              }
-              catch (Exception ex)
-              {
-                  await CreateAuditLog(
-                      "LGA List Query Failed",
-                      $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                      "LGA Management"
-                  );
-                  _logger.LogError(ex, "Error retrieving LGAs: {ErrorMessage}", ex.Message);
-                  return ResponseFactory.Fail<PaginatorDto<IEnumerable<LGResponseDto>>>(ex,
-                      "An unexpected error occurred while retrieving Local Government Areas");
-              }
-          }*/
         public async Task<BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>> GetLocalGovernments(
       LGAFilterRequestDto filterDto,
       PaginationFilter paginationFilter)
@@ -416,9 +306,9 @@ namespace SabiMarket.Infrastructure.Services
                 {
                     Id = c.Id,
                     FullName = string.IsNullOrEmpty(c.FullName)
-        ? (c.User != null ? $"{c.User.FirstName} {c.User.LastName}" : string.Empty)
-        : c.FullName,
-                    Email = c.User != null ? c.User.Email ?? string.Empty : string.Empty,
+                    ? (c.User != null ? $"{c.User.FirstName} {c.User.LastName}" : string.Empty)
+                    : c.FullName,
+                                Email = c.User != null ? c.User.Email ?? string.Empty : string.Empty,
                     PhoneNumber = c.User != null ? c.User.PhoneNumber ?? string.Empty : string.Empty,
                     MarketName = c.Market != null ? c.Market.MarketName : string.Empty,
                     IsActive = c.User != null && c.User.IsActive,
@@ -649,7 +539,7 @@ namespace SabiMarket.Infrastructure.Services
                 market.Id = Guid.NewGuid().ToString();
                 market.IsActive = true;
                 market.MarketName = request.MarketName;
-                market.Location= request.MarketName; 
+                market.Location = request.MarketName;
                 market.LocalGovernmentId = chairman.LocalGovernmentId;
                 market.LocalGovernmentName = localGovernment.Name; // Ensure this is correctly assigned
                 market.StartDate = DateTime.UtcNow;
@@ -681,190 +571,20 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-
-        /* public async Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request)
-         {
-             var correlationId = Guid.NewGuid().ToString();
-             var userId = _currentUser.GetUserId();
-
-             try
-             {
-                 // Validate request
-                 var validationResult = await _createMarketValidator.ValidateAsync(request);
-                 if (!validationResult.IsValid)
-                 {
-                     return ResponseFactory.Fail<MarketResponseDto>(
-                         new ValidationException(validationResult.Errors),
-                         "Invalid market data"
-                     );
-                 }
-
-                 var market = _mapper.Map<Market>(request);
-
-                 // Verify caretaker exists only if CaretakerId is provided
-                 if (!string.IsNullOrWhiteSpace(request.CaretakerId) && request.CaretakerId != "string")
-                 {
-                     var caretaker = await _repository.CaretakerRepository.GetCaretakerById(request.CaretakerId, false);
-                     if (caretaker == null)
-                     {
-                         return ResponseFactory.Fail<MarketResponseDto>(
-                             new NotFoundException("Caretaker not found"),
-                             "Invalid caretaker"
-                         );
-                     }
-                     market.CaretakerId = request.CaretakerId;
-                 }
-                 else
-                 {
-                     // Ensure CaretakerId is null if not provided
-                     market.CaretakerId = null;
-                 }
-
-                 // Get Local Government and Chairman Details 
-                 var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
-                 if (chairman == null)
-                 {
-                     return ResponseFactory.Fail<MarketResponseDto>(
-                         new NotFoundException("Chairman not found"),
-                         "Invalid chairman"
-                     );
-                 }
-
-                 market.ChairmanId = chairman.Id; // Assign only if chairman exists
-
-                 await CreateAuditLog(
-                     "Market Creation",
-                     $"CorrelationId: {correlationId} - Creating new market: {request.MarketName}",
-                     "Market Management"
-                 );
-
-                 // Set default values for required fields
-                 market.Id = Guid.NewGuid().ToString();
-                 market.IsActive = true;
-                 market.Location = request.MarketName;
-                 market.MarketName = request.MarketName;
-                 market.LocalGovernmentName = chairman.LocalGovernment.Name;
-                 market.StartDate = DateTime.UtcNow;
-                 market.MarketCapacity = 0;
-                 market.LocalGovernmentId = chairman.LocalGovernmentId;
-                 market.Chairman = chairman; 
-                 market.Chairman.UserId = userId; 
-
-                 _repository.MarketRepository.AddMarket(market);
-                 await _repository.SaveChangesAsync();
-
-                 await CreateAuditLog(
-                     "Market Created",
-                     $"CorrelationId: {correlationId} - Market created successfully with ID: {market.Id}",
-                     "Market Management"
-                 );
-
-                 return ResponseFactory.Success(_mapper.Map<MarketResponseDto>(market), "Market created successfully");
-             }
-             catch (Exception ex)
-             {
-                 await CreateAuditLog(
-                     "Market Creation Failed",
-                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                     "Market Management"
-                 );
-                 return ResponseFactory.Fail<MarketResponseDto>(ex, "Error creating market");
-             }
-         }*/
-
-        /*    public async Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request)
-            {
-                var correlationId = Guid.NewGuid().ToString();
-                try
-                {
-                    // Validate request
-                    var validationResult = await _createMarketValidator.ValidateAsync(request);
-                    if (!validationResult.IsValid)
-                    {
-                        return ResponseFactory.Fail<MarketResponseDto>(
-                            new ValidationException(validationResult.Errors),
-                            "Invalid market data"
-                        );
-                    }
-
-                    var market = _mapper.Map<Market>(request);
-
-                    // Verify caretaker exists only if CaretakerId is provided
-                    // Only set market.CaretakerId if request.CaretakerId has a value
-                    if (!string.IsNullOrEmpty(request.CaretakerId) && request.CaretakerId != "string")
-                    {
-                        // Verify caretaker exists
-                        var caretaker = await _repository.CaretakerRepository.GetCaretakerById(request.CaretakerId, false);
-
-                        if (caretaker == null)
-                        {
-                            return ResponseFactory.Fail<MarketResponseDto>(
-                                new NotFoundException("Caretaker not found"),
-                                "Invalid caretaker"
-                            );
-                        }
-
-                        market.CaretakerId = request.CaretakerId;
-                    }
-                    else
-                    {
-                        // Ensure CaretakerId is null, not empty string
-                        market.CaretakerId = null;
-                    }
-
-
-                    await CreateAuditLog(
-                        "Market Creation",
-                        $"CorrelationId: {correlationId} - Creating new market: {request.MarketName}",
-                        "Market Management"
-                    );
-
-
-                    // Set default values for required fields
-                   // market.LocalGovernmentId = ""; // Assuming caretaker has this
-                    market.Id = Guid.NewGuid().ToString();   
-                    market.IsActive = true;
-                    market.Location = "";
-                    market.LocalGovernmentName = string.Empty;  
-                    market.StartDate = DateTime.UtcNow;
-                    market.MarketCapacity = 0; // Can be updated later
-
-                    _repository.MarketRepository.AddMarket(market);
-                    await _repository.SaveChangesAsync();
-
-                    await CreateAuditLog(
-                        "Market Created",
-                        $"CorrelationId: {correlationId} - Market created successfully with ID: {market.Id}",
-                        "Market Management"
-                    );
-
-                    return ResponseFactory.Success(_mapper.Map<MarketResponseDto>(market), "Market created successfully");
-                }
-                catch (Exception ex)
-                {
-                    await CreateAuditLog(
-                        "Market Creation Failed",
-                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                        "Market Management"
-                    );
-                    return ResponseFactory.Fail<MarketResponseDto>(ex, "Error creating market");
-                }
-            }
-    */
         public async Task<BaseResponse<bool>> UpdateMarket(string marketId, UpdateMarketRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();
             try
             {
                 // Validate request
-              /*  var validationResult = await _updateValidator.ValidateAsync(request);
-                if (!validationResult.IsValid)
-                {
-                    return ResponseFactory.Fail<bool>(
-                        new ValidationException(validationResult.Errors),
-                        "Invalid market data"
-                    );
-                }*/
+                /*  var validationResult = await _updateValidator.ValidateAsync(request);
+                  if (!validationResult.IsValid)
+                  {
+                      return ResponseFactory.Fail<bool>(
+                          new ValidationException(validationResult.Errors),
+                          "Invalid market data"
+                      );
+                  }*/
 
                 // Verify market exists
                 var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, true);
@@ -918,75 +638,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "Error updating market");
             }
         }
-
-        /*   public async Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request)
-           {
-               var correlationId = Guid.NewGuid().ToString();
-               try
-               {
-                   await CreateAuditLog(
-                       "Market Creation",
-                       $"CorrelationId: {correlationId} - Creating new market: {request.}",
-                       "Market Management"
-                   );
-
-                   var market = _mapper.Map<Market>(request);
-                   _repository.MarketRepository.AddMarket(market);
-                   await _repository.SaveChangesAsync();
-
-                   await CreateAuditLog(
-                       "Market Created",
-                       $"CorrelationId: {correlationId} - Market created successfully with ID: {market.Id}",
-                       "Market Management"
-                   );
-
-                   return ResponseFactory.Success(_mapper.Map<MarketResponseDto>(market), "Market created successfully");
-               }
-               catch (Exception ex)
-               {
-                   await CreateAuditLog(
-                       "Market Creation Failed",
-                       $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                       "Market Management"
-                   );
-                   return ResponseFactory.Fail<MarketResponseDto>(ex, "Error creating market");
-               }
-           }
-
-           public async Task<BaseResponse<bool>> UpdateMarket(string marketId, UpdateMarketRequestDto request)
-           {
-               var correlationId = Guid.NewGuid().ToString();
-               try
-               {
-                   await CreateAuditLog(
-                       "Market Update",
-                       $"CorrelationId: {correlationId} - Updating market {marketId}",
-                       "Market Management"
-                   );
-
-                   var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, true);
-                   _mapper.Map(request, market);
-                   await _repository.SaveChangesAsync();
-
-                   await CreateAuditLog(
-                       "Market Updated",
-                       $"CorrelationId: {correlationId} - Market updated successfully",
-                       "Market Management"
-                   );
-
-                   return ResponseFactory.Success(true, "Market updated successfully");
-               }
-               catch (Exception ex)
-               {
-                   await CreateAuditLog(
-                       "Market Update Failed",
-                       $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                       "Market Management"
-                   );
-                   return ResponseFactory.Fail<bool>(ex, "Error updating market");
-               }
-           }
-   */
         public async Task<BaseResponse<MarketDetailsDto>> GetMarketDetails(string marketId)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1291,8 +942,8 @@ namespace SabiMarket.Infrastructure.Services
 
                 var levySetup = _mapper.Map<LevyPayment>(request);
 
-                levySetup.ChairmanId = chairman.Id; 
-                levySetup.TraderId = "";  
+                levySetup.ChairmanId = chairman.Id;
+                levySetup.TraderId = "";
                 levySetup.GoodBoyId = "";
                 levySetup.Notes = "Initial Levy Setup by the Chairman";
                 levySetup.TransactionReference = "";
@@ -1319,42 +970,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
-
-
-     /*   public async Task<BaseResponse<bool>> ConfigureLevySetup(LevySetupRequestDto request)
-        {
-            var correlationId = Guid.NewGuid().ToString();
-            try
-            {
-                await CreateAuditLog(
-                    "Levy Setup Configuration",
-                    $"CorrelationId: {correlationId} - Configuring new levy setup",
-                    "Levy Management"
-                );
-
-                var levySetup = _mapper.Map<LevyPayment>(request);
-                _repository.LevyPaymentRepository.AddPayment(levySetup);
-                await _repository.SaveChangesAsync();
-
-                await CreateAuditLog(
-                    "Levy Setup Configured",
-                    $"CorrelationId: {correlationId} - Levy setup configured successfully",
-                    "Levy Management"
-                );
-
-                return ResponseFactory.Success(true, "Levy setup configured successfully");
-            }
-            catch (Exception ex)
-            {
-                await CreateAuditLog(
-                    "Levy Setup Configuration Failed",
-                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                    "Levy Management"
-                );
-                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-            }
-        }
-*/
         public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> SearchMarkets(string searchTerm)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1678,7 +1293,7 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<AssistantOfficerResponseDto>> CreateAssistantOfficer(CreateAssistantOfficerRequestDto officerDto)
+        public async Task<BaseResponse<AssistantOfficerResponseDto>> CreateAssistantOfficer(CreateAssistantOfficerRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();
             var userId = _currentUser.GetUserId();
@@ -1687,68 +1302,286 @@ namespace SabiMarket.Infrastructure.Services
             {
                 await CreateAuditLog(
                     "Assistant Officer Creation",
-                    $"CorrelationId: {correlationId} - Creating new assistant officer",
+                    $"CorrelationId: {correlationId} - Creating new assistant officer: {request.FullName}",
                     "Officer Management"
                 );
 
-                var validationResult = await _createAssistOfficerValidator.ValidateAsync(officerDto);
+                // Validate request
+                var validationResult = await _createAssistOfficerValidator.ValidateAsync(request);
                 if (!validationResult.IsValid)
                 {
                     await CreateAuditLog(
-                        "Assistant Officer Creation Failed",
+                        "Creation Failed",
                         $"CorrelationId: {correlationId} - Validation failed",
                         "Officer Management"
                     );
                     return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                        new FluentValidation.ValidationException(validationResult.Errors),
+                        new ValidationException(validationResult.Errors),
                         "Validation failed");
                 }
 
-                // Check if officer already exists with the same email
-               /* var existingOfficerByEmail = await _repository.AssistCenterOfficerRepository.GetByEmailAsync(officerDto.Email);
-                if (existingOff-kih.noicerByEmail != null)
+                // Check if email already exists
+                var existingUser = await _userManager.FindByEmailAsync(request.Email);
+                if (existingUser != null)
                 {
                     await CreateAuditLog(
-                        "Assistant Officer Creation Failed",
-                        $"CorrelationId: {correlationId} - Officer with email {officerDto.Email} already exists",
+                        "Creation Failed",
+                        $"CorrelationId: {correlationId} - Email already registered",
                         "Officer Management"
                     );
-                    return ResponseFactory.Fail<AssistantOfficerResponseDto>($"An officer with email {officerDto.Email} already exists");
-                }*/
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                        new BadRequestException("Email address is already registered"),
+                        "Email already exists");
+                }
 
                 // Get Chairman details
                 var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
                 if (chairman == null)
                 {
-                    return ResponseFactory.Fail<AssistantOfficerResponseDto>("Chairman not found");
+                    await CreateAuditLog(
+                        "Creation Failed",
+                        $"CorrelationId: {correlationId} - Chairman not found",
+                        "Officer Management"
+                    );
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                        new BadRequestException("Chairman not found"),
+                        "Chairman not found");
                 }
 
-                var officer = _mapper.Map<AssistCenterOfficer>(officerDto);
-                officer.ChairmanId = chairman.Id;
-                officer.UserId = userId;    
+                // Create ApplicationUser
+                var nameParts = request.FullName.Split(' ');
+                var firstName = nameParts[0];
+                var lastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : "";
+
+                var defaultPassword = GenerateDefaultPassword(request.FullName);
+                var user = new ApplicationUser
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserName = request.Email,
+                    Email = request.Email,
+                    PhoneNumber = request.PhoneNumber,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    EmailConfirmed = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    Gender = request.Gender,
+                    ProfileImageUrl = "",
+                    LocalGovernmentId = chairman.LocalGovernmentId
+                };
+
+                var createUserResult = await _userManager.CreateAsync(user, defaultPassword);
+                if (!createUserResult.Succeeded)
+                {
+                    await CreateAuditLog(
+                        "Creation Failed",
+                        $"CorrelationId: {correlationId} - Failed to create user account",
+                        "Officer Management"
+                    );
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                        new Exception(string.Join(", ", createUserResult.Errors.Select(e => e.Description))),
+                        "Failed to create user account");
+                }
+
+                // Assign role
+                var roleResult = await _userManager.AddToRoleAsync(user, UserRoles.AssistOfficer);
+                if (!roleResult.Succeeded)
+                {
+                    // Rollback user creation if role assignment fails
+                    await _userManager.DeleteAsync(user);
+                    await CreateAuditLog(
+                        "Creation Failed",
+                        $"CorrelationId: {correlationId} - Failed to assign assistant officer role",
+                        "Officer Management"
+                    );
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                        new Exception("Failed to assign assistant officer role"),
+                        "Role assignment failed");
+                }
+
+                // Create AssistCenterOfficer entity
+                var officer = new AssistCenterOfficer
+                {
+                    UserId = user.Id,
+                    ChairmanId = chairman.Id,
+                    LocalGovernmentId = chairman.LocalGovernmentId,
+                    MarketId = !string.IsNullOrEmpty(request.MarketId) ? request.MarketId : null,
+                    IsBlocked = false,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
                 _repository.AssistCenterOfficerRepository.AddAssistCenterOfficer(officer);
                 await _repository.SaveChangesAsync();
 
+                // Map response
+                var response = _mapper.Map<AssistantOfficerResponseDto>(officer);
+                response.DefaultPassword = defaultPassword;
+                response.FullName = request.FullName;
+                response.Email = user.Email;
+                response.PhoneNumber = user.PhoneNumber;
+                response.Gender = user.Gender;
+                response.MarketId = officer.MarketId;
+
                 await CreateAuditLog(
                     "Assistant Officer Created",
-                    $"CorrelationId: {correlationId} - Officer created with ID: {officer.Id}",
+                    $"CorrelationId: {correlationId} - Officer created successfully with ID: {officer.Id}",
                     "Officer Management"
                 );
 
-                return ResponseFactory.Success(_mapper.Map<AssistantOfficerResponseDto>(officer),
-                    "Assistant Officer created successfully");
+                return ResponseFactory.Success(response,
+                    "Assistant Officer created successfully. Please note down the default password.");
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating assistant officer");
                 await CreateAuditLog(
-                    "Assistant Officer Creation Failed",
+                    "Creation Failed",
                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
                     "Officer Management"
                 );
                 return ResponseFactory.Fail<AssistantOfficerResponseDto>(ex, "An unexpected error occurred");
             }
         }
+        public async Task<BaseResponse<AssistantOfficerResponseDto>> UpdateAssistantOfficer(string officerId, UpdateAssistantOfficerRequestDto request)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            var userId = _currentUser.GetUserId();
 
+            try
+            {
+                await CreateAuditLog(
+                    "Assistant Officer Update",
+                    $"CorrelationId: {correlationId} - Updating assistant officer with ID: {officerId}",
+                    "Officer Management"
+                );
+
+                // Get Chairman details (to verify authority)
+                var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                if (chairman == null)
+                {
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Chairman not found",
+                        "Officer Management"
+                    );
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                        new BadRequestException("Chairman not found"),
+                        "Chairman not found");
+                }
+
+                // Get existing officer
+                var officer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(officerId, true);
+                if (officer == null)
+                {
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Assistant officer not found",
+                        "Officer Management"
+                    );
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                        new NotFoundException($"Assistant officer with ID {officerId} not found"),
+                        "Assistant officer not found");
+                }
+
+                // Verify this chairman has authority over this officer
+                if (officer.ChairmanId != chairman.Id)
+                {
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Unauthorized access",
+                        "Officer Management"
+                    );
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                        new UnauthorizedAccessException("You are not authorized to update this assistant officer"),
+                        "Unauthorized access");
+                }
+
+                // Get the user associated with the officer
+                var user = await _userManager.FindByIdAsync(officer.UserId);
+                if (user == null)
+                {
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Associated user not found",
+                        "Officer Management"
+                    );
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                        new NotFoundException("Associated user account not found"),
+                        "User not found");
+                }
+
+                // Check if email changed and if it's already in use
+                if (request.Email != user.Email)
+                {
+                    var existingUser = await _userManager.FindByEmailAsync(request.Email);
+                    if (existingUser != null && existingUser.Id != user.Id)
+                    {
+                        await CreateAuditLog(
+                            "Update Failed",
+                            $"CorrelationId: {correlationId} - Email already registered",
+                            "Officer Management"
+                        );
+                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                            new BadRequestException("Email address is already registered"),
+                            "Email already exists");
+                    }
+                }
+
+                // Update User details
+                var nameParts = request.FullName.Split(' ');
+                user.FirstName = nameParts[0];
+                user.LastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : "";
+                user.Email = request.Email;
+                user.UserName = request.Email; // Update username to match email
+                user.PhoneNumber = request.PhoneNumber;
+                user.Gender = request.Gender;
+
+                var updateUserResult = await _userManager.UpdateAsync(user);
+                if (!updateUserResult.Succeeded)
+                {
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Failed to update user account",
+                        "Officer Management"
+                    );
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                        new Exception(string.Join(", ", updateUserResult.Errors.Select(e => e.Description))),
+                        "Failed to update user account");
+                }
+
+                // Update Officer details
+                officer.MarketId = !string.IsNullOrEmpty(request.MarketId) ? request.MarketId : null;
+                officer.UpdatedAt = DateTime.UtcNow;
+
+                _repository.AssistCenterOfficerRepository.UpdateAssistCenterOfficer(officer);
+                await _repository.SaveChangesAsync();
+
+                // Get updated officer with market details for response
+                var updatedOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(officerId, false);
+
+                // Map response
+                var response = _mapper.Map<AssistantOfficerResponseDto>(updatedOfficer);
+
+                await CreateAuditLog(
+                    "Assistant Officer Updated",
+                    $"CorrelationId: {correlationId} - Officer updated successfully with ID: {officer.Id}",
+                    "Officer Management"
+                );
+
+                return ResponseFactory.Success(response, "Assistant Officer updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating assistant officer");
+                await CreateAuditLog(
+                    "Update Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Officer Management"
+                );
+                return ResponseFactory.Fail<AssistantOfficerResponseDto>(ex, "An unexpected error occurred");
+            }
+        }
         public async Task<BaseResponse<AssistantOfficerResponseDto>> GetAssistantOfficerById(string officerId)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1792,7 +1625,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<AssistantOfficerResponseDto>(ex, "An unexpected error occurred");
             }
         }
-
         public async Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1836,7 +1668,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<LevyResponseDto>(ex, "Error retrieving levy");
             }
         }
-
         public async Task<BaseResponse<bool>> AssignCaretakerToMarket(string marketId, string caretakerId)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1907,132 +1738,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
-        /* public async Task<BaseResponse<bool>> AssignCaretakerToMarket(string marketId, string caretakerId)
-         {
-             var correlationId = Guid.NewGuid().ToString();
-             try
-             {
-                 await CreateAuditLog(
-                     "Caretaker Market Assignment",
-                     $"CorrelationId: {correlationId} - Assigning caretaker {caretakerId} to market {marketId}",
-                     "Market Management"
-                 );
-
-                 var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, true);
-                 if (market == null)
-                 {
-                     await CreateAuditLog(
-                         "Assignment Failed",
-                         $"CorrelationId: {correlationId} - Market not found",
-                         "Market Management"
-                     );
-                     return ResponseFactory.Fail<bool>(new NotFoundException("Market not found"), "Market not found");
-                 }
-
-                 var caretaker = await _repository.CaretakerRepository.GetCaretakerById(caretakerId, true);
-                 if (caretaker == null)
-                 {
-                     await CreateAuditLog(
-                         "Assignment Failed",
-                         $"CorrelationId: {correlationId} - Caretaker not found",
-                         "Market Management"
-                     );
-                     return ResponseFactory.Fail<bool>(new NotFoundException("Caretaker not found"), "Caretaker not found");
-                 }
-
-                 if (market.Caretaker.Any(c => c.Id == caretakerId))
-                 {
-                     await CreateAuditLog(
-                         "Assignment Failed",
-                         $"CorrelationId: {correlationId} - Caretaker already assigned to market",
-                         "Market Management"
-                     );
-                     return ResponseFactory.Fail<bool>(
-                         new InvalidOperationException("Caretaker is already assigned"),
-                         "Already assigned");
-                 }
-
-                 market.Caretaker.Add(caretaker);
-                 await _repository.SaveChangesAsync();
-
-                 await CreateAuditLog(
-                     "Assignment Successful",
-                     $"CorrelationId: {correlationId} - Caretaker successfully assigned to market",
-                     "Market Management"
-                 );
-
-                 return ResponseFactory.Success(true, "Caretaker assigned successfully");
-             }
-             catch (Exception ex)
-             {
-                 await CreateAuditLog(
-                     "Assignment Failed",
-                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                     "Market Management"
-                 );
-                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-             }
-         }
- */
-        /*    public async Task<BaseResponse<ChairmanResponseDto>> CreateChairman(CreateChairmanRequestDto chairmanDto)
-            {
-                var correlationId = Guid.NewGuid().ToString();
-                try
-                {
-                    await CreateAuditLog(
-                        "Chairman Creation",
-                        $"CorrelationId: {correlationId} - Creating new chairman",
-                        "Chairman Management"
-                    );
-
-                    var userId = _currentUser.GetUserId();
-                    var validationResult = await _createChairmanValidator.ValidateAsync(chairmanDto);
-                    if (!validationResult.IsValid)
-                    {
-                        await CreateAuditLog(
-                            "Creation Failed",
-                            $"CorrelationId: {correlationId} - Validation failed",
-                            "Chairman Management"
-                        );
-                        return ResponseFactory.Fail<ChairmanResponseDto>(
-                            new ValidationException(validationResult.Errors),
-                            "Validation failed");
-                    }
-
-                    // Set default values
-                    chairmanDto.UserId = userId;
-                    chairmanDto.Title = "Honorable";
-                    chairmanDto.Office = "Chairman";
-                    chairmanDto.Password = GenerateDefaultPassword(chairmanDto.FullName);
-
-                    var chairman = _mapper.Map<Chairman>(chairmanDto);
-                    _repository.ChairmanRepository.CreateChairman(chairman);
-                    await _repository.SaveChangesAsync();
-
-                    var responseDto = _mapper.Map<ChairmanResponseDto>(chairman);
-                    responseDto.DefaultPassword = chairmanDto.Password;
-
-                    await CreateAuditLog(
-                        "Chairman Created",
-                        $"CorrelationId: {correlationId} - Chairman created successfully with ID: {chairman.Id}",
-                        "Chairman Management"
-                    );
-
-                    return ResponseFactory.Success(responseDto,
-                        "Chairman created successfully. Please note down the default password.");
-                }
-                catch (Exception ex)
-                {
-                    await CreateAuditLog(
-                        "Creation Failed",
-                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                        "Chairman Management"
-                    );
-                    return ResponseFactory.Fail<ChairmanResponseDto>(ex, "An unexpected error occurred");
-                }
-            }
-    */
-
         public async Task<BaseResponse<ChairmanResponseDto>> CreateChairman(CreateChairmanRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -2141,7 +1846,7 @@ namespace SabiMarket.Infrastructure.Services
                     Office = "Chairman",
                     LocalGovernmentId = request.LocalGovernmentId,
                     FullName = request.FullName,
-                    Email = request.Email,  
+                    Email = request.Email,
                     TermStart = DateTime.UtcNow,
                     TermEnd = DateTime.UtcNow.AddYears(8),
                     IsActive = true,
