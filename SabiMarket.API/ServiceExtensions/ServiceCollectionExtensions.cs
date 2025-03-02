@@ -161,6 +161,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IValidator<RegistrationRequestDto>, RegistrationRequestValidator>();
         services.AddScoped<IValidator<LoginRequestDto>, LoginRequestValidator>();
+        services.AddTransient<IEmailService, FreeEmailService>();
         services.AddScoped<IRepositoryManager, RepositoryManager>();
         services.AddScoped<IServiceManager, ServiceManager>();
         services.AddScoped<ICloudinaryService, CloudinaryService>();
