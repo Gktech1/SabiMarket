@@ -189,7 +189,7 @@ namespace SabiMarket.API.Controllers
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto request)
         {
 
-            var response = await _settingsService.SendPasswordResetOTPBySMS(request.PhoneNumber);
+            var response = await _settingsService.SendPasswordResetOTP(request);
 
             if (!response.IsSuccessful)
             {
@@ -214,7 +214,7 @@ namespace SabiMarket.API.Controllers
         [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> VerifyOTP([FromBody] VerifyOTPDto request)
         {
-            var response = await _settingsService.VerifyPasswordResetOTP(request.PhoneNumber, request.OTP);
+            var response = await _settingsService.VerifyPasswordResetOTP(request);
 
             if (!response.IsSuccessful)
             {
@@ -244,9 +244,7 @@ namespace SabiMarket.API.Controllers
         {
 
                 var response = await _settingsService.ResetPasswordAfterOTP(
-                    request.PhoneNumber,
-                    request.NewPassword
-                );
+                    request);
 
                 if (!response.IsSuccessful)
                 {

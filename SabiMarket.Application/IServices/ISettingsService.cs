@@ -8,9 +8,9 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<bool>> ChangePassword(string userId, ChangePasswordDto changePasswordDto);
         Task<BaseResponse<bool>> UpdateProfile(string userId, UpdateProfileDto updateProfileDto);
         Task<BaseResponse<UserDetailsResponseDto>> GetUserDetails(string userId, string userType);
-        Task<BaseResponse<bool>> SendPasswordResetOTPBySMS(string phoneNumber);
-        Task<BaseResponse<bool>> VerifyPasswordResetOTP(string phoneNumber, string otp);
-        Task<BaseResponse<bool>> ResetPasswordAfterOTP(string phoneNumber, string newPassword);
+        Task<BaseResponse<bool>> SendPasswordResetOTP(ForgotPasswordDto forgotPasswordDto);
+        Task<BaseResponse<bool>> VerifyPasswordResetOTP(VerifyOTPDto verifyOTPDto);
+        Task<BaseResponse<bool>> ResetPasswordAfterOTP(ResetPasswordDto resetPasswordDto);
         Task<BaseResponse<bool>> LogoutUser(string userId);
     }
 }

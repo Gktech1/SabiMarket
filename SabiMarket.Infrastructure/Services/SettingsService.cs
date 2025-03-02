@@ -81,12 +81,12 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<bool>> SendPasswordResetOTP(string email = null, string phoneNumber = null)
+        public async Task<BaseResponse<bool>> SendPasswordResetOTP(ForgotPasswordDto forgotPasswordDto)
         {
             try
             {
                 // Validate that at least one identifier is provided
-                if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(phoneNumber))
+                if (string.IsNullOrWhiteSpace(forgotPasswordDto.EmailAddress) && string.IsNullOrWhiteSpace(forgotPasswordDto.PhoneNumber))
                 {
                     return ResponseFactory.Fail<bool>(
                         new BadRequestException("Either email or phone number must be provided"),
@@ -101,15 +101,15 @@ namespace SabiMarket.Infrastructure.Services
                 ApplicationUser user = null;
 
                 // First try to find by email if provided
-                if (!string.IsNullOrWhiteSpace(email))
+                if (!string.IsNullOrWhiteSpace(forgotPasswordDto.EmailAddress))
                 {
-                    user = await _userManager.FindByEmailAsync(email);
+                    user = await _userManager.FindByEmailAsync(forgotPasswordDto.EmailAddress);
                 }
 
                 // If user not found and phone provided, try by phone
-                if (user == null && !string.IsNullOrWhiteSpace(phoneNumber))
+                if (user == null && !string.IsNullOrWhiteSpace(forgotPasswordDto.PhoneNumber))
                 {
-                    string normalizedPhone = NormalizePhoneNumber(phoneNumber);
+                    string normalizedPhone = NormalizePhoneNumber(forgotPasswordDto.PhoneNumber);
                     user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == normalizedPhone);
                 }
 
@@ -210,22 +210,22 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
-        public async Task<BaseResponse<bool>> VerifyPasswordResetOTP(string identifier, string otp)
+        public async Task<BaseResponse<bool>> VerifyPasswordResetOTP(VerifyOTPDto verifyOTPDto)
         {
             try
             {
                 // Determine if identifier is email or phone
-                bool isEmail = identifier.Contains("@");
+                bool isEmail = verifyOTPDto.EmailAddress!.Contains("@");
 
                 // Find user by identifier
                 ApplicationUser user = null;
                 if (isEmail)
                 {
-                    user = await _userManager.FindByEmailAsync(identifier);
+                    user = await _userManager.FindByEmailAsync(verifyOTPDto.EmailAddress);
                 }
                 else
                 {
-                    user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == identifier);
+                    user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == verifyOTPDto.PhoneNumber);
                 }
 
                 if (user == null)
@@ -236,7 +236,7 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Verify OTP
-                if (user.PasswordResetToken != otp || user.PasswordResetExpiry < DateTime.UtcNow)
+                if (user.PasswordResetToken != verifyOTPDto.OTP || user.PasswordResetExpiry < DateTime.UtcNow)
                 {
                     return ResponseFactory.Fail<bool>(
                         new BadRequestException("Invalid or expired OTP"),
@@ -257,22 +257,139 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<bool>> ResetPasswordAfterOTP(string identifier, string newPassword)
+        public async Task<BaseResponse<bool>> ResetPasswordAfterOTP(ResetPasswordDto resetPasswordDto)
+        {
+            try
+            {
+                // Validate input
+                if (resetPasswordDto == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new BadRequestException("Invalid request data"),
+                        "Password reset failed");
+                }
+
+                // Validate password and confirm password match
+                if (resetPasswordDto.NewPassword != resetPasswordDto.ConfirmPassword)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new BadRequestException("Passwords do not match"),
+                        "The password and confirmation password do not match");
+                }
+
+                // Determine if identifier is email or phone
+                ApplicationUser user = null;
+
+                // First try to find by email if provided
+                if (!string.IsNullOrWhiteSpace(resetPasswordDto.EmailAddress))
+                {
+                    user = await _userManager.FindByEmailAsync(resetPasswordDto.EmailAddress);
+                }
+                // Then try by phone if provided and user not found
+                else if (!string.IsNullOrWhiteSpace(resetPasswordDto.PhoneNumber))
+                {
+                    user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == resetPasswordDto.PhoneNumber);
+                }
+                else
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new BadRequestException("Missing identifier"),
+                        "Either email or phone number must be provided");
+                }
+
+                if (user == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("User not found"),
+                        "Password reset failed");
+                }
+
+                // Check if OTP is still valid
+                if (string.IsNullOrEmpty(user.PasswordResetToken) || user.PasswordResetExpiry < DateTime.UtcNow)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new BadRequestException("Invalid or expired reset token"),
+                        "Password reset failed");
+                }
+
+                // Validate password complexity before attempting to reset
+                var passwordValidator = new PasswordValidator<ApplicationUser>();
+                var passwordValidationResult = await passwordValidator.ValidateAsync(_userManager, user, resetPasswordDto.NewPassword);
+
+                if (!passwordValidationResult.Succeeded)
+                {
+                    string errorMessages = string.Join(", ", passwordValidationResult.Errors.Select(e => e.Description));
+                    return ResponseFactory.Fail<bool>(
+                        new BadRequestException(errorMessages),
+                        "Password doesn't meet the requirements");
+                }
+
+                // Reset password without changing SecurityStamp
+                var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var result = await _userManager.ResetPasswordAsync(user, resetToken, resetPasswordDto.NewPassword);
+
+                if (!result.Succeeded)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new BadRequestException(result.Errors.First().Description),
+                        "Password reset failed");
+                }
+
+                // Clear reset token
+                user.PasswordResetToken = null;
+                user.PasswordResetExpiry = null;
+                user.PasswordResetMethod = null;
+                user.PasswordResetVerified = false;
+                await _userManager.UpdateAsync(user);
+
+                // Send confirmation notification if email is available
+                try
+                {
+                    if (_emailService != null && !string.IsNullOrEmpty(user.Email))
+                    {
+                        string subject = "Password Changed Successfully";
+                        string htmlBody = $@"
+                <html>
+                <body>
+                    <h2>Password Changed</h2>
+                    <p>Your password has been changed successfully.</p>
+                    <p>If you did not make this change, please contact support immediately.</p>
+                </body>
+                </html>";
+
+                        await _emailService.SendEmailAsync(user.Email, subject, htmlBody);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail the password reset if confirmation email fails
+                    _logger.LogWarning(ex, "Failed to send password change confirmation");
+                }
+
+                return ResponseFactory.Success(true, "Password reset successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during password reset");
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+            }
+        }
+       /* public async Task<BaseResponse<bool>> ResetPasswordAfterOTP(ResetPasswordDto resetPasswordDto)
         {
             try
             {
                 // Determine if identifier is email or phone
-                bool isEmail = identifier.Contains("@");
+                bool isEmail = resetPasswordDto.EmailAddress!.Contains("@");
 
                 // Find user by identifier
                 ApplicationUser user = null;
                 if (isEmail)
                 {
-                    user = await _userManager.FindByEmailAsync(identifier);
+                    user = await _userManager.FindByEmailAsync(resetPasswordDto.EmailAddress);
                 }
                 else
                 {
-                    user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == identifier);
+                    user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == resetPasswordDto.PhoneNumber);
                 }
 
                 if (user == null)
@@ -292,7 +409,7 @@ namespace SabiMarket.Infrastructure.Services
 
                 // Reset password without changing SecurityStamp
                 var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-                var result = await _userManager.ResetPasswordAsync(user, resetToken, newPassword);
+                var result = await _userManager.ResetPasswordAsync(user, resetToken, resetPasswordDto.NewPassword);
 
                 if (!result.Succeeded)
                 {
@@ -340,7 +457,7 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
-        public async Task<BaseResponse<bool>> LogoutUser(string userId)
+      */  public async Task<BaseResponse<bool>> LogoutUser(string userId)
         {
             try
             {
