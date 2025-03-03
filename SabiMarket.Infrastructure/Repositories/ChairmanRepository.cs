@@ -7,6 +7,7 @@ using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
+using System.Linq.Expressions;
 
 namespace SabiMarket.Infrastructure.Repositories
 {
@@ -108,6 +109,14 @@ namespace SabiMarket.Infrastructure.Repositories
             return await FindByCondition(
                 c => c.UserId == userId && c.MarketId == marketId,
                 trackChanges: false).AnyAsync();
+        }
+
+        public async Task<int> CountAsync(Expression<Func<Chairman, bool>> predicate)
+        {
+            return await _dbContext.Set<Chairman>()
+                .Include(c => c.User)
+                .Where(predicate)
+                .CountAsync();
         }
 
         public async Task<bool> MarketHasChairmanAsync(string marketId, bool trackChanges)
