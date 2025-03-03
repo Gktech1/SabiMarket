@@ -24,6 +24,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using iText.Commons.Actions.Contexts;
 using Microsoft.Extensions.Configuration.UserSecrets;
+using System.Security.Claims;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -276,10 +277,11 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>> GetChairmen(
+        public async Task<BaseResponse<AdminDashboardResponse>> GetChairmen(
     string? searchTerm, PaginationFilter paginationFilter)
         {
             var correlationId = Guid.NewGuid().ToString();
+            var currentUserId = _currentUser.GetUserId();
             try
             {
                 await CreateAuditLog(
@@ -300,17 +302,16 @@ namespace SabiMarket.Infrastructure.Services
                 );
 
                 // Map the chairmen entities to response DTOs
-                //var chairmanDtos = _mapper.Map<IEnumerable<ChairmanResponseDto>>(chairmenPage.PageItems);
-
                 var chairmanDtos = chairmenPage.PageItems.Select(c => new ChairmanResponseDto
                 {
                     Id = c.Id,
                     FullName = string.IsNullOrEmpty(c.FullName)
-                    ? (c.User != null ? $"{c.User.FirstName} {c.User.LastName}" : string.Empty)
-                    : c.FullName,
-                                Email = c.User != null ? c.User.Email ?? string.Empty : string.Empty,
+                        ? (c.User != null ? $"{c.User.FirstName} {c.User.LastName}" : string.Empty)
+                        : c.FullName,
+                    Email = c.User != null ? c.User.Email ?? string.Empty : string.Empty,
                     PhoneNumber = c.User != null ? c.User.PhoneNumber ?? string.Empty : string.Empty,
                     MarketName = c.Market != null ? c.Market.MarketName : string.Empty,
+                    LocalGovernmentName = c.LocalGovernment != null ? c.LocalGovernment.Name : string.Empty,
                     IsActive = c.User != null && c.User.IsActive,
                     MarketId = c.MarketId,
                     LocalGovernmentId = c.LocalGovernmentId,
@@ -319,9 +320,45 @@ namespace SabiMarket.Infrastructure.Services
                     DefaultPassword = null  // Explicitly setting it to null if not needed
                 }).ToList();
 
+                // Get current admin to fetch dashboard stats
+                var admin = await _repository.AdminRepository.GetAdminByUserIdAsync(currentUserId, trackChanges: false);
 
-                // Create and return the paginated response
-                var response = new PaginatorDto<IEnumerable<ChairmanResponseDto>>
+                if (admin != null)
+                {
+                    // Update the last dashboard access timestamp
+                    admin.LastDashboardAccess = DateTime.UtcNow;
+                    _repository.AdminRepository.UpdateAdmin(admin);
+
+                    // Also refresh the stats if they're more than an hour old
+                    if (admin.StatsLastUpdatedAt < DateTime.UtcNow.AddHours(-1))
+                    {
+                        // Get fresh stats
+                        int registeredLGAs = await _repository.LocalGovernmentRepository.CountAsync();
+                        int activeChairmen = await _repository.ChairmanRepository.CountAsync(c => c.User != null && c.User.IsActive);
+                        decimal totalRevenue = await _repository.LevyPaymentRepository.GetTotalRevenueAsync();
+
+                        // Update admin stats
+                        await _repository.AdminRepository.UpdateAdminStatsAsync(
+                            admin.UserId,
+                            registeredLGAs,
+                            activeChairmen,
+                            totalRevenue
+                        );
+                    }
+
+                    await _repository.SaveChangesAsync();
+                }
+
+                // Create the dashboard metrics from the admin entity
+                var metrics = new DashboardMetrics
+                {
+                    RegisteredLGAs = admin?.RegisteredLGAs ?? 0,
+                    ActiveChairmen = admin?.ActiveChairmen ?? 0,
+                    TotalRevenue = admin?.TotalRevenue ?? 0
+                };
+
+                // Create and return the comprehensive response
+                var paginatedChairmen = new PaginatorDto<IEnumerable<ChairmanResponseDto>>
                 {
                     PageItems = chairmanDtos,
                     CurrentPage = chairmenPage.CurrentPage,
@@ -329,7 +366,13 @@ namespace SabiMarket.Infrastructure.Services
                     NumberOfPages = chairmenPage.NumberOfPages
                 };
 
-                return ResponseFactory.Success(response, "Chairmen retrieved successfully");
+                var dashboardResponse = new AdminDashboardResponse
+                {
+                    Chairmen = paginatedChairmen,
+                    Metrics = metrics
+                };
+
+                return ResponseFactory.Success(dashboardResponse, "Chairmen and dashboard metrics retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -338,10 +381,76 @@ namespace SabiMarket.Infrastructure.Services
                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
                     "Chairman Management"
                 );
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<ChairmanResponseDto>>>(ex, "Error retrieving chairmen");
+                return ResponseFactory.Fail<AdminDashboardResponse>(ex, "Error retrieving chairmen and metrics");
             }
         }
 
+        /*    public async Task<BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>> GetChairmen(
+        string? searchTerm, PaginationFilter paginationFilter)
+            {
+                var correlationId = Guid.NewGuid().ToString();
+                try
+                {
+                    await CreateAuditLog(
+                        "Chairmen List Query",
+                        $"CorrelationId: {correlationId} - Retrieving chairmen list - Page: {paginationFilter.PageNumber}, Size: {paginationFilter.PageSize}",
+                        "Chairman Management"
+                    );
+
+                    // Fetch the paginated chairmen
+                    var chairmenPage = await _repository.ChairmanRepository
+                        .GetChairmenWithPaginationAsync(paginationFilter, trackChanges: false, searchTerm);
+
+                    // Log the number of chairmen retrieved
+                    await CreateAuditLog(
+                        "Chairmen List Retrieved",
+                        $"CorrelationId: {correlationId} - Retrieved {chairmenPage.PageItems.Count()} chairmen",
+                        "Chairman Management"
+                    );
+
+                    // Map the chairmen entities to response DTOs
+                    //var chairmanDtos = _mapper.Map<IEnumerable<ChairmanResponseDto>>(chairmenPage.PageItems);
+
+                    var chairmanDtos = chairmenPage.PageItems.Select(c => new ChairmanResponseDto
+                    {
+                        Id = c.Id,
+                        FullName = string.IsNullOrEmpty(c.FullName)
+                        ? (c.User != null ? $"{c.User.FirstName} {c.User.LastName}" : string.Empty)
+                        : c.FullName,
+                                    Email = c.User != null ? c.User.Email ?? string.Empty : string.Empty,
+                        PhoneNumber = c.User != null ? c.User.PhoneNumber ?? string.Empty : string.Empty,
+                        MarketName = c.Market != null ? c.Market.MarketName : string.Empty,
+                        IsActive = c.User != null && c.User.IsActive,
+                        MarketId = c.MarketId,
+                        LocalGovernmentId = c.LocalGovernmentId,
+                        CreatedAt = c.CreatedAt,
+                        UpdatedAt = c.UpdatedAt,
+                        DefaultPassword = null  // Explicitly setting it to null if not needed
+                    }).ToList();
+
+
+                    // Create and return the paginated response
+                    var response = new PaginatorDto<IEnumerable<ChairmanResponseDto>>
+                    {
+                        PageItems = chairmanDtos,
+                        CurrentPage = chairmenPage.CurrentPage,
+                        PageSize = chairmenPage.PageSize,
+                        NumberOfPages = chairmenPage.NumberOfPages
+                    };
+
+                    return ResponseFactory.Success(response, "Chairmen retrieved successfully");
+                }
+                catch (Exception ex)
+                {
+                    await CreateAuditLog(
+                        "Chairmen List Query Failed",
+                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                        "Chairman Management"
+                    );
+                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<ChairmanResponseDto>>>(ex, "Error retrieving chairmen");
+                }
+            }
+    */
 
         /*public async Task<BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>> GetChairmen(string? searchTerm, PaginationFilter paginationFilter)
         {

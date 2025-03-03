@@ -1,5 +1,6 @@
 ﻿using SabiMarket.Application.DTOs;
 using SabiMarket.Domain.Entities.Administration;
+using System.Linq.Expressions;
 
 namespace SabiMarket.Application.IRepositories
 {
@@ -19,6 +20,7 @@ namespace SabiMarket.Application.IRepositories
         void UpdateChairman(Chairman chairman); 
         Task<IEnumerable<Chairman>> GetReportsByChairmanIdAsync(string chairmanId);
         Task<Chairman> GetChairmanById(string UserId, bool trackChanges);
+        Task<int> CountAsync(Expression<Func<Chairman, bool>> predicate);
     }
 
 }

@@ -127,6 +127,11 @@ namespace SabiMarket.Infrastructure.Repositories
             return await query.Paginate(paginationFilter);
         }
 
+        public async Task<int> CountAsync()
+        {
+            return await _repositoryContext.Set<LocalGovernment>().CountAsync();
+        }
+
         /* public async Task<PaginatorDto<IEnumerable<LocalGovernment>>> GetLocalGovernmentArea(
        string searchTerm,
        PaginationFilter paginationFilter)

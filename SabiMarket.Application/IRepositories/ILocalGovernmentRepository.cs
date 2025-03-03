@@ -23,5 +23,6 @@ namespace SabiMarket.Infrastructure.Repositories
         void UpdateLocalGovernment(LocalGovernment localGovernment);
         void DeleteLocalGovernment(LocalGovernment localGovernment);
         IQueryable<LocalGovernment> GetFilteredLGAsQuery(LGAFilterRequestDto filterDto);
+        Task<int> CountAsync();
     }
 }
