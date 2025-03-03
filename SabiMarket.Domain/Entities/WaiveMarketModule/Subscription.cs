@@ -1,23 +1,22 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SabiMarket.Domain.Entities.UserManagement;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
+using SabiMarket.Domain.Entities.UserManagement;
 
 namespace SabiMarket.Domain.Entities.WaiveMarketModule
 {
     [Table("Subscriptions")]
     public class Subscription : BaseEntity
     {
-        public string SGId { get; set; }
 
         [Required]
         public string SubscriberId { get; set; }
 
         [Required]
-        public string SubscriptionActivatorId { get; set; }
+        public string? SubscriptionActivatorId { get; set; }
 
-        public DateTime SubscriptionStartDate { get; set; } = DateTime.UtcNow;
-        public DateTime SubscriptionEndDate { get; set; } = DateTime.UtcNow.AddMonths(1);
+        public DateTime? SubscriptionStartDate { get; set; }
+        public DateTime? SubscriptionEndDate { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }

@@ -11,7 +11,6 @@ namespace SabiMarket.Application.DTOs.Requests
     public class CreateSubscriptionDto
     {
         public decimal Amount { get; set; }
-        public string SGId { get; set; }
         //public string PaymentMethod { get; set; }
         public string ProofOfPayment { get; set; }
         public string SubscriberId { get; set; }
