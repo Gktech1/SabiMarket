@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IRepositories.SowFoodIRepositories;
-using SabiMarket.Domain.Entities.SowFoodLinkUp;
+
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
 
@@ -17,9 +17,9 @@ namespace SabiMarket.Infrastructure.Repositories.SowFoodLinkedRepositories
 
         public async Task<IEnumerable<SowFoodCompanyProductionItem>> GetAllCompanyProductionItemForExport(bool trackChanges) => await FindAll(trackChanges).ToListAsync();
 
-        public async Task<PaginatorDto<IEnumerable<SowFoodCompanyProductionItem>>> GetPagedCompanyProductionItem(PaginationFilter paginationFilter)
+        public async Task<PaginatorDto<IEnumerable<SowFoodCompanyProductionItem>>> GetPagedCompanyProductionItem(string itemId, string companyId, PaginationFilter paginationFilter)
         {
-            return await FindAll(false)
+            return await FindAll(false).Where(x => x.Id == itemId && x.SowFoodCompanyId == companyId)
                        .Paginate(paginationFilter);
         }
 

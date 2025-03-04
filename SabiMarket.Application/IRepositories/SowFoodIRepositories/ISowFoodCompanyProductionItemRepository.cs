@@ -1,5 +1,4 @@
 ﻿using SabiMarket.Application.DTOs;
-using SabiMarket.Domain.Entities.SowFoodLinkUp;
 
 namespace SabiMarket.Application.IRepositories.SowFoodIRepositories
 {
@@ -9,7 +8,7 @@ namespace SabiMarket.Application.IRepositories.SowFoodIRepositories
         void UpdateCompanyProductionItem(SowFoodCompanyProductionItem item);
         void DeleteCompanyProductionItem(SowFoodCompanyProductionItem item);
         Task<SowFoodCompanyProductionItem> GetCompanyProductionItemById(string id, string companyId, bool trackChanges);
-        Task<PaginatorDto<IEnumerable<SowFoodCompanyProductionItem>>> GetPagedCompanyProductionItem(PaginationFilter paginationFilter);
+        Task<PaginatorDto<IEnumerable<SowFoodCompanyProductionItem>>> GetPagedCompanyProductionItem(string itemId, string companyId, PaginationFilter paginationFilter);
         Task<PaginatorDto<IEnumerable<SowFoodCompanyProductionItem>>> SearchCompanyProductionItem(string searchString, PaginationFilter paginationFilter);
         Task<IEnumerable<SowFoodCompanyProductionItem>> GetAllCompanyProductionItemForExport(bool trackChanges);
     }

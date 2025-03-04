@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Application.IRepositories.SowFoodIRepositories;
-using SabiMarket.Domain.Entities.SowFoodLinkUp;
+
 using SabiMarket.Domain.Entities.WaiveMarketModule;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;

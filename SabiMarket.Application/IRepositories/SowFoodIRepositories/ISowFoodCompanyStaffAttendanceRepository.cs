@@ -1,5 +1,4 @@
 ﻿using SabiMarket.Application.DTOs;
-using SabiMarket.Domain.Entities.SowFoodLinkUp;
 
 namespace SabiMarket.Application.IRepositories.SowFoodIRepositories
 {

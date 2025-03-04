@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SabiMarket.Application.DTOs;
-using SabiMarket.Domain.Entities.SowFoodLinkUp;
+
 
 namespace SabiMarket.Application.IRepositories.SowFoodIRepositories
 {

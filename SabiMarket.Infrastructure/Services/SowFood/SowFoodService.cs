@@ -8,7 +8,7 @@ using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs.SowFoodDto;
 using SabiMarket.Application.IRepositories;
-using SabiMarket.Domain.Entities.SowFoodLinkUp;
+
 using SabiMarket.Domain.Entities.WaiveMarketModule;
 using SabiMarket.Domain.Exceptions;
 using SabiMarket.Infrastructure.Utilities;
@@ -245,7 +245,7 @@ namespace SabiMarket.Infrastructure.Services.SowFood
             try
             {
                 Log.Information("Starting UpdateCompanyProductionItem method");
-                var productionItem = await _repositoryManager.SowFoodCompanyProductionItemRepository.GetCompanyProductionItemById(dto.Id, dto.SowFoodCompanyId, true);
+                var productionItem = await _repositoryManager.SowFoodCompanyProductionItemRepository.GetCompanyProductionItemById(dto.ProductionItemId, dto.SowFoodCompanyId, true);
                 if (productionItem == null)
                 {
                     Log.Information("No record found for update");
@@ -253,10 +253,10 @@ namespace SabiMarket.Infrastructure.Services.SowFood
                 }
 
                 Log.Information("Updating production item");
-                productionItem.Name = dto.Name;
-                productionItem.Quantity = dto.Quantity;
+                productionItem.Name = dto.Name ?? productionItem.Name;
+                productionItem.Quantity = dto.Quantity != productionItem.Quantity ? dto.Quantity : productionItem.Quantity;
                 //productionItem.UnitPrice = dto.UnitPrice;
-                productionItem.ImageUrl = dto.ImageUrl;
+                productionItem.ImageUrl = dto.ImageUrl ?? productionItem.ImageUrl;
                 productionItem.UpdatedAt = DateTime.UtcNow;
 
                 await _repositoryManager.SaveChangesAsync();
@@ -296,7 +296,7 @@ namespace SabiMarket.Infrastructure.Services.SowFood
             }
         }
 
-        public async Task<BaseResponse<GetSowFoodCompanyProductionItemDto>> GetCompanyProductionItemById(string id, string companyId)
+        public async Task<BaseResponse<SowFoodCompanyProductionItem>> GetCompanyProductionItemById(string id, string companyId)
         {
             try
             {
@@ -305,11 +305,11 @@ namespace SabiMarket.Infrastructure.Services.SowFood
                 if (productionItem == null)
                 {
                     Log.Information("No record found");
-                    return ResponseFactory.Fail<GetSowFoodCompanyProductionItemDto>(new NotFoundException("No Record Found."), "Record not found.");
+                    return ResponseFactory.Fail<SowFoodCompanyProductionItem>(new NotFoundException("No Record Found."), "Record not found.");
                 }
 
                 Log.Information("Mapping production item details");
-                var productionItemDetails = new GetSowFoodCompanyProductionItemDto
+                var productionItemDetails = new SowFoodCompanyProductionItem
                 {
                     Id = productionItem.Id,
                     Name = productionItem.Name,
@@ -323,37 +323,29 @@ namespace SabiMarket.Infrastructure.Services.SowFood
             catch (Exception ex)
             {
                 Log.Information($"Error in GetCompanyProductionItemById: {ex.Message}");
-                return ResponseFactory.Fail<GetSowFoodCompanyProductionItemDto>(ex, "An error occurred while retrieving the production item.");
+                return ResponseFactory.Fail<SowFoodCompanyProductionItem>(ex, "An error occurred while retrieving the production item.");
             }
         }
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<GetSowFoodCompanyProductionItemDto>>>> GetCompanyProduction(string id, string companyId)
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<SowFoodCompanyProductionItem>>>> GetCompanyProductionItem(string id, string companyId, PaginationFilter filter)
         {
             try
             {
                 Log.Information("Fetching production item by ID");
-                var productionItem = await _repositoryManager.SowFoodCompanyProductionItemRepository.GetCompanyProductionItemById(id, companyId, false);
+                var productionItem = await _repositoryManager.SowFoodCompanyProductionItemRepository.GetPagedCompanyProductionItem(id, companyId, filter);
                 if (productionItem == null)
                 {
                     Log.Information("No record found");
-                    return ResponseFactory.Fail<GetSowFoodCompanyProductionItemDto>(new NotFoundException("No Record Found."), "Record not found.");
+                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<SowFoodCompanyProductionItem>>>(new NotFoundException("No Record Found."), "Record not found.");
                 }
 
                 Log.Information("Mapping production item details");
-                var productionItemDetails = new GetSowFoodCompanyProductionItemDto
-                {
-                    Id = productionItem.Id,
-                    Name = productionItem.Name,
-                    Quantity = productionItem.Quantity,
-                    //UnitPrice = productionItem.UnitPrice,
-                    ImageUrl = productionItem.ImageUrl
-                };
 
-                return ResponseFactory.Success(productionItemDetails);
+                return ResponseFactory.Success(productionItem);
             }
             catch (Exception ex)
             {
                 Log.Information($"Error in GetCompanyProductionItemById: {ex.Message}");
-                return ResponseFactory.Fail<GetSowFoodCompanyProductionItemDto>(ex, "An error occurred while retrieving the production item.");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<SowFoodCompanyProductionItem>>>(ex, "An error occurred while retrieving the production item.");
             }
         }
         #endregion
@@ -373,7 +365,6 @@ namespace SabiMarket.Infrastructure.Services.SowFood
                     UnitPrice = dto.UnitPrice,
                     SowFoodCompanyProductItemId = dto.SowFoodCompanyProductItemId ?? null,
                     SowFoodCompanyShelfItemId = dto.SowFoodCompanyShelfItemId ?? null,
-                    SowFoodCompanyCustomerId = dto.SowFoodCompanyCustomerId ?? null,
                     SowFoodCompanyStaffId = logInUser.Id
                 };
 
@@ -382,6 +373,7 @@ namespace SabiMarket.Infrastructure.Services.SowFood
                 if (!string.IsNullOrEmpty(dto.SowFoodCompanyShelfItemId))
                 {
                     Log.Information("Fetching shelf item with ID {ShelfItemId}", dto.SowFoodCompanyShelfItemId);
+                    var getCompanyDetails = _repositoryManager.SowFoodCompanyRepository.
                     var shelfItem = await _repositoryManager.SowFoodCompanyShelfItemRepository
                         .GetCompanyShelfItemById(dto.SowFoodCompanyShelfItemId, true);
 

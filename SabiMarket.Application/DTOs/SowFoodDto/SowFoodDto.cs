@@ -38,4 +38,30 @@ namespace SabiMarket.Application.DTOs.SowFoodDto
         public decimal Amount { get; set; }
     }
 
+    public class UpdateSowFoodCompanyProductionItemDto
+    {
+        public string ProductionItemId { get; set; }
+        public string SowFoodCompanyId { get; set; }
+        public string Name { get; set; }
+        public int Quantity { get; set; }
+        public string ImageUrl { get; set; }
+    }
+    public class CreateSowFoodCompanyProductionItemDto
+    {
+        public string SowFoodCompanyId { get; set; }
+        public string Name { get; set; }
+        public int Quantity { get; set; }
+        public string ImageUrl { get; set; }
+    }
+    public class CreateSowFoodCompanySalesRecordDto
+    {
+        public int Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public string? SowFoodCompanyProductItemId { get; set; }
+        public string? SowFoodCompanyShelfItemId { get; set; }
+        public string? SowFoodCompanyCustomerId { get; set; }
+
+    }
+
+
 }
