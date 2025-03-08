@@ -1,5 +1,7 @@
-﻿using SabiMarket.Application.IRepositories;
+﻿using SabiMarket.Application.DTOs.Responses;
+using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities;
+using SabiMarket.Domain.Enum;
 
 public interface IReportRepository : IGeneralRepository<Report>
 {
@@ -10,4 +12,10 @@ public interface IReportRepository : IGeneralRepository<Report>
     Task<Report> GetMarketComplianceRates(string marketId);
     Task<IEnumerable<Report>> GetLevyCollectionPerMarket();
     Task<Report> ExportReport(DateTime startDate, DateTime endDate);
+    Task<DashboardReportDto> GetDashboardReportDataAsync(
+          string lgaFilter = null,
+          string marketFilter = null,
+          int? year = null,
+          TimeFrame timeFrame = TimeFrame.ThisWeek);
+    Task<FilterOptionsDto> GetFilterOptionsAsync();
 }
