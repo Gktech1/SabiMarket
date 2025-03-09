@@ -295,7 +295,7 @@ namespace SabiMarket.Infrastructure.Services
                             BusinessAddress = request.Address,
                             BusinessDescription = request.VendorDetails.BusinessDescription,
                             VendorCode = $"V-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
-                            Type = request.VendorDetails.VendorTypeEnum,
+                            Type = request.VendorDetails.VendorTypeEnum ?? VendorTypeEnum.Other, // Replace with appropriate default,
                             IsVerified = false,
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow
