@@ -189,7 +189,7 @@ namespace SabiMarket.Infrastructure.Repositories
                     MarketName = market.MarketName,
                     Location = market.Location,
                     TotalTraders = market.TotalTraders,
-                    Revenue = marketPayments.Sum(p => p.Amount) < 0 ?? marketDetails.TotalRevenue,
+                    Revenue = marketPayments.Sum(p => p.Amount),
                     ComplianceRate = market.ComplianceRate,
                     TransactionCount = marketPayments.Count
                 };
