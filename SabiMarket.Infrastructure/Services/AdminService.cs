@@ -22,6 +22,8 @@ using FluentValidation.Results;
 using Azure.Core;
 using CloudinaryDotNet.Actions;
 using Microsoft.EntityFrameworkCore;
+using SabiMarket.Domain.Enum;
+using SabiMarket.Infrastructure.Repositories;
 
 public class AdminService : IAdminService
 {
@@ -338,6 +340,48 @@ public class AdminService : IAdminService
                 ex, "An unexpected error occurred");
         }
     }
+
+    public async Task<BaseResponse<DashboardReportDto>> GetDashboardReportDataAsync(
+          string lgaFilter = null,
+          string marketFilter = null,
+          int? year = null,
+          TimeFrame timeFrame = TimeFrame.ThisWeek)
+    {
+        var correlationId = Guid.NewGuid().ToString();
+        try
+        {
+            await CreateAuditLog(
+                "Dashboard Data Request",
+                $"CorrelationId: {correlationId} - Fetching dashboard data with filters: LGA={lgaFilter}, Market={marketFilter}, Year={year}, TimeFrame={timeFrame}",
+            "Dashboard Management"
+            );
+
+            var dashboardData = await _repository.ReportRepository.GetDashboardReportDataAsync(
+                lgaFilter,
+                marketFilter,
+                year,
+                timeFrame);
+
+            await CreateAuditLog(
+                "Dashboard Data Retrieved",
+                $"CorrelationId: {correlationId} - Dashboard data retrieved successfully",
+                "Dashboard Management"
+            );
+
+            return ResponseFactory.Success(dashboardData, "Dashboard data retrieved successfully");
+        }
+        catch (Exception ex)
+        {
+            await CreateAuditLog(
+                "Dashboard Data Request Failed",
+                $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                "Dashboard Management"
+            );
+
+            return ResponseFactory.Fail<DashboardReportDto>(ex, "An unexpected error occurred while retrieving dashboard data");
+        }
+    }
+
 
     public async Task<BaseResponse<AdminDashboardStatsDto>> GetDashboardStats(string adminId)
     {
@@ -1227,22 +1271,22 @@ public class AdminService : IAdminService
             }
 
             // Update other role properties
-          /*  if (role.Name != updateRoleDto.Name)
-            {
-                if (await _repository.AdminRepository.RoleExistsAsync(updateRoleDto.Name, roleId))
-                {
-                    await CreateAuditLog(
-                        "Role Update Failed",
-                        $"Role name already exists: {updateRoleDto.Name}",
-                        "Role Management"
-                    );
-                    return ResponseFactory.Fail<RoleResponseDto>("Role name already exists");
-                }
+            /*  if (role.Name != updateRoleDto.Name)
+              {
+                  if (await _repository.AdminRepository.RoleExistsAsync(updateRoleDto.Name, roleId))
+                  {
+                      await CreateAuditLog(
+                          "Role Update Failed",
+                          $"Role name already exists: {updateRoleDto.Name}",
+                          "Role Management"
+                      );
+                      return ResponseFactory.Fail<RoleResponseDto>("Role name already exists");
+                  }
 
-                changes.Add($"Name: {role.Name} → {updateRoleDto.Name}");
-                role.Name = updateRoleDto.Name;
-                role.NormalizedName = updateRoleDto.Name.ToUpper();
-            }*/
+                  changes.Add($"Name: {role.Name} → {updateRoleDto.Name}");
+                  role.Name = updateRoleDto.Name;
+                  role.NormalizedName = updateRoleDto.Name.ToUpper();
+              }*/
 
             // Update description if changed
             if (role.Description != updateRoleDto.Description)
@@ -1276,7 +1320,7 @@ public class AdminService : IAdminService
             var responseDto = _mapper.Map<RoleResponseDto>(role);
             return ResponseFactory.Success(responseDto, changes.Any()
                 ? "Role updated successfully"
-                : "No changes were made to role");           
+                : "No changes were made to role");
         }
         catch (Exception ex)
         {
@@ -1284,93 +1328,93 @@ public class AdminService : IAdminService
             return ResponseFactory.Fail<RoleResponseDto>(ex, "An unexpected error occurred");
         }
     }
-   /* public async Task<BaseResponse<RoleResponseDto>> UpdateRole(string roleId, UpdateRoleRequestDto updateRoleDto)
-    {
-        try
-        {
-            var validationResult = await _updateRoleValidator.ValidateAsync(updateRoleDto);
-            if (!validationResult.IsValid)
-            {
-                await CreateAuditLog(
-                    "Role Update Failed",
-                    $"Validation failed for role update ID: {roleId}",
-                    "Role Management"
-                );
-                return ResponseFactory.Fail<RoleResponseDto>(
-                    new ValidationException(validationResult.Errors),
-                    "Validation failed");
-            }
+    /* public async Task<BaseResponse<RoleResponseDto>> UpdateRole(string roleId, UpdateRoleRequestDto updateRoleDto)
+     {
+         try
+         {
+             var validationResult = await _updateRoleValidator.ValidateAsync(updateRoleDto);
+             if (!validationResult.IsValid)
+             {
+                 await CreateAuditLog(
+                     "Role Update Failed",
+                     $"Validation failed for role update ID: {roleId}",
+                     "Role Management"
+                 );
+                 return ResponseFactory.Fail<RoleResponseDto>(
+                     new ValidationException(validationResult.Errors),
+                     "Validation failed");
+             }
 
-            var role = await _repository.AdminRepository.GetRoleByIdAsync(roleId, trackChanges: true);
-            if (role == null)
-            {
-                await CreateAuditLog(
-                    "Role Update Failed",
-                    $"Role not found for ID: {roleId}",
-                    "Role Management"
-                );
-                return ResponseFactory.Fail<RoleResponseDto>(
-                    new NotFoundException("Role not found"),
-                    "Role not found");
-            }
+             var role = await _repository.AdminRepository.GetRoleByIdAsync(roleId, trackChanges: true);
+             if (role == null)
+             {
+                 await CreateAuditLog(
+                     "Role Update Failed",
+                     $"Role not found for ID: {roleId}",
+                     "Role Management"
+                 );
+                 return ResponseFactory.Fail<RoleResponseDto>(
+                     new NotFoundException("Role not found"),
+                     "Role not found");
+             }
 
-            // Check for duplicate name
-            if (await _repository.AdminRepository.RoleExistsAsync(updateRoleDto.Name, roleId))
-            {
-                await CreateAuditLog(
-                    "Role Update Failed",
-                    $"Role name already exists: {updateRoleDto.Name}",
-                    "Role Management"
-                );
-                return ResponseFactory.Fail<RoleResponseDto>("Role name already exists");
-            }
+             // Check for duplicate name
+             if (await _repository.AdminRepository.RoleExistsAsync(updateRoleDto.Name, roleId))
+             {
+                 await CreateAuditLog(
+                     "Role Update Failed",
+                     $"Role name already exists: {updateRoleDto.Name}",
+                     "Role Management"
+                 );
+                 return ResponseFactory.Fail<RoleResponseDto>("Role name already exists");
+             }
 
-            // Track changes for audit
-            var originalPermissions = role.Permissions.Select(p => p.Name).ToList();
-            var addedPermissions = updateRoleDto.Permissions.Except(originalPermissions).ToList();
-            var removedPermissions = originalPermissions.Except(updateRoleDto.Permissions).ToList();
+             // Track changes for audit
+             var originalPermissions = role.Permissions.Select(p => p.Name).ToList();
+             var addedPermissions = updateRoleDto.Permissions.Except(originalPermissions).ToList();
+             var removedPermissions = originalPermissions.Except(updateRoleDto.Permissions).ToList();
 
-            // Update role properties
-            role.Name = updateRoleDto.Name;
-            role.NormalizedName = updateRoleDto.Name.ToUpper();
-            role.LastModifiedBy = _currentUser.GetUserId();
-            role.LastModifiedAt = DateTime.UtcNow;
+             // Update role properties
+             role.Name = updateRoleDto.Name;
+             role.NormalizedName = updateRoleDto.Name.ToUpper();
+             role.LastModifiedBy = _currentUser.GetUserId();
+             role.LastModifiedAt = DateTime.UtcNow;
 
-            // Update permissions
-            role.Permissions.Clear();
-            role.Permissions = updateRoleDto.Permissions.Select(p => new RolePermission
-            {
-                Id = Guid.NewGuid().ToString(),
-                Name = p,
-                RoleId = roleId,  // Add this line to set the RoleId
-                IsGranted = true
-            }).ToList();
+             // Update permissions
+             role.Permissions.Clear();
+             role.Permissions = updateRoleDto.Permissions.Select(p => new RolePermission
+             {
+                 Id = Guid.NewGuid().ToString(),
+                 Name = p,
+                 RoleId = roleId,  // Add this line to set the RoleId
+                 IsGranted = true
+             }).ToList();
 
-            _repository.AdminRepository.UpdateRole(role);
-            await _repository.SaveChangesAsync();
+             _repository.AdminRepository.UpdateRole(role);
+             await _repository.SaveChangesAsync();
 
-            var changes = new List<string>();
-            if (addedPermissions.Any())
-                changes.Add($"Added permissions: {string.Join(", ", addedPermissions)}");
-            if (removedPermissions.Any())
-                changes.Add($"Removed permissions: {string.Join(", ", removedPermissions)}");
+             var changes = new List<string>();
+             if (addedPermissions.Any())
+                 changes.Add($"Added permissions: {string.Join(", ", addedPermissions)}");
+             if (removedPermissions.Any())
+                 changes.Add($"Removed permissions: {string.Join(", ", removedPermissions)}");
 
-            await CreateAuditLog(
-                "Updated Role",
-                $"Updated role {role.Name}. Changes: {string.Join("; ", changes)}",
-                "Role Management"
-            );
+             await CreateAuditLog(
+                 "Updated Role",
+                 $"Updated role {role.Name}. Changes: {string.Join("; ", changes)}",
+                 "Role Management"
+             );
 
-            var responseDto = _mapper.Map<RoleResponseDto>(role);
-            return ResponseFactory.Success(responseDto, "Role updated successfully");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating role");
-            return ResponseFactory.Fail<RoleResponseDto>(ex, "An unexpected error occurred");
-        }
-    }
-*/
+             var responseDto = _mapper.Map<RoleResponseDto>(role);
+             return ResponseFactory.Success(responseDto, "Role updated successfully");
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error updating role");
+             return ResponseFactory.Fail<RoleResponseDto>(ex, "An unexpected error occurred");
+         }
+     }
+ */
     public async Task<BaseResponse<bool>> DeleteRole(string roleId)
     {
         try
@@ -1481,7 +1525,7 @@ public class AdminService : IAdminService
                 Email = requestDto.EmailAddress,
                 PhoneNumber = requestDto.PhoneNumber,
                 NormalizedUserName = requestDto.EmailAddress,
-                NormalizedEmail = requestDto.EmailAddress,  
+                NormalizedEmail = requestDto.EmailAddress,
                 FirstName = requestDto.FullName.Split(' ')[0],
                 LastName = requestDto.FullName.Contains(" ") ?
                     string.Join(" ", requestDto.FullName.Split(' ').Skip(1)) : "",

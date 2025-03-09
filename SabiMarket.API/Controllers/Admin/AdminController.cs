@@ -5,6 +5,7 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
+using SabiMarket.Application.Extensions;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -139,6 +140,32 @@ public class AdminController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("admindasboardreport")]
+    [ProducesResponseType(typeof(BaseResponse<DashboardReportDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<DashboardReportDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetDashboardReport(
+           [FromQuery] string lgaFilter = null,
+           [FromQuery] string marketFilter = null,
+           [FromQuery] int? year = null,
+           [FromQuery] string timeFrameStr = "This week")
+    {
+        // Convert string timeFrame to enum
+        var timeFrame = timeFrameStr.ToTimeFrame();
+
+        var response = await _adminService.GetDashboardReportDataAsync(
+            lgaFilter,
+            marketFilter,
+            year,
+            timeFrame);
+
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+
+        return Ok(response);
+    }
+
     [HttpGet("{adminId}/audit-logs")]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<AuditLogResponseDto>>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<AuditLogResponseDto>>>), StatusCodes.Status403Forbidden)]
@@ -171,7 +198,7 @@ public class AdminController : ControllerBase
         }
         return Ok(response);
     }
-    
+
     /// <summary>
     /// Retrieves a paginated list of roles with optional filtering
     /// </summary>
@@ -188,18 +215,18 @@ public class AdminController : ControllerBase
         [FromQuery] RoleFilterRequestDto filter,
         [FromQuery] PaginationFilter pagination)
     {
-            _logger.LogInformation("Getting roles with filter: {@Filter}, pagination: {@Pagination}",
-                filter, pagination);
+        _logger.LogInformation("Getting roles with filter: {@Filter}, pagination: {@Pagination}",
+            filter, pagination);
 
-            var response = await _adminService.GetRoles(filter, pagination);
+        var response = await _adminService.GetRoles(filter, pagination);
 
-            if (!response.IsSuccessful)
-            {
-                _logger.LogWarning("Failed to get roles: {ErrorMessage}", response.Message);
-                return StatusCode(response.Error.StatusCode, response);
-            }
+        if (!response.IsSuccessful)
+        {
+            _logger.LogWarning("Failed to get roles: {ErrorMessage}", response.Message);
+            return StatusCode(response.Error.StatusCode, response);
+        }
 
-            return Ok(response);
+        return Ok(response);
     }
 
     [HttpPost("create-roles")]
