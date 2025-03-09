@@ -54,6 +54,7 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<SowFoodCompanyStaffAttendance> SowFoodStaffAttendances { get; set; }
         public DbSet<SowFoodCompany> SowFoodCompanies { get; set; }
         public DbSet<CustomerPurchase> CustomerPurchases { get; set; }
+        //public DbSet<Report> Reports { get; set; }
 
         #endregion
 
