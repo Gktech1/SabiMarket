@@ -454,6 +454,35 @@ public class MappingProfile : Profile
                 src.LevyPayments.OrderByDescending(p => p.PaymentDate).FirstOrDefault().PaymentDate))
             .ForMember(dest => dest.LevyPayments, opt => opt.MapFrom(src => src.LevyPayments));
 
+        CreateMap<Market, MarketDetailsDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.MarketName))
+            .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.TotalTraders, opt => opt.MapFrom(src => src.TotalTraders))
+            .ForMember(dest => dest.Capacity, opt => opt.MapFrom(src => src.Capacity))
+            .ForMember(dest => dest.ContactPhone, opt => opt.Ignore()) // Not in source entity
+            .ForMember(dest => dest.ContactEmail, opt => opt.Ignore()) // Not in source entity
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+            .ForMember(dest => dest.TotalRevenue, opt => opt.MapFrom(src => src.TotalRevenue))
+            .ForMember(dest => dest.ComplianceRate, opt => opt.MapFrom(src => src.ComplianceRate))
+            .ForMember(dest => dest.Caretakers, opt => opt.MapFrom((src, dest, _, context) => {
+                // If there's a caretaker, add it to the collection
+                if (src.Caretaker != null)
+                {
+                    return new List<CaretakerResponseDto> { context.Mapper.Map<CaretakerResponseDto>(src.Caretaker) };
+                }
+                return new List<CaretakerResponseDto>();
+            }))
+            .ForMember(dest => dest.Traders, opt => opt.MapFrom(src => src.Traders));
+
+        // Make sure you also have this mapping for the Caretaker entity
+        CreateMap<Caretaker, CaretakerResponseDto>();
+
+        // And this mapping for the Trader entity
+        CreateMap<Trader, TraderResponseDto>();
+
         CreateMap<CreateGoodBoyRequestDto, ApplicationUser>()
            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
@@ -461,12 +490,6 @@ public class MappingProfile : Profile
 
         CreateMap<CreateGoodBoyRequestDto, GoodBoy>()
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => StatusEnum.Unlocked));
-
-        CreateMap<Market, MarketDetailsDto>()
-            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.MarketName))
-            .ForMember(dest => dest.Caretakers, opt => opt.MapFrom(src => src.Caretaker != null ?
-                new List<Caretaker> { src.Caretaker } : new List<Caretaker>()))
-            .ForMember(dest => dest.Traders, opt => opt.MapFrom(src => src.Traders));
 
         CreateMap<GoodBoy, GoodBoyResponseDto>()
             .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))

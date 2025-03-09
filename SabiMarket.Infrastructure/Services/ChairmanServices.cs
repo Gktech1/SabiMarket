@@ -655,6 +655,7 @@ namespace SabiMarket.Infrastructure.Services
                 market.MarketCapacity = 0;
                 market.ChairmanId = chairman.Id;
 
+
                 // Save Market
                 _repository.MarketRepository.AddMarket(market);
                 await _repository.SaveChangesAsync();
