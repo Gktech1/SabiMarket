@@ -178,7 +178,7 @@ public class ChairmanController : ControllerBase
 
     [HttpPost("levy-setup")]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), statusCode: StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ConfigureLevySetup([FromBody] LevySetupRequestDto request)
     {

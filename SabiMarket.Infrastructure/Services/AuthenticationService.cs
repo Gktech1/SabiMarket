@@ -286,14 +286,6 @@ namespace SabiMarket.Infrastructure.Services
                 switch (request.Role.ToUpper())
                 {
                     case "VENDOR":
-                        if (request.VendorDetails == null)
-                        {
-                            await _userManager.DeleteAsync(user);
-                            return ResponseFactory.Fail<RegistrationResponseDto>(
-                                new BadRequestException("Vendor details are required"),
-                                "Missing vendor information");
-                        }
-
                         var vendor = new Vendor
                         {
                             Id = Guid.NewGuid().ToString(),
@@ -313,14 +305,6 @@ namespace SabiMarket.Infrastructure.Services
                         break;
 
                     case "CUSTOMER":
-                        if (request.CustomerDetails == null)
-                        {
-                            await _userManager.DeleteAsync(user);
-                            return ResponseFactory.Fail<RegistrationResponseDto>(
-                                new BadRequestException("Customer details are required"),
-                                "Missing customer information");
-                        }
-
                         var customer = new Customer
                         {
                             Id = Guid.NewGuid().ToString(),
@@ -335,13 +319,6 @@ namespace SabiMarket.Infrastructure.Services
                         break;
 
                     case "ADVERTISER":
-                        if (request.AdvertiserDetails == null)
-                        {
-                            await _userManager.DeleteAsync(user);
-                            return ResponseFactory.Fail<RegistrationResponseDto>(
-                                new BadRequestException("Advertiser details are required"),
-                                "Missing advertiser information");
-                        }
 
                         var advertisement = new Advertisement
                         {
@@ -398,208 +375,6 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        /*  public async Task<BaseResponse<RegistrationResponseDto>> RegisterAsync(RegistrationRequestDto request)
-          {
-              try
-              {
-                  // Validate email format using regex
-                  var emailPattern = @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
-                  if (!Regex.IsMatch(request.Email, emailPattern))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Invalid email format"),
-                          "Please provide a valid email address");
-                  }
-
-                  // Validate password strength
-                  if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Password must be at least 8 characters long"),
-                          "Invalid password");
-                  }
-
-               *//*   if (!request.Password.Any(char.IsUpper))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Password must contain at least one uppercase letter"),
-                          "Invalid password");
-                  }
-
-                  if (!request.Password.Any(char.IsLower))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Password must contain at least one lowercase letter"),
-                          "Invalid password");
-                  }
-
-                  if (!request.Password.Any(char.IsDigit))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Password must contain at least one number"),
-                          "Invalid password");
-                  }
-
-                  if (!request.Password.Any(ch => !char.IsLetterOrDigit(ch)))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Password must contain at least one special character"),
-                          "Invalid password");
-                  }
-
-                  // Check if email already exists
-                  var existingUser = await _userManager.FindByEmailAsync(request.Email);
-                  if (existingUser != null)
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Email already registered"),
-                          "Email exists");
-                  }*//*
-
-                  // Rest of your existing code...
-                  if (!await _roleManager.RoleExistsAsync(request.Role.ToUpper()))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Invalid role specified"),
-                          "Invalid role");
-                  }
-
-                  var user = new ApplicationUser
-                  {
-                      Id = Guid.NewGuid().ToString(),
-                      UserName = request.Email,
-                      Email = request.Email,
-                      FirstName = request.FirstName,
-                      LastName = request.LastName,
-                      PhoneNumber = request.PhoneNumber,
-                      Address = request.Address,
-                      ProfileImageUrl = request.ProfileImageUrl ?? "",
-                      IsActive = true,
-                      EmailConfirmed = true,
-                      CreatedAt = DateTime.UtcNow,
-                  };
-
-                  var result = await _userManager.CreateAsync(user, request.Password);
-                  if (!result.Succeeded)
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description))),
-                          "User creation failed");
-                  }
-
-                  var roleResult = await _userManager.AddToRoleAsync(user, request.Role.ToUpper());
-                  if (!roleResult.Succeeded)
-                  {
-                      await _userManager.DeleteAsync(user);
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Failed to assign role"),
-                          "Role assignment failed");
-                  }
-
-                  var response = new RegistrationResponseDto
-                  {
-                      UserId = user.Id,
-                      Email = user.Email,
-                      Role = request.Role,
-                      Message = "Registration successful. You can now log in",
-                      RequiresApproval = RequiresApproval(request.Role)
-                  };
-
-                  return ResponseFactory.Success(response, "Registration successful");
-              }
-              catch (Exception ex)
-              {
-                  _logger.LogError(ex, "Registration failed for email: {Email}", request.Email);
-                  return ResponseFactory.Fail<RegistrationResponseDto>(
-                      new BadRequestException("An unexpected error occurred during registration"),
-                      "Registration failed");
-              }
-          }
-  */
-        /* public async Task<BaseResponse<RegistrationResponseDto>> RegisterAsync(RegistrationRequestDto request)
-         {
-             try
-             {
-                 // Validate request using FluentValidation
-              *//*   var validationResult = await _registrationValidator.ValidateAsync(request);
-                 if (!validationResult.IsValid)
-                 {
-                     return ResponseFactory.Fail<RegistrationResponseDto>(
-                         new FluentValidation.ValidationException(validationResult.Errors),
-                         "Validation failed");
-                 }*//*
-
-                 // Check if email already exists
-                 var existingUser = await _userManager.FindByEmailAsync(request.Email);
-                 if (existingUser != null)
-                 {
-                     return ResponseFactory.Fail<RegistrationResponseDto>(
-                         new BadRequestException("Email already registered"),
-                         "Email exists");
-                 }
-
-                 // Validate role
-                 if (!await _roleManager.RoleExistsAsync(request.Role.ToUpper()))
-                 {
-                     return ResponseFactory.Fail<RegistrationResponseDto>(
-                         new BadRequestException("Invalid role specified"),
-                         "Invalid role");
-                 }
-
-                 // Create base user
-                 var user = new ApplicationUser
-                 {
-                     Id = Guid.NewGuid().ToString(),
-                     UserName = request.Email,
-                     Email = request.Email,
-                     FirstName = request.FirstName,
-                     LastName = request.LastName,
-                     PhoneNumber = request.PhoneNumber,
-                     Address = request.Address,
-                     ProfileImageUrl = request.ProfileImageUrl ?? "",
-                     IsActive = true,
-                     EmailConfirmed = true,
-                     CreatedAt = DateTime.UtcNow
-                 };
-                 // Create user
-                 var result = await _userManager.CreateAsync(user, request.Password);
-                 if (!result.Succeeded)
-                 {
-                     return ResponseFactory.Fail<RegistrationResponseDto>(
-                         new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description))),
-                         "User creation failed");
-                 }
-
-                 // Assign role
-                 var roleResult = await _userManager.AddToRoleAsync(user, request.Role.ToUpper());
-                 if (!roleResult.Succeeded)
-                 {
-                     await _userManager.DeleteAsync(user);
-                     return ResponseFactory.Fail<RegistrationResponseDto>(
-                         new BadRequestException("Failed to assign role"),
-                         "Role assignment failed");
-                 }
-
-                 var response = new RegistrationResponseDto
-                 {
-                     UserId = user.Id,
-                     Email = user.Email,
-                     Role = request.Role,
-                     Message = "Registration successful. You can now log in",
-                     RequiresApproval = RequiresApproval(request.Role)
-                 };
-
-                 return ResponseFactory.Success(response, "Registration successful");
-             }
-             catch (Exception ex)
-             {
-                 _logger.LogError(ex, "Registration failed for email: {Email}", request.Email);
-                 return ResponseFactory.Fail<RegistrationResponseDto>(
-                     new BadRequestException("An unexpected error occurred during registration"),
-                     "Registration failed");
-             }
-         }
- */
         private bool RequiresApproval(string role)
         {
             return role.ToUpper() switch

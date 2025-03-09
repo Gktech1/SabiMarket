@@ -462,6 +462,12 @@ public class MappingProfile : Profile
         CreateMap<CreateGoodBoyRequestDto, GoodBoy>()
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => StatusEnum.Unlocked));
 
+        CreateMap<Market, MarketDetailsDto>()
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.MarketName))
+            .ForMember(dest => dest.Caretakers, opt => opt.MapFrom(src => src.Caretaker != null ?
+                new List<Caretaker> { src.Caretaker } : new List<Caretaker>()))
+            .ForMember(dest => dest.Traders, opt => opt.MapFrom(src => src.Traders));
+
         CreateMap<GoodBoy, GoodBoyResponseDto>()
             .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
             .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
@@ -511,7 +517,7 @@ public class MappingProfile : Profile
                .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
                .ForMember(dest => dest.ChairmanId, opt => opt.MapFrom(src => src.Id));
 
-        CreateMap<Market, MarketDetailsDto>()
+        /*CreateMap<Market, MarketDetailsDto>()
            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.MarketName))
            .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
@@ -523,7 +529,7 @@ public class MappingProfile : Profile
            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
            .ForMember(dest => dest.TotalRevenue, opt => opt.MapFrom(src => src.TotalRevenue))
-           .ForMember(dest => dest.ComplianceRate, opt => opt.MapFrom(src => src.ComplianceRate));
+           .ForMember(dest => dest.ComplianceRate, opt => opt.MapFrom(src => src.ComplianceRate));*/
 
         CreateMap<LocalGovernment, LGAResponseDto>()
                    .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))

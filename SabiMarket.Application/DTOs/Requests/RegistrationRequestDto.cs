@@ -29,7 +29,7 @@ namespace SabiMarket.Application.DTOs.Requests
     public class VendorDetailsDto
     {
         public string BusinessName { get; set; }
-        public string BusinessType { get; set; }
+        public string? BusinessType { get; set; }
         public string BusinessDescription { get; set; }
         public string LocalGovernmentId { get; set; }
         public string? Currency { get; set; }
