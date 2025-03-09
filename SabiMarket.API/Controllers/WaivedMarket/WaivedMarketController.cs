@@ -96,6 +96,24 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
+        [HttpPut("DeleteWaivedProducts")]
+        public async Task<IActionResult> DeleteWaivedProducts(string waiveProductId)
+        {
+            var response = await _serviceManager.IWaivedProductService.DeleteProduct(waiveProductId);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
         [HttpPost("UploadFile")]
         public async Task<IActionResult> UploadFiles(IFormFile file)
         {

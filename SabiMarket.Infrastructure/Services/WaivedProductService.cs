@@ -227,6 +227,18 @@ public class WaivedProductService : IWaivedProductService
         return ResponseFactory.Success("Success");
 
     }
+    public async Task<BaseResponse<string>> DeleteProduct(string waiveProductId)
+    {
+        var product = await _repositoryManager.WaivedProductRepository.GetWaivedProductById(waiveProductId, false);
+        if (product == null)
+        {
+            return ResponseFactory.Fail<string>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+        _applicationDbContext.WaivedProducts.Remove(product);
+        await _repositoryManager.SaveChangesAsync();
+        return ResponseFactory.Success("Product deleted successfully.");
+
+    }
 
     public async Task<BaseResponse<PaginatorDto<IEnumerable<Vendor>>>> GetVendorAndProducts(PaginationFilter filter)
     {
