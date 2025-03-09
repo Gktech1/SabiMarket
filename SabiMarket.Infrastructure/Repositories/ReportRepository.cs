@@ -109,6 +109,172 @@ namespace SabiMarket.Infrastructure.Repositories
             };
         }
 
+        public async Task<Report> ExportAdminReport(
+    DateTime startDate,
+    DateTime endDate,
+    string marketId = null,
+    string lgaId = null,
+    string timeZone = "UTC")
+        {
+            // Start with base query for levy payments within date range
+            var query = _context.LevyPayments
+                .Where(lp => lp.PaymentDate >= startDate && lp.PaymentDate <= endDate);
+
+            // Add market filter if specified
+            if (!string.IsNullOrEmpty(marketId))
+            {
+                query = query.Where(lp => lp.MarketId == marketId);
+            }
+
+            // Add LGA filter if specified
+            if (!string.IsNullOrEmpty(lgaId) && lgaId != "string")
+            {
+                query = query.Where(lp => lp.Market.LocalGovernmentId == lgaId);
+            }
+
+            // Get filtered market query
+            var marketQuery = _context.Markets.AsQueryable();
+            if (!string.IsNullOrEmpty(marketId))
+            {
+                marketQuery = marketQuery.Where(m => m.Id == marketId);
+            }
+            if (!string.IsNullOrEmpty(lgaId) && lgaId != "string")
+            {
+                marketQuery = marketQuery.Where(m => m.LocalGovernmentId == lgaId);
+            }
+
+            // Fetch complete market details
+            var marketDetails = await marketQuery
+                .Select(m => new
+                {
+                    MarketId = m.Id,
+                    MarketName = m.MarketName, // Using MarketName from your entity
+                    Location = m.Location,
+                    TotalTraders = m.TotalTraders, // Using the properties that already exist in your entity
+                    CompliantTraders = m.CompliantTraders,
+                    ComplianceRate = m.ComplianceRate,
+                    Revenue = query.Where(lp => lp.MarketId == m.Id).Sum(lp => lp.Amount), // Calculate revenue for date range
+                    Transactions = query.Count(lp => lp.MarketId == m.Id)
+                })
+                .ToListAsync();
+
+            // Get total revenue from all matching payments
+            var totalRevenue = await query.SumAsync(lp => lp.Amount);
+
+            // Get total transaction count
+            var totalTransactions = await query.CountAsync();
+
+            // Get trader statistics from Markets
+            var totalTraders = marketDetails.Sum(m => m.TotalTraders);
+            var compliantTraders = marketDetails.Sum(m => m.CompliantTraders);
+            var averageComplianceRate = totalTraders > 0
+                ? (decimal)compliantTraders / totalTraders * 100
+                : 0;
+
+            // Calculate average daily revenue
+            var dayCount = Math.Max(1, (endDate - startDate).Days + 1);
+            var dailyAverage = totalRevenue / dayCount;
+
+            // Get monthly revenue data for charts
+            var monthlyData = await query
+                .GroupBy(lp => new {
+                    lp.MarketId,
+                    MarketName = lp.Market.MarketName,
+                    Year = lp.PaymentDate.Year,
+                    Month = lp.PaymentDate.Month
+                })
+                .Select(g => new {
+                    g.Key.MarketId,
+                    g.Key.MarketName,
+                    g.Key.Year,
+                    g.Key.Month,
+                    Revenue = g.Sum(lp => lp.Amount),
+                    Transactions = g.Count()
+                })
+                .ToListAsync();
+
+            // Build the report
+            var report = new Report
+            {
+                MarketCount = marketDetails.Count,
+                TotalRevenueGenerated = totalRevenue,
+                ReportDate = DateTime.UtcNow,
+                StartDate = startDate,
+                EndDate = endDate,
+                PaymentTransactions = totalTransactions,
+                TotalTraders = totalTraders,
+                CompliantTraders = compliantTraders,
+                ComplianceRate = averageComplianceRate,
+                DailyAverageRevenue = dailyAverage
+            };
+
+            // Get payment methods breakdown
+            var paymentMethods = await query
+                .GroupBy(lp => lp.PaymentMethod)
+                .Select(g => new { Method = g.Key, Amount = g.Sum(lp => lp.Amount) })
+                .ToListAsync();
+
+            // Convert enum values to readable strings
+            var paymentMethodDictionary = new Dictionary<string, decimal>();
+            foreach (var pm in paymentMethods)
+            {
+                string methodName;
+                if (Enum.IsDefined(typeof(PaymentMethodEnum), pm.Method))
+                {
+                    methodName = Enum.GetName(typeof(PaymentMethodEnum), pm.Method);
+                }
+                else
+                {
+                    methodName = "Unknown";
+                }
+
+                paymentMethodDictionary[methodName] = pm.Amount;
+            }
+
+            // Assign to report
+            report.RevenueByPaymentMethod = paymentMethodDictionary;
+
+            // Add market details and monthly revenue collections to the report
+            // (You'll need to make sure these properties exist on your Report class)
+            report.MarketDetails = marketDetails.Select(m => new MarketDetail
+            {
+                MarketId = m.MarketId,
+                MarketName = m.MarketName,
+                Location = m.Location,
+                TotalTraders = m.TotalTraders,
+                Revenue = m.Revenue,
+                ComplianceRate = m.ComplianceRate,
+                TransactionCount = m.Transactions
+            }).ToList();
+
+            report.MonthlyRevenueData = monthlyData.Select(md => new MonthlyRevenue
+            {
+                MarketId = md.MarketId,
+                MarketName = md.MarketName,
+                Year = md.Year,
+                Month = md.Month,
+                Revenue = md.Revenue,
+                TransactionCount = md.Transactions
+            }).ToList();
+
+            // Handle timezone conversion
+            if (timeZone != "UTC" && timeZone != "string")
+            {
+                try
+                {
+                    var timezone = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
+                    report.ReportDate = TimeZoneInfo.ConvertTimeFromUtc(report.ReportDate, timezone);
+                }
+                catch (Exception ex)
+                {
+                    // Handle timezone exception - just keep UTC
+                    System.Diagnostics.Debug.WriteLine($"Error converting timezone: {ex.Message}");
+                }
+            }
+
+            return report;
+        }
+
         public async Task<DashboardReportDto> GetDashboardReportDataAsync(
            string lgaFilter = null,
            string marketFilter = null,
@@ -485,6 +651,110 @@ namespace SabiMarket.Infrastructure.Repositories
                 })
                 .ToListAsync();
         }
+
+        // Update the repository method to accept all filter parameters
+  /*      public async Task<Report> ExportAdminReport(
+            DateTime startDate,
+            DateTime endDate,
+            string marketId = null,
+            string lgaId = null,
+            string timeZone = "UTC")
+        {
+            // Start with base query for levy payments within date range
+            var query = _context.LevyPayments
+                .Where(lp => lp.PaymentDate >= startDate && lp.PaymentDate <= endDate);
+
+            // Add market filter if specified
+            if (!string.IsNullOrEmpty(marketId))
+            {
+                query = query.Where(lp => lp.MarketId == marketId);
+            }
+
+            // Add LGA filter if specified
+            if (!string.IsNullOrEmpty(lgaId))
+            {
+                query = query.Where(lp => lp.Market.LocalGovernmentId == lgaId);
+            }
+
+            // Get filtered market count - moved this up to avoid duplication
+            var marketQuery = _context.Markets.AsQueryable();
+            if (!string.IsNullOrEmpty(marketId))
+            {
+                marketQuery = marketQuery.Where(m => m.Id == marketId);
+            }
+            if (!string.IsNullOrEmpty(lgaId))
+            {
+                marketQuery = marketQuery.Where(m => m.LocalGovernmentId == lgaId);
+            }
+
+            // Build the report with filtered data - only create this once
+            var report = new Report
+            {
+                MarketCount = await marketQuery.CountAsync(),
+                TotalRevenueGenerated = await query.SumAsync(lp => lp.Amount),
+                ReportDate = DateTime.UtcNow,
+                StartDate = startDate,
+                EndDate = endDate
+            };
+
+            // Get payment methods breakdown
+            var paymentMethods = await query
+                .GroupBy(lp => lp.PaymentMethod)
+                .Select(g => new { Method = g.Key, Amount = g.Sum(lp => lp.Amount) })
+                .ToListAsync();
+
+            // Convert enum values to readable strings
+            var paymentMethodDictionary = new Dictionary<string, decimal>();
+            foreach (var pm in paymentMethods)
+            {
+                string methodName;
+                if (Enum.IsDefined(typeof(PaymentMethodEnum), pm.Method))
+                {
+                    methodName = Enum.GetName(typeof(PaymentMethodEnum), pm.Method);
+                }
+                else
+                {
+                    methodName = "Unknown";
+                }
+
+                paymentMethodDictionary[methodName] = pm.Amount;
+            }
+
+            // Assign to report
+            report.RevenueByPaymentMethod = paymentMethodDictionary;
+
+            // Convert time if needed
+            if (timeZone != "UTC")
+            {
+                try
+                {
+                    // Check if the timeZone is actually the literal "string" (probably from the default in your DTO)
+                    if (timeZone == "string")
+                    {
+                        // Default to UTC if "string" is passed
+                        timeZone = "UTC";
+                    }
+                    else
+                    {
+                        var timezone = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
+                        report.ReportDate = TimeZoneInfo.ConvertTimeFromUtc(report.ReportDate, timezone);
+                    }
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    // Log the invalid timezone
+                    System.Diagnostics.Debug.WriteLine($"Invalid timezone: {timeZone}");
+                    // Just continue using UTC
+                }
+                catch (Exception ex)
+                {
+                    // Handle other potential exceptions
+                    System.Diagnostics.Debug.WriteLine($"Error converting timezone: {ex.Message}");
+                }
+            }
+
+            return report;
+        }*/
 
         public async Task<Report> ExportReport(DateTime startDate, DateTime endDate)
         {

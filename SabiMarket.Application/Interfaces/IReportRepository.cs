@@ -18,4 +18,10 @@ public interface IReportRepository : IGeneralRepository<Report>
           int? year = null,
           TimeFrame timeFrame = TimeFrame.ThisWeek);
     Task<FilterOptionsDto> GetFilterOptionsAsync();
+    Task<Report> ExportAdminReport(
+            DateTime startDate,
+            DateTime endDate,
+            string marketId = null,
+            string lgaId = null,
+            string timeZone = "UTC");
 }
