@@ -60,7 +60,7 @@ namespace SabiMarket.Infrastructure.Services
             }
             if (!getUser.IsSubscriptionActive && getUser.SubscriptionEndDate < DateTime.UtcNow.AddHours(1))
             {
-                return ResponseFactory.Success<bool>(false, "User does not have an active subscription");
+                return ResponseFactory.Fail<bool>("User does not have an active subscription");
             }
             return ResponseFactory.Success<bool>(true, "User has an active subscription.");
 

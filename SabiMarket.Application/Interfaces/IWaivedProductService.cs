@@ -27,5 +27,6 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<string>> DeleteComplaint(string complaintId, string vendorId, string complaintMsg, string imageUrl);
         Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedback>>>> GetAllComplaint(PaginationFilter filter);
         Task<BaseResponse<CustomerFeedback>> GetCustomerFeedbackById(string Id);
+        Task<BaseResponse<string>> DeleteProduct(string waiveProductId);
     }
 }

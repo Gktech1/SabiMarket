@@ -12,7 +12,6 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         [Required]
         public string SubscriberId { get; set; }
 
-        [Required]
         public string? SubscriptionActivatorId { get; set; }
 
         public DateTime? SubscriptionStartDate { get; set; }

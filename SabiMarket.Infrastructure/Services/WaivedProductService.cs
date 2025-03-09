@@ -137,7 +137,6 @@ public class WaivedProductService : IWaivedProductService
     string category,
     PaginationFilter paginationFilter)
     {
-        var correlationId = Guid.NewGuid().ToString();
         try
         {
             // Fetch the waived products using pagination
@@ -179,12 +178,12 @@ public class WaivedProductService : IWaivedProductService
    PaginationFilter paginationFilter)
     {
         // Base query
-        var query = _applicationDbContext.WaivedProducts.AsNoTracking();
+        var query = _applicationDbContext.WaivedProducts.Include(c => c.ProductCategory).AsNoTracking();
 
         // Apply category filter if provided
         if (!string.IsNullOrEmpty(category))
         {
-            query = query.Where(p => p.ProductCategoryId == category);
+            query = query.Where(p => p.ProductCategory.Name.Contains(category));
         }
 
         // Order by product name
@@ -194,16 +193,6 @@ public class WaivedProductService : IWaivedProductService
         return await query.Paginate(paginationFilter);
     }
 
-    /*public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string? category, PaginationFilter filter)
-    {
-        var waivedProducts = await _applicationDbContext.WaivedProducts.Paginate(fil);
-        if (waivedProducts == null)
-        {
-            return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaivedProduct>>>(new NotFoundException("No Record Found."), "Record not found.");
-        }
-
-        return ResponseFactory.Success(waivedProducts);
-    }*/
     public async Task<BaseResponse<WaivedProduct>> GetWaivedProductById(string Id)
     {
         var waivedProduct = await _repositoryManager.WaivedProductRepository.GetWaivedProductById(Id, false);
@@ -236,6 +225,18 @@ public class WaivedProductService : IWaivedProductService
         //product.Description = dto.Description;
         await _repositoryManager.SaveChangesAsync();
         return ResponseFactory.Success("Success");
+
+    }
+    public async Task<BaseResponse<string>> DeleteProduct(string waiveProductId)
+    {
+        var product = await _repositoryManager.WaivedProductRepository.GetWaivedProductById(waiveProductId, false);
+        if (product == null)
+        {
+            return ResponseFactory.Fail<string>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+        _applicationDbContext.WaivedProducts.Remove(product);
+        await _repositoryManager.SaveChangesAsync();
+        return ResponseFactory.Success("Product deleted successfully.");
 
     }
 
