@@ -6,6 +6,8 @@ using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
 using SabiMarket.Application.Extensions;
+using SabiMarket.Domain.Enum;
+using SabiMarket.Domain.Models;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -164,6 +166,47 @@ public class AdminController : ControllerBase
         }
 
         return Ok(response);
+    }
+
+    [HttpPost("exportadmin-report")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<byte[]>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<byte[]>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ExportReport([FromBody] ReportExportRequestDto request)
+    {
+        _logger.LogInformation($"Report export requested: {request.ReportType}, Format: {request.ExportFormat}");
+
+        var response = await _adminService.ExportReport(request);
+
+        if (!response.IsSuccessful)
+        {
+            _logger.LogWarning($"Report export failed: {response.Error?.Message}");
+            return StatusCode(response.Error.StatusCode, response);
+        }
+
+        // Set content type based on export format
+        var contentType = request.ExportFormat switch
+        {
+            ExportFormat.Excel => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ExportFormat.PDF => "application/pdf",
+            ExportFormat.CSV => "text/csv",
+            _ => "application/octet-stream"
+        };
+
+        // Set file name based on export format
+        var fileExtension = request.ExportFormat switch
+        {
+            ExportFormat.Excel => "xlsx",
+            ExportFormat.PDF => "pdf",
+            ExportFormat.CSV => "csv",
+            _ => "bin"
+        };
+
+        string fileName = $"Market_Report_{DateTime.Now:yyyyMMdd}_{request.ReportType}.{fileExtension}";
+
+        _logger.LogInformation($"Report exported successfully. Size: {response.Data.Length} bytes");
+
+        return File(response.Data, contentType, fileName);
     }
 
     [HttpGet("{adminId}/audit-logs")]

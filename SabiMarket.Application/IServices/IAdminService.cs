@@ -36,6 +36,7 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<PaginatorDto<IEnumerable<TeamMemberResponseDto>>>> GetTeamMembers(
          TeamMemberFilterRequestDto filterDto,
          PaginationFilter paginationFilter);
+        Task<BaseResponse<byte[]>> ExportReport(ReportExportRequestDto request);
     }
 }
 

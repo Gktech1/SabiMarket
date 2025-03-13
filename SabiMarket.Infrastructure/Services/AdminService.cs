@@ -382,6 +382,94 @@ public class AdminService : IAdminService
         }
     }
 
+    public async Task<BaseResponse<byte[]>> ExportReport(ReportExportRequestDto request)
+    {
+        var correlationId = Guid.NewGuid().ToString();
+        try
+        {
+            // Log the export attempt with more detailed information
+            await CreateAuditLog(
+                "Report Export Requested",
+                $"CorrelationId: {correlationId} - Exporting {request.ReportType} report in {request.ExportFormat} format. " +
+                $"Date range: {request.StartDate:yyyy-MM-dd} to {request.EndDate:yyyy-MM-dd}. " +
+                $"Market: {(string.IsNullOrEmpty(request.MarketId) ? "All Markets" : request.MarketId)}. " +
+                $"LGA: {(string.IsNullOrEmpty(request.LGAId) ? "All LGAs" : request.LGAId)}",
+                "Report Management"
+            );
+
+            // Validate date range
+            if (request.EndDate < request.StartDate)
+            {
+                return ResponseFactory.Fail<byte[]>(
+                    new ArgumentException("End date cannot be earlier than start date"),
+                    "Invalid date range provided"
+                );
+            }
+
+            // Retrieve report data with all filter parameters
+            var report = await _repository.ReportRepository.ExportAdminReport(
+                request.StartDate,
+                request.EndDate,
+                request.MarketId,
+                request.LGAId,
+                request.TimeZone
+            );
+
+            // Map repository data to DTO
+            var reportData = _mapper.Map<ReportExportDto>(report);
+
+            // Generate appropriate export format
+            byte[] resultBytes;
+            string formatName;
+
+            switch (request.ExportFormat)
+            {
+                case ExportFormat.Excel:
+                    resultBytes = await ExcelExportHelper.GenerateMarketReport(reportData);
+                    formatName = "Excel";
+                    break;
+
+                case ExportFormat.PDF:
+                    resultBytes = await PdfExportHelper.GenerateMarketReport(reportData);
+                    formatName = "PDF";
+                    break;
+
+                case ExportFormat.CSV:
+                    resultBytes = await CsvExportHelper.GenerateMarketReport(reportData);
+                    formatName = "CSV";
+                    break;
+
+                default:
+                    resultBytes = await ExcelExportHelper.GenerateMarketReport(reportData);
+                    formatName = "Excel";
+                    break;
+            }
+
+            // Log successful export
+            await CreateAuditLog(
+                "Report Exported Successfully",
+                $"CorrelationId: {correlationId} - Report exported in {formatName} format. " +
+                $"Size: {resultBytes.Length} bytes",
+                "Report Management"
+            );
+
+            return ResponseFactory.Success(resultBytes, $"Report exported successfully in {formatName} format");
+        }
+        catch (Exception ex)
+        {
+            // Log detailed error information
+            await CreateAuditLog(
+                "Report Export Failed",
+                $"CorrelationId: {correlationId} - Error: {ex.Message}\n" +
+                $"Stack Trace: {ex.StackTrace}\n" +
+                $"Report Parameters: Start={request.StartDate:yyyy-MM-dd}, End={request.EndDate:yyyy-MM-dd}, " +
+                $"Market={request.MarketId}, Format={request.ExportFormat}",
+                "Report Management"
+            );
+
+            return ResponseFactory.Fail<byte[]>(ex, "An unexpected error occurred while generating the report");
+        }
+    }
 
     public async Task<BaseResponse<AdminDashboardStatsDto>> GetDashboardStats(string adminId)
     {

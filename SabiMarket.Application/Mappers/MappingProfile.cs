@@ -63,25 +63,70 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.DefaultPassword, opt => opt.Ignore());
 
         CreateMap<Chairman, ChairmanResponseDto>();
+       
+        CreateMap<Report, ReportExportDto>()
+               .ForMember(dest => dest.TotalMarkets, opt => opt.MapFrom(src => src.MarketCount))
+               .ForMember(dest => dest.TotalRevenue, opt => opt.MapFrom(src => src.TotalRevenueGenerated))
+               .ForMember(dest => dest.TotalTraders, opt => opt.MapFrom(src => src.TotalTraders))
+               .ForMember(dest => dest.TotalCaretakers, opt => opt.MapFrom(src => src.TotalCaretakers))
+               .ForMember(dest => dest.TraderComplianceRate, opt => opt.MapFrom(src => src.ComplianceRate))
+               .ForMember(dest => dest.TotalTransactions, opt => opt.MapFrom(src => src.PaymentTransactions))
+               .ForMember(dest => dest.MarketDetails, opt => opt.Ignore())
+               .ForMember(dest => dest.RevenueByPaymentMethod, opt => opt.Ignore())
+               .ForMember(dest => dest.TransactionsByMarket, opt => opt.Ignore())
+               .ForMember(dest => dest.RevenueByMonth, opt => opt.Ignore())
+               .ForMember(dest => dest.LGADetails, opt => opt.Ignore())
+               .ForMember(dest => dest.ComplianceByMarket, opt => opt.Ignore())
+               .AfterMap((src, dest, context) =>
+               {
+                   // For single-report mapping, we need to manually create the collections
+                   // This will be overridden when mapping collections with custom methods
+                   if (dest.MarketDetails == null)
+                   {
+                       dest.MarketDetails = new List<ReportExportDto.MarketSummary>();
 
+                       // Only add market details if we have market data
+                       if (!string.IsNullOrEmpty(src.MarketId))
+                       {
+                           dest.MarketDetails.Add(new ReportExportDto.MarketSummary
+                           {
+                               MarketId = src.MarketId,
+                               MarketName = src.MarketName,
+                               Location = src.Market?.Location,
+                               LGAName = src.Market?.LocalGovernment?.Name,
+                               TotalTraders = src.TotalTraders,
+                               Revenue = src.TotalLevyCollected,
+                               ComplianceRate = src.ComplianceRate,
+                               TransactionCount = src.PaymentTransactions
+                           });
+                       }
+                   }
+               });
         // Ensure collection mapping
         CreateMap<IEnumerable<Chairman>, IEnumerable<ChairmanResponseDto>>().ConvertUsing((src, dest, context) =>
             src.Select(chairman => context.Mapper.Map<ChairmanResponseDto>(chairman)));
-
-
-        /*  CreateMap<Chairman, ChairmanResponseDto>()
-            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
-                string.IsNullOrEmpty(src.FullName) ? $"{src.User.FirstName} {src.User.LastName}" : src.FullName))
-            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email ?? string.Empty)) // Handle nullable Email
-            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber ?? string.Empty)) // Handle nullable PhoneNumber
-            .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.MarketName)) // Assuming Market.Name is available
-            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.User.IsActive))  // Assuming IsActive is in User
-            .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
-            .ForMember(dest => dest.LocalGovernmentId, opt => opt.MapFrom(src => src.LocalGovernmentId))
-            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
-            .ForMember(dest => dest.DefaultPassword, opt => opt.Ignore());  // DefaultPassword should not be included in the DTO
-  */
+        CreateMap<IEnumerable<Report>, ReportExportDto>()
+                       .ForMember(dest => dest.MarketDetails, opt => opt.MapFrom((src, _, __, context) => MapMarketDetails(src)))
+                       .ForMember(dest => dest.RevenueByMonth, opt => opt.MapFrom((src, _, __, context) => MapRevenueByMonth(src)))
+                       .ForMember(dest => dest.ComplianceByMarket, opt => opt.MapFrom((src, _, __, context) => MapComplianceByMarket(src)))
+                       .ForMember(dest => dest.TotalMarkets, opt => opt.MapFrom(src => src.Select(r => r.MarketId).Distinct().Count()))
+                       .ForMember(dest => dest.TotalRevenue, opt => opt.MapFrom(src => src.Sum(r => r.TotalLevyCollected)))
+                       .ForMember(dest => dest.TotalTraders, opt => opt.MapFrom(src => src.Sum(r => r.TotalTraders)))
+                       .ForMember(dest => dest.TotalTransactions, opt => opt.MapFrom(src => src.Sum(r => r.PaymentTransactions)))
+                       .ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => src.Min(r => r.StartDate)))
+                       .ForMember(dest => dest.EndDate, opt => opt.MapFrom(src => src.Max(r => r.EndDate)))
+                       .ForMember(dest => dest.TraderComplianceRate, opt => opt.MapFrom(src =>
+                           src.Sum(r => r.TotalTraders) > 0
+                               ? (decimal)src.Sum(r => r.CompliantTraders) / src.Sum(r => r.TotalTraders) * 100
+                               : 0))
+                       .ForMember(dest => dest.DailyAverageRevenue, opt => opt.MapFrom((src, _, __, context) =>
+                       {
+                           var startDate = src.Min(r => r.StartDate);
+                           var endDate = src.Max(r => r.EndDate);
+                           var totalDays = (endDate - startDate).Days + 1;
+                           var totalRevenue = src.Sum(r => r.TotalLevyCollected);
+                           return totalDays > 0 ? totalRevenue / totalDays : 0;
+                       }));
         CreateMap<LevySetupRequestDto, LevyPayment>()
             .ForMember(dest => dest.Period, opt => opt.MapFrom(src => src.PaymentFrequencyDays))
             .ForMember(dest => dest.Amount, opt => opt.MapFrom(src => src.Amount))
@@ -417,6 +462,12 @@ public class MappingProfile : Profile
         CreateMap<CreateGoodBoyRequestDto, GoodBoy>()
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => StatusEnum.Unlocked));
 
+        CreateMap<Market, MarketDetailsDto>()
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.MarketName))
+            .ForMember(dest => dest.Caretakers, opt => opt.MapFrom(src => src.Caretaker != null ?
+                new List<Caretaker> { src.Caretaker } : new List<Caretaker>()))
+            .ForMember(dest => dest.Traders, opt => opt.MapFrom(src => src.Traders));
+
         CreateMap<GoodBoy, GoodBoyResponseDto>()
             .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
             .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
@@ -466,6 +517,19 @@ public class MappingProfile : Profile
                .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
                .ForMember(dest => dest.ChairmanId, opt => opt.MapFrom(src => src.Id));
 
+        /*CreateMap<Market, MarketDetailsDto>()
+           .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+           .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.MarketName))
+           .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
+           .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+           .ForMember(dest => dest.TotalTraders, opt => opt.MapFrom(src => src.TotalTraders))
+           .ForMember(dest => dest.Capacity, opt => opt.MapFrom(src => src.Capacity))
+           .ForMember(dest => dest.ContactPhone, opt => opt.Ignore()) // No matching property in source
+           .ForMember(dest => dest.ContactEmail, opt => opt.Ignore()) // No matching property in source
+           .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+           .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+           .ForMember(dest => dest.TotalRevenue, opt => opt.MapFrom(src => src.TotalRevenue))
+           .ForMember(dest => dest.ComplianceRate, opt => opt.MapFrom(src => src.ComplianceRate));*/
 
         CreateMap<LocalGovernment, LGAResponseDto>()
                    .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
@@ -540,5 +604,106 @@ public class MappingProfile : Profile
         PaymentPeriodEnum.Yearly => 365,
         _ => 1
     };
+
+
+    private List<ReportExportDto.MarketSummary> MapMarketDetails(IEnumerable<Report> reports)
+    {
+        var marketDetails = new List<ReportExportDto.MarketSummary>();
+
+        // Group by market to get aggregated stats
+        var marketGroups = reports.Where(r => !string.IsNullOrEmpty(r.MarketId))
+                                 .GroupBy(r => r.MarketId);
+
+        foreach (var marketGroup in marketGroups)
+        {
+            var firstReport = marketGroup.First();
+
+            marketDetails.Add(new ReportExportDto.MarketSummary
+            {
+                MarketId = firstReport.MarketId,
+                MarketName = firstReport.MarketName,
+                Location = firstReport.Market?.Location,
+                LGAName = firstReport.Market?.LocalGovernment?.Name,
+                TotalTraders = marketGroup.Sum(r => r.TotalTraders),
+                Revenue = marketGroup.Sum(r => r.TotalLevyCollected),
+                ComplianceRate = marketGroup.Any(r => r.TotalTraders > 0)
+                    ? marketGroup.Sum(r => r.CompliantTraders) / (decimal)marketGroup.Sum(r => r.TotalTraders) * 100
+                    : 0,
+                TransactionCount = marketGroup.Sum(r => r.PaymentTransactions)
+            });
+        }
+
+        return marketDetails;
+    }
+
+    private List<ReportExportDto.MarketMonthlyRevenue> MapRevenueByMonth(IEnumerable<Report> reports)
+    {
+        var revenueByMonth = new List<ReportExportDto.MarketMonthlyRevenue>();
+
+        // Group by market
+        var marketGroups = reports.Where(r => !string.IsNullOrEmpty(r.MarketId))
+                                 .GroupBy(r => r.MarketId);
+
+        foreach (var marketGroup in marketGroups)
+        {
+            var firstReport = marketGroup.First();
+            var monthlyData = new List<ReportExportDto.MonthlyData>();
+
+            // Group by year and month
+            var monthGroups = marketGroup.GroupBy(r => new { r.Year, r.Month });
+
+            foreach (var monthGroup in monthGroups)
+            {
+                var monthName = new DateTime(monthGroup.Key.Year, monthGroup.Key.Month, 1)
+                                    .ToString("MMM");
+
+                monthlyData.Add(new ReportExportDto.MonthlyData
+                {
+                    Month = monthName,
+                    MonthNumber = monthGroup.Key.Month,
+                    Year = monthGroup.Key.Year,
+                    Revenue = monthGroup.Sum(r => r.MonthlyRevenue),
+                    TransactionCount = monthGroup.Sum(r => r.PaymentTransactions)
+                });
+            }
+
+            revenueByMonth.Add(new ReportExportDto.MarketMonthlyRevenue
+            {
+                MarketId = firstReport.MarketId,
+                MarketName = firstReport.MarketName,
+                MonthlyData = monthlyData.OrderBy(m => m.Year).ThenBy(m => m.MonthNumber).ToList()
+            });
+        }
+
+        return revenueByMonth;
+    }
+
+    private List<ReportExportDto.MarketCompliance> MapComplianceByMarket(IEnumerable<Report> reports)
+    {
+        var complianceByMarket = new List<ReportExportDto.MarketCompliance>();
+
+        // Group by market
+        var marketGroups = reports.Where(r => !string.IsNullOrEmpty(r.MarketId))
+                                 .GroupBy(r => r.MarketId);
+
+        foreach (var marketGroup in marketGroups)
+        {
+            var firstReport = marketGroup.First();
+            var totalTraders = marketGroup.Sum(r => r.TotalTraders);
+            var compliantTraders = marketGroup.Sum(r => r.CompliantTraders);
+
+            complianceByMarket.Add(new ReportExportDto.MarketCompliance
+            {
+                MarketId = firstReport.MarketId,
+                MarketName = firstReport.MarketName,
+                CompliancePercentage = totalTraders > 0 ? (decimal)compliantTraders / totalTraders * 100 : 0,
+                CompliantTraders = compliantTraders,
+                NonCompliantTraders = totalTraders - compliantTraders
+            });
+        }
+
+        return complianceByMarket;
+    }
 }
+
 
