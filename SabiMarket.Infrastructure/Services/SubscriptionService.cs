@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Mailjet.Client.Resources;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
@@ -29,20 +30,29 @@ namespace SabiMarket.Infrastructure.Services
             try
             {
                 var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+                var checkActiveSubscription = await _applicationDbContext.Subscriptions.Where(x => x.SubscriberId == dto.SubscriberId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
+                if (checkActiveSubscription is not null && checkActiveSubscription.SubscriptionEndDate > DateTime.UtcNow.AddHours(1))
+                {
+                    return ResponseFactory.Fail<string>(new ForbidException("User already an active subscription."), "User already an active subscription.");
+
+                }
+                if (checkActiveSubscription is not null && !checkActiveSubscription.IsActive && !checkActiveSubscription.IsAdminConfirmPayment)
+                {
+                    return ResponseFactory.Fail<string>(new ForbidException("User already an active subscription."), "User already an active subscription.");
+
+                }
                 var subscription = new Subscription
                 {
                     Amount = dto.Amount,
                     ProofOfPayment = dto.ProofOfPayment ?? "",
-                    SubscriptionStartDate = DateTime.UtcNow,
-                    SubscriptionEndDate = DateTime.UtcNow.AddMonths(1),
-                    SubscriberId = loggedInUser.Id, // FIXED: Use an existing user ID
+                    SubscriberId = dto.SubscriberId ?? loggedInUser.Id, // FIXED: Use an existing user ID
                     IsSubscriberConfirmPayment = !string.IsNullOrEmpty(dto.ProofOfPayment) ? true : false,
                 };
 
                 _repositoryManager.SubscriptionRepository.AddSubscription(subscription);
                 await _repositoryManager.SaveChangesAsync();
 
-                return ResponseFactory.Success<string>("Success", "Subscription was successful");
+                return ResponseFactory.Success<string>("Success", "Subscription request sent succesfully.");
 
             }
             catch (Exception ex)
@@ -80,16 +90,31 @@ namespace SabiMarket.Infrastructure.Services
         }
         public async Task<BaseResponse<bool>> AdminConfirmSubscriptionPayment(string subscriptionId)
         {
-            var getSubscriptions = await _applicationDbContext.Subscriptions.Where(x => x.Id == subscriptionId).FirstOrDefaultAsync();
-            if (getSubscriptions == null)
+            try
             {
-                return ResponseFactory.Fail<bool>(new NotFoundException("Subscription not found."), "Subscription not found.");
+                var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+                var getSubscriptions = await _applicationDbContext.Subscriptions.Where(x => x.Id == subscriptionId).FirstOrDefaultAsync();
+                if (getSubscriptions == null)
+                {
+                    return ResponseFactory.Fail<bool>(new NotFoundException("Subscription not found."), "Subscription not found.");
+                }
+                if (!string.IsNullOrEmpty(getSubscriptions.SubscriptionActivatorId) && getSubscriptions.IsActive && getSubscriptions.IsActive)
+                {
+                    return ResponseFactory.Fail<bool>(new("Subscription has already been treated."), "Subscription has already been treated.");
+                }
+                getSubscriptions.IsAdminConfirmPayment = true;
+                getSubscriptions.IsActive = true;
+                getSubscriptions.SubscriptionStartDate = DateTime.UtcNow.AddHours(1);
+                getSubscriptions.SubscriptionEndDate = DateTime.UtcNow.AddMonths(1);
+                getSubscriptions.SubscriptionActivatorId = loggedInUser.Id;
+                _applicationDbContext.SaveChanges();
+                return ResponseFactory.Success<bool>(true, "Subscription confirmed successfully.");
             }
-            getSubscriptions.IsAdminConfirmPayment = true;
-            getSubscriptions.SubscriptionStartDate = DateTime.UtcNow.AddHours(1);
-            getSubscriptions.SubscriptionEndDate = DateTime.UtcNow.AddMonths(1);
-            _applicationDbContext.SaveChanges();
-            return ResponseFactory.Success<bool>(true, "Subscription confirmed successfully.");
+            catch (Exception ex)
+            {
+                return ResponseFactory.Fail<bool>($"Error: {ex.Message}");
+            }
         }
         public async Task<BaseResponse<bool>> UserConfirmSubscriptionPayment(string subscriptionId)
         {

@@ -96,7 +96,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
-        [HttpPut("DeleteWaivedProducts")]
+        [HttpDelete("DeleteWaivedProducts")]
         public async Task<IActionResult> DeleteWaivedProducts(string waiveProductId)
         {
             var response = await _serviceManager.IWaivedProductService.DeleteProduct(waiveProductId);
@@ -185,7 +185,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
             return Ok(response);
         }
-
+        [Authorize(Policy = PolicyNames.RequireAdminOnly)]
         [HttpPost("AdminConfirmSubscriptionPayment")]
         public async Task<IActionResult> AdminConfirmSubscriptionPayment(string subscriptionId)
         {

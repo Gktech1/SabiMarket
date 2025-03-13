@@ -41,6 +41,7 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<ProductCategory> ProductCategories { get; set; }
         public DbSet<Chairman> Chairmen { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
+        public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
         // Add Admin DbSet
         public DbSet<Admin> Admins { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
