@@ -21,5 +21,6 @@ namespace SabiMarket.Application.Interfaces
         Task<int> GetCaretakerCountAsync(DateTime? startDate = null, DateTime? endDate = null);
         Task<IEnumerable<Caretaker>> GetAllCaretakers(bool trackChanges);
         Task<bool> ExistsAsync(string id);
+        Task<Caretaker> GetCaretakerByLocalGovernmentId(string LGAId, bool trackChanges);
     }
 }
