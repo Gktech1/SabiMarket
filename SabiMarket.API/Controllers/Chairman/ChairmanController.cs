@@ -10,7 +10,7 @@ using SabiMarket.Domain.Exceptions;
 [Route("api/[controller]")]
 [ApiController]
 [Produces("application/json")]
-//[Authorize(Policy = PolicyNames.RequireMarketManagement)]
+[Authorize(Policy = PolicyNames.RequireMarketManagement)]
 public class ChairmanController : ControllerBase
 {
     private readonly IChairmanService _chairmanService;
