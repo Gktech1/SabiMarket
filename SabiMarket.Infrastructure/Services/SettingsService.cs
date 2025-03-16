@@ -99,6 +99,8 @@ namespace SabiMarket.Infrastructure.Services
 
                 // Find user by identifier
                 ApplicationUser user = null;
+                //TODO
+                // check if email address exist 
 
                 // First try to find by email if provided
                 if (!string.IsNullOrWhiteSpace(forgotPasswordDto.EmailAddress))
@@ -231,8 +233,8 @@ namespace SabiMarket.Infrastructure.Services
                 if (user == null)
                 {
                     return ResponseFactory.Fail<bool>(
-                        new NotFoundException("Invalid identifier or OTP"),
-                        "Verification failed");
+                        new NotFoundException("User Email does not exist"),
+                        "User does not exist");
                 }
 
                 // Verify OTP
