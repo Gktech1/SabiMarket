@@ -43,6 +43,15 @@ namespace SabiMarket.Infrastructure.Repositories
                     .ThenInclude(t => t.Market)
                 .FirstOrDefaultAsync();
 
+        public async Task<Caretaker> GetCaretakerByLocalGovernmentId(string LGAId, bool trackChanges) =>
+           await FindByCondition(x => x.LocalGovernmentId == LGAId, trackChanges)
+               .Include(a => a.Markets)
+               .Include(a => a.GoodBoys)
+                   .ThenInclude(gb => gb.LevyPayments)
+               .Include(a => a.AssignedTraders)
+                   .ThenInclude(t => t.Market)
+               .FirstOrDefaultAsync();
+
         /* public async Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersWithPagination(
              PaginationFilter paginationFilter, bool trackChanges)
          {

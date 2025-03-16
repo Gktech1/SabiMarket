@@ -637,6 +637,18 @@ namespace SabiMarket.Infrastructure.Services
                     );
                 }
 
+                // Ensure chairman has a Caretaker 
+                var caretakerbyLGAid = await _repository.CaretakerRepository.GetCaretakerByLocalGovernmentId(chairman.LocalGovernmentId, false);
+                if (caretakerbyLGAid == null)
+                {
+                    return ResponseFactory.Fail<MarketResponseDto>(
+                        new NotFoundException("Caretaker not found"),
+                        "Invalid caretaker"
+                    );
+                }
+
+
+
                 // Log market creation attempt
                 await CreateAuditLog(
                     "Market Creation",
@@ -654,6 +666,8 @@ namespace SabiMarket.Infrastructure.Services
                 market.StartDate = DateTime.UtcNow;
                 market.MarketCapacity = 0;
                 market.ChairmanId = chairman.Id;
+                market.CaretakerId = caretakerbyLGAid.Id;
+                
 
 
                 // Save Market
