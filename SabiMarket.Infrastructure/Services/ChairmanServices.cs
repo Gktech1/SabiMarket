@@ -1205,23 +1205,32 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets()
+        public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets(string localgovermentId = null)
         {
             var correlationId = Guid.NewGuid().ToString();
             try
             {
                 await CreateAuditLog(
                     "Markets List Query",
-                    $"CorrelationId: {correlationId} - Retrieving all markets",
+                    $"CorrelationId: {correlationId} - Retrieving markets" +
+                    (string.IsNullOrEmpty(localgovermentId) ? "" : $" for LocalGovernment: {localgovermentId}"),
                     "Market Management"
                 );
 
                 var markets = await _repository.MarketRepository.GetAllMarketForExport(false);
+
+                // Filter by LocalGovernment ID if provided
+                if (!string.IsNullOrEmpty(localgovermentId))
+                {
+                    markets = markets.Where(m => m.LocalGovernmentId == localgovermentId).ToList();
+                }
+
                 var marketDtos = _mapper.Map<IEnumerable<MarketResponseDto>>(markets);
 
                 await CreateAuditLog(
                     "Markets Retrieved",
-                    $"CorrelationId: {correlationId} - Retrieved {marketDtos.Count()} markets",
+                    $"CorrelationId: {correlationId} - Retrieved {marketDtos.Count()} markets" +
+                    (string.IsNullOrEmpty(localgovermentId) ? "" : $" for LocalGovernment: {localgovermentId}"),
                     "Market Management"
                 );
 

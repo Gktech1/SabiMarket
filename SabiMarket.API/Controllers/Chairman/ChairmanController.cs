@@ -10,7 +10,7 @@ using SabiMarket.Domain.Exceptions;
 [Route("api/[controller]")]
 [ApiController]
 [Produces("application/json")]
-[Authorize(Policy = PolicyNames.RequireMarketManagement)]
+//[Authorize(Policy = PolicyNames.RequireMarketManagement)]
 public class ChairmanController : ControllerBase
 {
     private readonly IChairmanService _chairmanService;
@@ -395,9 +395,9 @@ public class ChairmanController : ControllerBase
     [HttpGet("markets")]
     [ProducesResponseType(typeof(BaseResponse<IEnumerable<MarketResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<IEnumerable<MarketResponseDto>>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetAllMarkets()
+    public async Task<IActionResult> GetAllMarkets(string? localgovernmentId)
     {
-        var response = await _chairmanService.GetAllMarkets();
+        var response = await _chairmanService.GetAllMarkets(localgovernmentId!);
         return !response.IsSuccessful ? StatusCode(StatusCodes.Status500InternalServerError, response) : Ok(response);
     }
 

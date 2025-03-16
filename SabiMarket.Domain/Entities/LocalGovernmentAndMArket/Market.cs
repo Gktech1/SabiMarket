@@ -13,7 +13,6 @@ public class Market : BaseEntity
 
     [StringLength(50)]
     public string? MarketType { get; set; }
-
     public string? ChairmanId { get; set; }
 
     [StringLength(100)]
@@ -39,7 +38,6 @@ public class Market : BaseEntity
     public decimal ComplianceRate { get; set; }
     public int CompliantTraders { get; set; }
     public int NonCompliantTraders { get; set; }
-
     // Navigation properties
     [ForeignKey("ChairmanId")]
     [DeleteBehavior(DeleteBehavior.NoAction)]
@@ -52,6 +50,9 @@ public class Market : BaseEntity
     [ForeignKey("CaretakerId")]
     [DeleteBehavior(DeleteBehavior.NoAction)]
     public virtual Caretaker Caretaker { get; set; }
+
+    [NotMapped]
+    public virtual ICollection<Caretaker> AdditionalCaretakers { get; set; } = new List<Caretaker>();
 
     public virtual ICollection<Trader> Traders { get; set; } = new List<Trader>();
     public virtual ICollection<MarketSection> MarketSections { get; set; } = new List<MarketSection>();
