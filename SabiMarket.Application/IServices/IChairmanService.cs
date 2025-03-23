@@ -19,8 +19,8 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<ChairmanResponseDto>> CreateChairman(CreateChairmanRequestDto chairmanDto);
         Task<BaseResponse<bool>> UpdateChairmanProfile(string chairmanId, UpdateProfileDto profileDto);
         Task<BaseResponse<AdminDashboardResponse>> GetChairmen(string? searchTerm, PaginationFilter paginationFilter);
-       // Task<BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>> GetChairmen(string? searchTerm, PaginationFilter paginationFilter);
-        Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets();
+        // Task<BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>> GetChairmen(string? searchTerm, PaginationFilter paginationFilter);
+        Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets(string localgovermentId = null);
         Task<BaseResponse<DashboardMetricsResponseDto>> GetDashboardMetrics();
         Task<BaseResponse<bool>> AssignCaretakerToMarket(string marketId, string caretakerId);
         Task<BaseResponse<bool>> AssignCaretakerToChairman(string chairmanId, string caretakerId);

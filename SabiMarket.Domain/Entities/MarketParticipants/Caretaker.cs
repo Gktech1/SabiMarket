@@ -34,7 +34,6 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
         [ForeignKey("LocalGovernmentId")]
         [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual LocalGovernment LocalGovernment { get; set; }
-
         public virtual ICollection<Market> Markets { get; set; } = new List<Market>();
         public virtual ICollection<GoodBoy> GoodBoys { get; set; } = new List<GoodBoy>();
         public virtual ICollection<Trader> AssignedTraders { get; set; } = new List<Trader>();
