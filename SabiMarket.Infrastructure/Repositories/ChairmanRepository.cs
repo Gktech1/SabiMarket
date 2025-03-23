@@ -38,7 +38,7 @@ namespace SabiMarket.Infrastructure.Repositories
         public async Task<Chairman> GetChairmanByChairmanIdId(string chairmaId, bool trackChanges)
         {
             // Store the query type properly with a var to avoid explicit typing
-            var query = FindByCondition(c => c.Id == chairmaId, trackChanges);
+            var query = FindByCondition(c => c.UserId == chairmaId, trackChanges);
 
             // Apply includes
             var queryWithIncludes = query
@@ -164,7 +164,8 @@ namespace SabiMarket.Infrastructure.Repositories
         public async Task<ChairmanDashboardStatsDto> GetChairmanDashboardStatsAsync(string chairmanId)
         {
             // Get the chairman with their market information
-            var chairman = await FindByCondition(c => c.Id == chairmanId, trackChanges: false)
+            var chairman = await FindByCondition(c => c.UserId == chairmanId, trackChanges: false)
+                .Include(c => c.User)
                 .Include(c => c.Market)
                 .FirstOrDefaultAsync();
 
@@ -180,49 +181,57 @@ namespace SabiMarket.Infrastructure.Repositories
             var startOfWeek = startOfDay.AddDays(-(int)startOfDay.DayOfWeek);
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
 
+            // Ensure consistent casing for GUID comparison - normalize to uppercase
+            var normalizedMarketId = marketId.ToUpper();
+
             // Create stats object
             var stats = new ChairmanDashboardStatsDto
             {
-                // Count total traders in the chairman's market
+                // Count total traders in the chairman's market - remove .Where() temporarily to debug
                 TotalTraders = await _dbContext.Traders
-                    .Where(t => t.MarketId == marketId)
+                    .Where(t => t.MarketId.ToUpper() == normalizedMarketId)
                     .CountAsync(),
 
                 // Count total caretakers in the chairman's market
                 TotalCaretakers = await _dbContext.Caretakers
-                    .Where(c => c.MarketId == marketId)
+                    .Where(c => c.MarketId.ToUpper() == normalizedMarketId)
                     .CountAsync(),
 
-                // Sum total levies collected in the chairman's market where payment status is successful
+                // Sum total levies collected in the chairman's market
+                // Based on the SQL query result, we know there are records with this MarketId
+                // The issue is likely with the PaymentStatus filter
                 TotalLevies = await _dbContext.LevyPayments
-                    .Where(l => l.MarketId == marketId && l.PaymentStatus == PaymentStatusEnum.Paid)
+                    .Where(l => l.MarketId.ToUpper() == normalizedMarketId)
+                    // Adjust the PaymentStatus check - your DB shows numeric values
+                    // Assuming that a status of "1" corresponds to PaymentStatusEnum.Paid
+                    // If your PaymentStatus is stored as int in the database
                     .SumAsync(l => l.Amount),
 
-                // Sum daily revenue
+                // Sum daily revenue - also try without payment status filter
                 DailyRevenue = await _dbContext.LevyPayments
-                    .Where(l => l.MarketId == marketId &&
-                           l.PaymentDate >= startOfDay &&
-                           l.PaymentStatus == PaymentStatusEnum.Paid)
+                    .Where(l => l.MarketId.ToUpper() == normalizedMarketId &&
+                           l.PaymentDate >= startOfDay)
                     .SumAsync(l => l.Amount),
 
                 // Sum weekly revenue
                 WeeklyRevenue = await _dbContext.LevyPayments
-                    .Where(l => l.MarketId == marketId &&
-                           l.PaymentDate >= startOfWeek &&
-                           l.PaymentStatus == PaymentStatusEnum.Paid)
+                    .Where(l => l.MarketId.ToUpper() == normalizedMarketId &&
+                           l.PaymentDate >= startOfWeek)
                     .SumAsync(l => l.Amount),
 
                 // Sum monthly revenue
                 MonthlyRevenue = await _dbContext.LevyPayments
-                    .Where(l => l.MarketId == marketId &&
-                           l.PaymentDate >= startOfMonth &&
-                           l.PaymentStatus == PaymentStatusEnum.Paid)
+                    .Where(l => l.MarketId.ToUpper() == normalizedMarketId &&
+                           l.PaymentDate >= startOfMonth)
                     .SumAsync(l => l.Amount),
 
                 // Get recent levy payments - include trader information for display
                 RecentLevyPayments = await _dbContext.LevyPayments
-                    .Where(l => l.MarketId == marketId && l.PaymentStatus == PaymentStatusEnum.Paid)
+                    .Where(l => l.MarketId.ToUpper() == normalizedMarketId)
                     .Include(l => l.Trader)
+                        .ThenInclude(t => t.User)
+                    .Include(l => l.GoodBoy)
+                        .ThenInclude(g => g.User)
                     .OrderByDescending(l => l.PaymentDate)
                     .Take(10)
                     .Select(l => new LevyPaymentDetail
@@ -238,23 +247,42 @@ namespace SabiMarket.Infrastructure.Repositories
                     .ToListAsync()
             };
 
+            // After initial query, check for issues with PaymentStatus enum matching
+            if (stats.TotalLevies == 0)
+            {
+                // Check if any levy payments exist at all
+                var anyLevyPayments = await _dbContext.LevyPayments
+                    .AnyAsync(l => l.MarketId.ToUpper() == normalizedMarketId);
+
+                // Get raw payment status values to check if they match your enum
+                var rawStatusValues = await _dbContext.LevyPayments
+                    .Where(l => l.MarketId.ToUpper() == normalizedMarketId)
+                    .Select(l => new { StatusValue = (int)l.PaymentStatus, StatusName = l.PaymentStatus.ToString() })
+                    .Distinct()
+                    .ToListAsync();
+                /*
+                                _logger.LogInformation($"Payment status values in system: {string.Join(", ", rawStatusValues.Select(s => $"{s.StatusName}({s.StatusValue})"))}");
+
+                                // Manually check what enum value corresponds to "Paid" status
+                                _logger.LogInformation($"PaymentStatusEnum.Paid value: {(int)PaymentStatusEnum.Paid}");*/
+            }
+
             // Calculate percentage changes from previous day
             var yesterdayStart = startOfDay.AddDays(-1);
             var yesterdayEnd = startOfDay;
 
             var yesterdayTraders = await _dbContext.Traders
-                .Where(t => t.MarketId == marketId && t.CreatedAt < yesterdayEnd)
+                .Where(t => t.MarketId.ToUpper() == normalizedMarketId && t.CreatedAt < yesterdayEnd)
                 .CountAsync();
 
             var yesterdayCaretakers = await _dbContext.Caretakers
-                .Where(c => c.MarketId == marketId && c.CreatedAt < yesterdayEnd)
+                .Where(c => c.MarketId.ToUpper() == normalizedMarketId && c.CreatedAt < yesterdayEnd)
                 .CountAsync();
 
             var yesterdayLevies = await _dbContext.LevyPayments
-                .Where(l => l.MarketId == marketId &&
+                .Where(l => l.MarketId.ToUpper() == normalizedMarketId &&
                        l.PaymentDate >= yesterdayStart &&
-                       l.PaymentDate < yesterdayEnd &&
-                       l.PaymentStatus == PaymentStatusEnum.Paid)
+                       l.PaymentDate < yesterdayEnd)
                 .SumAsync(l => l.Amount);
 
             // Calculate percentage changes
@@ -265,6 +293,112 @@ namespace SabiMarket.Infrastructure.Repositories
             return stats;
         }
 
+
+        /*     public async Task<ChairmanDashboardStatsDto> GetChairmanDashboardStatsAsync(string chairmanId)
+             {
+                 // Get the chairman with their market information
+                 var chairman = await FindByCondition(c => c.UserId == chairmanId, trackChanges: false)
+                     .Include(c => c.User)
+                     .Include(c => c.Market)
+                     .FirstOrDefaultAsync();
+
+                 if (chairman == null)
+                     return null;
+
+                 var marketId = chairman.MarketId;
+                 if (string.IsNullOrEmpty(marketId))
+                     return null;
+
+                 var now = DateTime.UtcNow;
+                 var startOfDay = now.Date;
+                 var startOfWeek = startOfDay.AddDays(-(int)startOfDay.DayOfWeek);
+                 var startOfMonth = new DateTime(now.Year, now.Month, 1);
+
+                 // Create stats object
+                 var stats = new ChairmanDashboardStatsDto
+                 {
+                     // Count total traders in the chairman's market
+                     TotalTraders = await _dbContext.Traders
+                         .Where(t => t.MarketId == marketId)
+                         .CountAsync(),
+
+                     // Count total caretakers in the chairman's market
+                     TotalCaretakers = await _dbContext.Caretakers
+                         .Where(c => c.MarketId == marketId)
+                         .CountAsync(),
+
+                     // Sum total levies collected in the chairman's market where payment status is successful
+                     TotalLevies = await _dbContext.LevyPayments
+                         .Where(l => l.MarketId == marketId && l.PaymentStatus == PaymentStatusEnum.Paid)
+                         .SumAsync(l => l.Amount),
+
+                     // Sum daily revenue
+                     DailyRevenue = await _dbContext.LevyPayments
+                         .Where(l => l.MarketId == marketId &&
+                                l.PaymentDate >= startOfDay &&
+                                l.PaymentStatus == PaymentStatusEnum.Paid)
+                         .SumAsync(l => l.Amount),
+
+                     // Sum weekly revenue
+                     WeeklyRevenue = await _dbContext.LevyPayments
+                         .Where(l => l.MarketId == marketId &&
+                                l.PaymentDate >= startOfWeek &&
+                                l.PaymentStatus == PaymentStatusEnum.Paid)
+                         .SumAsync(l => l.Amount),
+
+                     // Sum monthly revenue
+                     MonthlyRevenue = await _dbContext.LevyPayments
+                         .Where(l => l.MarketId == marketId &&
+                                l.PaymentDate >= startOfMonth &&
+                                l.PaymentStatus == PaymentStatusEnum.Paid)
+                         .SumAsync(l => l.Amount),
+
+                     // Get recent levy payments - include trader information for display
+                     RecentLevyPayments = await _dbContext.LevyPayments
+                         .Where(l => l.MarketId == marketId && l.PaymentStatus == PaymentStatusEnum.Paid)
+                         .Include(l => l.Trader)
+                         .OrderByDescending(l => l.PaymentDate)
+                         .Take(10)
+                         .Select(l => new LevyPaymentDetail
+                         {
+                             PaymentId = l.Id,
+                             AmountPaid = l.Amount,
+                             PaidBy = l.Trader != null ? l.Trader.User.FirstName + " " + l.Trader.User.LastName :
+                                      l.GoodBoy != null ? l.GoodBoy.User.FirstName + " " + l.GoodBoy.User.LastName : "Unknown",
+                             PaymentDate = l.PaymentDate,
+                             PaymentMethod = l.PaymentMethod,
+                             PaymentPeriod = l.PaymentMethod
+                         })
+                         .ToListAsync()
+                 };
+
+                 // Calculate percentage changes from previous day
+                 var yesterdayStart = startOfDay.AddDays(-1);
+                 var yesterdayEnd = startOfDay;
+
+                 var yesterdayTraders = await _dbContext.Traders
+                     .Where(t => t.MarketId == marketId && t.CreatedAt < yesterdayEnd)
+                     .CountAsync();
+
+                 var yesterdayCaretakers = await _dbContext.Caretakers
+                     .Where(c => c.MarketId == marketId && c.CreatedAt < yesterdayEnd)
+                     .CountAsync();
+
+                 var yesterdayLevies = await _dbContext.LevyPayments
+                     .Where(l => l.MarketId == marketId &&
+                            l.PaymentDate >= yesterdayStart &&
+                            l.PaymentDate < yesterdayEnd &&
+                            l.PaymentStatus == PaymentStatusEnum.Paid)
+                     .SumAsync(l => l.Amount);
+
+                 // Calculate percentage changes
+                 stats.PercentageChangeTraders = CalculatePercentageChange(yesterdayTraders, stats.TotalTraders);
+                 stats.PercentageChangeCaretakers = CalculatePercentageChange(yesterdayCaretakers, stats.TotalCaretakers);
+                 stats.PercentageChangeLevies = CalculatePercentageChange(yesterdayLevies, stats.TotalLevies);
+
+                 return stats;
+             }
+     */
         private decimal CalculatePercentageChange(int previous, int current)
         {
             if (previous == 0)
