@@ -17,7 +17,7 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string? category, PaginationFilter filter);
         Task<BaseResponse<WaivedProduct>> GetWaivedProductById(string Id);
         Task<BaseResponse<string>> UpdateProduct(UpdateWaivedProductDto dto);
-        Task<BaseResponse<PaginatorDto<IEnumerable<Vendor>>>> GetVendorAndProducts(PaginationFilter filter);
+        Task<BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>> GetVendorAndProducts(PaginationFilter filter);
         Task<BaseResponse<string>> ConfirmCustomerPurchase(string id);
         Task<BaseResponse<string>> RegisterCustomerPurchase(CustomerPurchaseDto dto);
         Task<BaseResponse<List<ProductCategoryDto>>> GetAllProductCategories();

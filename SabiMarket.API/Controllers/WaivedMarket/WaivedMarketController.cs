@@ -327,8 +327,8 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
-        [HttpPost("GetAllSubscriptionPlans")]
-        public async Task<IActionResult> GetAllSubscriptionPlans(PaginationFilter filter)
+        [HttpGet("GetAllSubscriptionPlans")]
+        public async Task<IActionResult> GetAllSubscriptionPlans([FromQuery] PaginationFilter filter)
         {
             var response = await _serviceManager.ISubscriptionPlanService.GetAllSubscriptionPlans(filter);
             if (!response.IsSuccessful)

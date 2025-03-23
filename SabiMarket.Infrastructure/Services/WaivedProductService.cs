@@ -240,24 +240,46 @@ public class WaivedProductService : IWaivedProductService
 
     }
 
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<Vendor>>>> GetVendorAndProducts(PaginationFilter filter)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>> GetVendorAndProducts(PaginationFilter filter)
     {
         try
         {
             var vendors = await _repositoryManager.VendorRepository.GetVendorsWithPagination(filter, false);
-            if (vendors == null)
+            if (vendors == null || !vendors.PageItems.Any())
             {
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<Vendor>>>(new NotFoundException("No Record Found."), "Record not found.");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorDto>>>(new NotFoundException("No Record Found."), "Record not found.");
             }
 
-            return ResponseFactory.Success(vendors);
+            // Map Vendor to VendorDto to prevent circular reference
+            var vendorDtos = vendors.PageItems.Select(v => new VendorDto
+            {
+                Id = v.Id,
+                BusinessName = v.BusinessName,
+                VendorName = v.User.FirstName + " " + v.User.LastName,
+                Email = v.User.Email,
+                PhoneNumber = v.User.PhoneNumber,
+                Products = v.Products.Select(p => new ProductDto
+                {
+                    Id = p.Id,
+                    ProductName = p.ProductName,
+                    Price = p.Price
+                }).ToList()
+            }).ToList();
 
+            var response = new PaginatorDto<IEnumerable<VendorDto>>
+            {
+                PageItems = vendorDtos,
+                NumberOfPages = vendors.NumberOfPages,
+                PageSize = vendors.PageSize,
+                CurrentPage = vendors.CurrentPage,
+            };
+
+            return ResponseFactory.Success(response);
         }
         catch (Exception ex)
         {
-            Log.Error("Exception occured while getting vendors" + ex.Message);
-            return ResponseFactory.Fail<PaginatorDto<IEnumerable<Vendor>>>(new Exception("An Error occured."), "Try again later.");
-
+            Log.Error("Exception occurred while getting vendors: " + ex.Message);
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorDto>>>(new Exception("An error occurred."), "Try again later.");
         }
     }
     public async Task<BaseResponse<string>> RegisterCustomerPurchase(CustomerPurchaseDto dto)
