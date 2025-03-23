@@ -579,6 +579,88 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        public async Task<BaseResponse<ChairmanDashboardStatsDto>> GetChairmanDashboardStats(string chairmanId)
+        {
+            try
+            {
+                // First get the chairman to check existence and update access time
+                var chairman = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, trackChanges: true);
+                if (chairman == null)
+                {
+                    await CreateAuditLog(
+                        "Dashboard Access Failed",
+                        $"Chairman not found for ID: {chairmanId}",
+                        "Dashboard Access"
+                    );
+                    return ResponseFactory.Fail<ChairmanDashboardStatsDto>(
+                        new NotFoundException("Chairman not found"),
+                        "Chairman not found");
+                }
+
+                // Update last dashboard access
+                chairman.UpdatedAt = DateTime.UtcNow;
+                _repository.ChairmanRepository.UpdateChairman(chairman);
+
+                // Get dashboard statistics - now correctly returning ChairmanDashboardStatsDto
+                var statsDto = await _repository.ChairmanRepository.GetChairmanDashboardStatsAsync(chairmanId);
+
+                await CreateAuditLog(
+                    "Dashboard Access",
+                    $"Retrieved dashboard stats for chairman ID: {chairmanId}",
+                    "Dashboard Access"
+                );
+
+                await _repository.SaveChangesAsync();
+                return ResponseFactory.Success(statsDto, "Dashboard stats retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving chairman dashboard stats");
+                return ResponseFactory.Fail<ChairmanDashboardStatsDto>(ex, "An unexpected error occurred");
+            }
+        }
+        /*   public async Task<BaseResponse<ChairmanDashboardStatsDto>> GetChairmanDashboardStats(string chairmanId)
+           {
+               try
+               {
+                   var chairman = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, trackChanges: true);
+                   if (chairman == null)
+                   {
+                       await CreateAuditLog(
+                           "Dashboard Access Failed",
+                           $"Chairman not found for ID: {chairmanId}",
+                           "Dashboard Access"
+                       );
+                       return ResponseFactory.Fail<ChairmanDashboardStatsDto>(
+                           new NotFoundException("Chairman not found"),
+                           "Chairman not found");
+                   }
+
+                   // Update last dashboard access
+                   chairman.UpdatedAt = DateTime.UtcNow;
+                   _repository.ChairmanRepository.UpdateChairman(chairman);
+
+                   // Get dashboard statistics
+                   var stats = await _repository.ChairmanRepository.GetChairmanDashboardStatsAsync(chairmanId);
+                   var statsDto = _mapper.Map<ChairmanDashboardStatsDto>(stats);
+
+                   await CreateAuditLog(
+                       "Dashboard Access",
+                       $"Retrieved dashboard stats for chairman ID: {chairmanId}",
+                       "Dashboard Access"
+                   );
+
+                   await _repository.SaveChangesAsync();
+                   return ResponseFactory.Success(statsDto, "Dashboard stats retrieved successfully");
+               }
+               catch (Exception ex)
+               {
+                   _logger.LogError(ex, "Error retrieving chairman dashboard stats");
+                   return ResponseFactory.Fail<ChairmanDashboardStatsDto>(ex, "An unexpected error occurred");
+               }
+           }
+   */
+
         public async Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();

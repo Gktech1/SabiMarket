@@ -1,6 +1,6 @@
 ﻿namespace SabiMarket.Domain.Enum
 {
-    public enum PaymentMethodEnum
+    public enum PaymenPeriodEnum
     {
         Cash = 1,
         BankTransfer,

@@ -24,6 +24,25 @@ public class ChairmanController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// Get dashboard statistics for the logged-in chairman
+    /// </summary>
+    /// <returns>Dashboard statistics including trader counts, caretaker counts, and revenue metrics</returns>
+    [HttpGet("chairmandashboardstats")]
+    [ProducesResponseType(typeof(BaseResponse<ChairmanDashboardStatsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<ChairmanDashboardStatsDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<ChairmanDashboardStatsDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<ChairmanDashboardStatsDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetChairmanDashboardStats()
+    {
+        // Retrieve chairman ID from the authenticated user
+        var chairmanId = User.FindFirst("Id")?.Value;
+
+        var response = await _chairmanService.GetChairmanDashboardStats(chairmanId);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+
+    }
+
     [HttpGet("getall-localgovernments")]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>), StatusCodes.Status400BadRequest)]

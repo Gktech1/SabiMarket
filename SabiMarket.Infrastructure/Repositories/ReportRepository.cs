@@ -220,9 +220,9 @@ namespace SabiMarket.Infrastructure.Repositories
             foreach (var pm in paymentMethodGroups)
             {
                 string methodName;
-                if (Enum.IsDefined(typeof(PaymentMethodEnum), pm.Method))
+                if (Enum.IsDefined(typeof(PaymenPeriodEnum), pm.Method))
                 {
-                    methodName = Enum.GetName(typeof(PaymentMethodEnum), pm.Method);
+                    methodName = Enum.GetName(typeof(PaymenPeriodEnum), pm.Method);
                 }
                 else
                 {

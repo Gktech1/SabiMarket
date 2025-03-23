@@ -24,7 +24,7 @@ namespace SabiMarket.Domain.Entities.LevyManagement
         public PaymentPeriodEnum Period { get; set; }
 
         [Required]
-        public PaymentMethodEnum PaymentMethod { get; set; }
+        public PaymenPeriodEnum PaymentMethod { get; set; }
 
         [Required]
         public PaymentStatusEnum PaymentStatus { get; set; }
