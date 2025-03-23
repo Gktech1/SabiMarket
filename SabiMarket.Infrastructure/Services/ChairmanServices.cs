@@ -1287,7 +1287,8 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets(string localgovermentId = null)
+        // Service Method with Search Query
+        public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets(string localgovermentId = null, string searchQuery = null)
         {
             var correlationId = Guid.NewGuid().ToString();
             try
@@ -1295,11 +1296,13 @@ namespace SabiMarket.Infrastructure.Services
                 await CreateAuditLog(
                     "Markets List Query",
                     $"CorrelationId: {correlationId} - Retrieving markets" +
-                    (string.IsNullOrEmpty(localgovermentId) ? "" : $" for LocalGovernment: {localgovermentId}"),
+                    (string.IsNullOrEmpty(localgovermentId) ? "" : $" for LocalGovernment: {localgovermentId}") +
+                    (string.IsNullOrEmpty(searchQuery) ? "" : $" with search term: {searchQuery}"),
                     "Market Management"
                 );
 
-                var markets = await _repository.MarketRepository.GetAllMarketForExport(false);
+                // Pass the search query directly to the repository
+                var markets = await _repository.MarketRepository.GetAllMarketForExport(false, searchQuery);
 
                 // Filter by LocalGovernment ID if provided
                 if (!string.IsNullOrEmpty(localgovermentId))
@@ -1312,7 +1315,8 @@ namespace SabiMarket.Infrastructure.Services
                 await CreateAuditLog(
                     "Markets Retrieved",
                     $"CorrelationId: {correlationId} - Retrieved {marketDtos.Count()} markets" +
-                    (string.IsNullOrEmpty(localgovermentId) ? "" : $" for LocalGovernment: {localgovermentId}"),
+                    (string.IsNullOrEmpty(localgovermentId) ? "" : $" for LocalGovernment: {localgovermentId}") +
+                    (string.IsNullOrEmpty(searchQuery) ? "" : $" with search term: {searchQuery}"),
                     "Market Management"
                 );
 
@@ -1328,7 +1332,48 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<IEnumerable<MarketResponseDto>>(ex, "An unexpected error occurred");
             }
         }
+        /*     public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets(string localgovermentId = null)
+             {
+                 var correlationId = Guid.NewGuid().ToString();
+                 try
+                 {
+                     await CreateAuditLog(
+                         "Markets List Query",
+                         $"CorrelationId: {correlationId} - Retrieving markets" +
+                         (string.IsNullOrEmpty(localgovermentId) ? "" : $" for LocalGovernment: {localgovermentId}"),
+                         "Market Management"
+                     );
 
+                     var markets = await _repository.MarketRepository.GetAllMarketForExport(false);
+
+                     // Filter by LocalGovernment ID if provided
+                     if (!string.IsNullOrEmpty(localgovermentId))
+                     {
+                         markets = markets.Where(m => m.LocalGovernmentId == localgovermentId).ToList();
+                     }
+
+                     var marketDtos = _mapper.Map<IEnumerable<MarketResponseDto>>(markets);
+
+                     await CreateAuditLog(
+                         "Markets Retrieved",
+                         $"CorrelationId: {correlationId} - Retrieved {marketDtos.Count()} markets" +
+                         (string.IsNullOrEmpty(localgovermentId) ? "" : $" for LocalGovernment: {localgovermentId}"),
+                         "Market Management"
+                     );
+
+                     return ResponseFactory.Success(marketDtos, "Markets retrieved successfully");
+                 }
+                 catch (Exception ex)
+                 {
+                     await CreateAuditLog(
+                         "Markets List Query Failed",
+                         $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                         "Market Management"
+                     );
+                     return ResponseFactory.Fail<IEnumerable<MarketResponseDto>>(ex, "An unexpected error occurred");
+                 }
+             }
+     */
         public async Task<BaseResponse<TraderDetailsDto>> GetTraderDetails(string traderId)
         {
             var correlationId = Guid.NewGuid().ToString();

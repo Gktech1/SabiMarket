@@ -411,9 +411,9 @@ public class ChairmanController : ControllerBase
     [HttpGet("markets")]
     [ProducesResponseType(typeof(BaseResponse<IEnumerable<MarketResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<IEnumerable<MarketResponseDto>>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetAllMarkets(string? localgovernmentId)
+    public async Task<IActionResult> GetAllMarkets(string? localgovernmentId, string? searchTerm)
     {
-        var response = await _chairmanService.GetAllMarkets(localgovernmentId!);
+        var response = await _chairmanService.GetAllMarkets(localgovernmentId!, searchTerm!);
         return !response.IsSuccessful ? StatusCode(StatusCodes.Status500InternalServerError, response) : Ok(response);
     }
 
