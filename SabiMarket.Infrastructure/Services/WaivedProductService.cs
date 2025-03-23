@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Data;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
@@ -240,24 +241,46 @@ public class WaivedProductService : IWaivedProductService
 
     }
 
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<Vendor>>>> GetVendorAndProducts(PaginationFilter filter)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>> GetVendorAndProducts(PaginationFilter filter)
     {
         try
         {
             var vendors = await _repositoryManager.VendorRepository.GetVendorsWithPagination(filter, false);
-            if (vendors == null)
+            if (vendors == null || !vendors.PageItems.Any())
             {
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<Vendor>>>(new NotFoundException("No Record Found."), "Record not found.");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorDto>>>(new NotFoundException("No Record Found."), "Record not found.");
             }
 
-            return ResponseFactory.Success(vendors);
+            // Map Vendor to VendorDto to prevent circular reference
+            var vendorDtos = vendors.PageItems.Select(v => new VendorDto
+            {
+                Id = v.Id,
+                BusinessName = v.BusinessName,
+                VendorName = v.User.FirstName + " " + v.User.LastName,
+                Email = v.User.Email,
+                PhoneNumber = v.User.PhoneNumber,
+                Products = v.Products.Select(p => new ProductDto
+                {
+                    Id = p.Id,
+                    ProductName = p.ProductName,
+                    Price = p.Price
+                }).ToList()
+            }).ToList();
 
+            var response = new PaginatorDto<IEnumerable<VendorDto>>
+            {
+                PageItems = vendorDtos,
+                NumberOfPages = vendors.NumberOfPages,
+                PageSize = vendors.PageSize,
+                CurrentPage = vendors.CurrentPage,
+            };
+
+            return ResponseFactory.Success(response);
         }
         catch (Exception ex)
         {
-            Log.Error("Exception occured while getting vendors" + ex.Message);
-            return ResponseFactory.Fail<PaginatorDto<IEnumerable<Vendor>>>(new Exception("An Error occured."), "Try again later.");
-
+            Log.Error("Exception occurred while getting vendors: " + ex.Message);
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorDto>>>(new Exception("An error occurred."), "Try again later.");
         }
     }
     public async Task<BaseResponse<string>> RegisterCustomerPurchase(CustomerPurchaseDto dto)
@@ -275,7 +298,7 @@ public class WaivedProductService : IWaivedProductService
             };
             _applicationDbContext.CustomerPurchases.Add(purchase);
             await _repositoryManager.SaveChangesAsync();
-            return ResponseFactory.Success("Success", "Customer purchase created successfully.");
+            return ResponseFactory.Success(purchase.Id, "Customer purchase created successfully.");
 
         }
         catch (Exception ex)
@@ -291,7 +314,10 @@ public class WaivedProductService : IWaivedProductService
         try
         {
             var loggedInUser = Helper.GetUserDetails(_contextAccessor);
-
+            if (loggedInUser.Role.ToLower() != UserRoles.Admin.ToLower())
+            {
+                return ResponseFactory.Fail<string>(new UnauthorizedAccessException("You are not authorized for this action."), "Unautorised.");
+            }
             var purchase = _applicationDbContext.CustomerPurchases.Find(id);
             if (purchase == null)
             {
@@ -314,7 +340,10 @@ public class WaivedProductService : IWaivedProductService
         try
         {
             var loggedInUser = Helper.GetUserDetails(_contextAccessor);
-
+            if (_applicationDbContext.ProductCategories.Any(x => x.Name.ToLower() == categoryName.ToLower()))
+            {
+                return ResponseFactory.Fail<string>(new DuplicateNameException("Product already exist."), "Product already exist.");
+            }
             var category = new ProductCategory
             {
                 IsActive = true,
@@ -349,8 +378,21 @@ public class WaivedProductService : IWaivedProductService
 
         return ResponseFactory.Success(productCategory);
     }
+    public async Task<BaseResponse<string>> DeleteProductCategory(string id)
+    {
 
-    ///
+        var productCategory = await _applicationDbContext.ProductCategories.FindAsync(id);
+
+        if (productCategory == null)
+        {
+            return ResponseFactory.Fail<string>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+        _applicationDbContext.Remove(productCategory);
+        await _applicationDbContext.SaveChangesAsync();
+        return ResponseFactory.Success("Record deleted successfully.");
+    }
+
+    //
     public async Task<BaseResponse<string>> CreateComplaint(string vendorId, string compalaint, string? imageUrl)
     {
         try
@@ -397,7 +439,7 @@ public class WaivedProductService : IWaivedProductService
         await _repositoryManager.SaveChangesAsync();
         return ResponseFactory.Success("Success");
     }
-    public async Task<BaseResponse<string>> DeleteComplaint(string complaintId, string vendorId, string complaintMsg, string imageUrl)
+    public async Task<BaseResponse<string>> DeleteComplaint(string complaintId)
     {
         var complaint = _applicationDbContext.CustomerFeedbacks.Find(complaintId);
         if (complaint == null)

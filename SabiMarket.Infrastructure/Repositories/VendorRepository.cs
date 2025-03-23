@@ -50,8 +50,8 @@ namespace SabiMarket.Infrastructure.Repositories
         PaginationFilter paginationFilter, bool trackChanges)
         {
             var query = FindAll(trackChanges)
-                .Include(v => v.User)
                 .Include(p => p.Products)
+                .Include(p => p.User)
                 .OrderBy(v => v.User.FirstName);
             return await query.Paginate(paginationFilter);
         }

@@ -47,4 +47,23 @@ namespace SabiMarket.Application.DTOs
         //public decimal OriginalPrice { get; set; }
         //public decimal WaivedPrice { get; set; }
     }
+
+    public class VendorDto
+    {
+        public string Id { get; set; }
+        public string BusinessName { get; set; }
+        public string VendorName { get; set; }
+        public string PhoneNumber { get; set; }
+        public string Email { get; set; }
+
+        // Prevent circular references by not including the full User object
+        public List<ProductDto> Products { get; set; } = new();
+    }
+
+    public class ProductDto
+    {
+        public string Id { get; set; }
+        public string ProductName { get; set; }
+        public decimal Price { get; set; }
+    }
 }

@@ -327,8 +327,8 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
-        [HttpPost("GetAllSubscriptionPlans")]
-        public async Task<IActionResult> GetAllSubscriptionPlans(PaginationFilter filter)
+        [HttpGet("GetAllSubscriptionPlans")]
+        public async Task<IActionResult> GetAllSubscriptionPlans([FromQuery] PaginationFilter filter)
         {
             var response = await _serviceManager.ISubscriptionPlanService.GetAllSubscriptionPlans(filter);
             if (!response.IsSuccessful)
@@ -511,6 +511,41 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetCustomerComplaint([FromQuery] PaginationFilter filter)
         {
             var response = await _serviceManager.IWaivedProductService.GetAllComplaint(filter);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpDelete("DeleteCustomerComplaint")]
+        public async Task<IActionResult> DeleteCustomerComplaint(string complaintId)
+        {
+            var response = await _serviceManager.IWaivedProductService.DeleteComplaint(complaintId);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+        [HttpDelete("DeleteProductCategory")]
+        public async Task<IActionResult> DeleteProductCategory(string complaintId)
+        {
+            var response = await _serviceManager.IWaivedProductService.DeleteProductCategory(complaintId);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
