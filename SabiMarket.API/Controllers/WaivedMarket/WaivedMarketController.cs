@@ -13,7 +13,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize(Policy = PolicyNames.RequireVendorOnly)]
+    [Authorize]
     public class WaivedMarketController : ControllerBase
     {
         private readonly IServiceManager _serviceManager;
@@ -150,7 +150,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
+
         [HttpGet("CheckActiveVendorSubscription")]
+        [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
         public async Task<IActionResult> CheckActiveVendorSubscription([FromQuery] string userId)
         {
             var response = await _serviceManager.ISubscriptionService.CheckActiveVendorSubscription(userId);
@@ -169,6 +171,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("CheckActiveCustomerSubscription")]
+        [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
         public async Task<IActionResult> CheckActiveCustomerSubscription([FromQuery] string userId)
         {
             var response = await _serviceManager.ISubscriptionService.CheckActiveCustomerSubscription(userId);
@@ -364,9 +367,10 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("GetVendorAndProducts")]
+        [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
         public async Task<IActionResult> GetVendorAndProducts([FromQuery] PaginationFilter filter)
         {
-            var response = await _serviceManager.IWaivedProductService.GetVendorAndProducts(filter);
+            BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>? response = await _serviceManager.IWaivedProductService.GetVendorAndProducts(filter);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures

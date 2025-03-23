@@ -20,13 +20,129 @@ namespace SabiMarket.Infrastructure.Repositories
         public void AddMarket(Market market) => Create(market);
 
         public void DeleteMarket(Market market) => Delete(market);
+        /*     public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges, string searchQuery = null)
+             {
+                 var query = FindAll(trackChanges)
+                     .Include(a => a.Caretaker)
+                         .ThenInclude(c => c.User)
+                     .Include(a => a.Traders)
+                     .Include(m => m.Chairman)
+                         .ThenInclude(c => c.User)
+                     .Include(a => a.LocalGovernment)
+                     .Include(a => a.MarketSections);
 
-        public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges) => await FindAll(trackChanges).Include(a => a.Caretaker)
-            .Include(a => a.Traders)
-            .Include(m => m.Chairman)
-            .Include(m => m.Caretaker)
-            .Include(a => a.LocalGovernment)
-            .Include(a => a.MarketSections).ToListAsync();
+                 // If implementing search at repository level for better performance
+                 if (!string.IsNullOrEmpty(searchQuery))
+                 {
+                     searchQuery = searchQuery.ToLower();
+                     query = query.Where(m =>
+                         (m.MarketName != null && m.MarketName.ToLower().Contains(searchQuery)) ||
+                         (m.Location != null && m.Location.ToLower().Contains(searchQuery)) ||
+                         (m.Description != null && m.Description.ToLower().Contains(searchQuery)) ||
+                         (m.LocalGovernment != null && m.LocalGovernment.Name != null && m.LocalGovernment.Name.ToLower().Contains(searchQuery)) ||
+                         (m.LocalGovernmentName != null && m.LocalGovernmentName.ToLower().Contains(searchQuery)) ||
+                         (m.Chairman != null && m.Chairman.User != null && (
+                             (m.Chairman.User.FirstName != null && m.Chairman.User.FirstName.ToLower().Contains(searchQuery)) ||
+                             (m.Chairman.User.LastName != null && m.Chairman.User.LastName.ToLower().Contains(searchQuery))
+                         )) ||
+                         (m.Caretaker != null && m.Caretaker.User != null && (
+                             (m.Caretaker.User.FirstName != null && m.Caretaker.User.FirstName.ToLower().Contains(searchQuery)) ||
+                             (m.Caretaker.User.LastName != null && m.Caretaker.User.LastName.ToLower().Contains(searchQuery))
+                         )) ||
+                         (m.MarketType != null && m.MarketType.ToLower().Contains(searchQuery))
+                     );
+                 }
+
+                 return await query.ToListAsync();
+             }*/
+        /*    public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges, string searchQuery = null)
+            {
+                var query = FindAll(trackChanges)
+                    .Include(a => a.Caretaker)
+                    .Include(a => a.Traders)
+                    .Include(m => m.Chairman)
+                    .Include(a => a.LocalGovernment)
+                    .Include(a => a.MarketSections);
+
+                // If implementing search at repository level for better performance
+                if (!string.IsNullOrEmpty(searchQuery))
+                {
+                    searchQuery = searchQuery.ToLower();
+                    query = query.Where(m =>
+                        m.MarketName.ToLower().Contains(searchQuery) ||
+                        (m.Location != null && m.Location.ToLower().Contains(searchQuery)) ||
+                        (m.Description != null && m.Description.ToLower().Contains(searchQuery)) ||
+                        (m.LocalGovernment != null && m.LocalGovernment.Name.ToLower().Contains(searchQuery)) ||
+                        (m.LocalGovernmentName != null && m.LocalGovernmentName.ToLower().Contains(searchQuery)) ||
+                        (m.Chairman != null && (m.Chairman.User.FirstName.ToLower().Contains(searchQuery) || m.Chairman.User.LastName.ToLower().Contains(searchQuery))) ||
+                        (m.Caretaker != null && (m.Caretaker.User.FirstName.ToLower().Contains(searchQuery) || m.Caretaker.LastName.ToLower().Contains(searchQuery))) ||
+                        (m.MarketType != null && m.MarketType.ToLower().Contains(searchQuery))
+                    );
+                }
+
+                return await query.ToListAsync();
+            }
+           */ /* public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges) => await FindAll(trackChanges).Include(a => a.Caretaker)
+                 .Include(a => a.Traders)
+                 .Include(m => m.Chairman)
+                 .Include(m => m.Caretaker)
+                 .Include(a => a.LocalGovernment)
+                 .Include(a => a.MarketSections).ToListAsync();*/
+
+        public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges, string searchQuery = null)
+        {
+            // Start with base query
+            var query = FindAll(trackChanges);
+
+            // Apply search filter if provided
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                searchQuery = searchQuery.ToLower();
+                query = query.Where(m =>
+                    (m.MarketName != null && m.MarketName.ToLower().Contains(searchQuery)) ||
+                    (m.Location != null && m.Location.ToLower().Contains(searchQuery)) ||
+                    (m.Description != null && m.Description.ToLower().Contains(searchQuery)) ||
+                    (m.LocalGovernmentName != null && m.LocalGovernmentName.ToLower().Contains(searchQuery)) ||
+                    (m.MarketType != null && m.MarketType.ToLower().Contains(searchQuery))
+                );
+            }
+
+            // Apply includes after filtering
+            var queryWithIncludes = query
+                .Include(a => a.Caretaker)
+                    .ThenInclude(c => c.User)
+                .Include(a => a.Traders)
+                .Include(m => m.Chairman)
+                    .ThenInclude(c => c.User)
+                .Include(a => a.LocalGovernment)
+                .Include(a => a.MarketSections);
+
+            // Get the markets with includes
+            var markets = await queryWithIncludes.ToListAsync();
+
+            // If we need to search on navigation properties, do it in memory after loading
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                markets = markets.Where(m =>
+                    (m.MarketName != null && m.MarketName.ToLower().Contains(searchQuery)) ||
+                    (m.Location != null && m.Location.ToLower().Contains(searchQuery)) ||
+                    (m.Description != null && m.Description.ToLower().Contains(searchQuery)) ||
+                    (m.LocalGovernment != null && m.LocalGovernment.Name != null && m.LocalGovernment.Name.ToLower().Contains(searchQuery)) ||
+                    (m.LocalGovernmentName != null && m.LocalGovernmentName.ToLower().Contains(searchQuery)) ||
+                    (m.Chairman != null && m.Chairman.User != null && (
+                        (m.Chairman.User.FirstName != null && m.Chairman.User.FirstName.ToLower().Contains(searchQuery)) ||
+                        (m.Chairman.User.LastName != null && m.Chairman.User.LastName.ToLower().Contains(searchQuery))
+                    )) ||
+                    (m.Caretaker != null && m.Caretaker.User != null && (
+                        (m.Caretaker.User.FirstName != null && m.Caretaker.User.FirstName.ToLower().Contains(searchQuery)) ||
+                        (m.Caretaker.User.LastName != null && m.Caretaker.User.LastName.ToLower().Contains(searchQuery))
+                    )) ||
+                    (m.MarketType != null && m.MarketType.ToLower().Contains(searchQuery))
+                ).ToList();
+            }
+
+            return markets;
+        }
 
 
         public async Task<Market> GetMarketById(string id, bool trackChanges) => await FindByCondition(x => x.Id == id, trackChanges)
