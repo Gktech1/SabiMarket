@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Data;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
@@ -297,7 +298,7 @@ public class WaivedProductService : IWaivedProductService
             };
             _applicationDbContext.CustomerPurchases.Add(purchase);
             await _repositoryManager.SaveChangesAsync();
-            return ResponseFactory.Success("Success", "Customer purchase created successfully.");
+            return ResponseFactory.Success(purchase.Id, "Customer purchase created successfully.");
 
         }
         catch (Exception ex)
@@ -313,7 +314,10 @@ public class WaivedProductService : IWaivedProductService
         try
         {
             var loggedInUser = Helper.GetUserDetails(_contextAccessor);
-
+            if (loggedInUser.Role.ToLower() != UserRoles.Admin.ToLower())
+            {
+                return ResponseFactory.Fail<string>(new UnauthorizedAccessException("You are not authorized for this action."), "Unautorised.");
+            }
             var purchase = _applicationDbContext.CustomerPurchases.Find(id);
             if (purchase == null)
             {
@@ -336,7 +340,10 @@ public class WaivedProductService : IWaivedProductService
         try
         {
             var loggedInUser = Helper.GetUserDetails(_contextAccessor);
-
+            if (_applicationDbContext.ProductCategories.Any(x => x.Name.ToLower() == categoryName.ToLower()))
+            {
+                return ResponseFactory.Fail<string>(new DuplicateNameException("Product already exist."), "Product already exist.");
+            }
             var category = new ProductCategory
             {
                 IsActive = true,
@@ -371,8 +378,21 @@ public class WaivedProductService : IWaivedProductService
 
         return ResponseFactory.Success(productCategory);
     }
+    public async Task<BaseResponse<string>> DeleteProductCategory(string id)
+    {
 
-    ///
+        var productCategory = await _applicationDbContext.ProductCategories.FindAsync(id);
+
+        if (productCategory == null)
+        {
+            return ResponseFactory.Fail<string>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+        _applicationDbContext.Remove(productCategory);
+        await _applicationDbContext.SaveChangesAsync();
+        return ResponseFactory.Success("Record deleted successfully.");
+    }
+
+    //
     public async Task<BaseResponse<string>> CreateComplaint(string vendorId, string compalaint, string? imageUrl)
     {
         try
@@ -419,7 +439,7 @@ public class WaivedProductService : IWaivedProductService
         await _repositoryManager.SaveChangesAsync();
         return ResponseFactory.Success("Success");
     }
-    public async Task<BaseResponse<string>> DeleteComplaint(string complaintId, string vendorId, string complaintMsg, string imageUrl)
+    public async Task<BaseResponse<string>> DeleteComplaint(string complaintId)
     {
         var complaint = _applicationDbContext.CustomerFeedbacks.Find(complaintId);
         if (complaint == null)

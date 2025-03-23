@@ -22,9 +22,10 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<string>> RegisterCustomerPurchase(CustomerPurchaseDto dto);
         Task<BaseResponse<List<ProductCategoryDto>>> GetAllProductCategories();
         Task<BaseResponse<string>> CreateProductCategory(string categoryName, string description);
+        Task<BaseResponse<string>> DeleteProductCategory(string id);
         Task<BaseResponse<string>> CreateComplaint(string vendorId, string compalaint, string? imageUrl);
         Task<BaseResponse<string>> UpdateComplaint(string complaintId, string vendorId, string complaintMsg, string? imageUrl);
-        Task<BaseResponse<string>> DeleteComplaint(string complaintId, string vendorId, string complaintMsg, string imageUrl);
+        Task<BaseResponse<string>> DeleteComplaint(string complaintId);
         Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedback>>>> GetAllComplaint(PaginationFilter filter);
         Task<BaseResponse<CustomerFeedback>> GetCustomerFeedbackById(string Id);
         Task<BaseResponse<string>> DeleteProduct(string waiveProductId);
