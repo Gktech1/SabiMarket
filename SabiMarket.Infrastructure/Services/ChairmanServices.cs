@@ -584,7 +584,7 @@ namespace SabiMarket.Infrastructure.Services
             try
             {
                 // First get the chairman to check existence and update access time
-                var chairman = await _repository.ChairmanRepository.GetChairmanByIdAsync(chairmanId, trackChanges: true);
+                var chairman = await _repository.ChairmanRepository.GetChairmanByChairmanIdId(chairmanId, trackChanges: true);
                 if (chairman == null)
                 {
                     await CreateAuditLog(

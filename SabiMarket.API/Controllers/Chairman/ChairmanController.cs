@@ -33,11 +33,8 @@ public class ChairmanController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<ChairmanDashboardStatsDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<ChairmanDashboardStatsDto>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(BaseResponse<ChairmanDashboardStatsDto>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetChairmanDashboardStats()
+    public async Task<IActionResult> GetChairmanDashboardStats(string chairmanId)
     {
-        // Retrieve chairman ID from the authenticated user
-        var chairmanId = User.FindFirst("Id")?.Value;
-
         var response = await _chairmanService.GetChairmanDashboardStats(chairmanId);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
 
