@@ -107,6 +107,66 @@ namespace SabiMarket.Infrastructure.Repositories
                 .SumAsync(l => l.Amount);
         }
 
+        public async Task<PaginatorDto<IEnumerable<LevyPayment>>> SearchLevyPaymentsInMarket(
+    string marketId,
+    string searchQuery,
+    PaginationFilter paginationFilter,
+    bool trackChanges)
+        {
+            // Normalize marketId for consistent comparison
+            var normalizedMarketId = marketId.ToUpper();
+
+            // Start with base query for the market
+            var query = FindByCondition(l => l.MarketId.ToUpper() == normalizedMarketId, trackChanges);
+
+            // Apply search filter if query provided
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                // Normalize search query
+                var normalizedSearch = searchQuery.Trim().ToLower();
+
+                // Check if search query is a number
+                decimal amount = 0;
+                bool isNumeric = decimal.TryParse(normalizedSearch, out amount);
+
+                // Build the query based on search criteria
+                query = query.Where(l =>
+                    // Search by trader name (first or last)
+                    (l.Trader != null && (
+                        l.Trader.User.FirstName.ToLower().Contains(normalizedSearch) ||
+                        l.Trader.User.LastName.ToLower().Contains(normalizedSearch) ||
+                        (l.Trader.User.FirstName + " " + l.Trader.User.LastName).ToLower().Contains(normalizedSearch) ||
+                        (l.Trader.BusinessName != null && l.Trader.BusinessName.ToLower().Contains(normalizedSearch))
+                    )) ||
+                    // Search by GoodBoy name
+                    (l.GoodBoy != null && (
+                        l.GoodBoy.User.FirstName.ToLower().Contains(normalizedSearch) ||
+                        l.GoodBoy.User.LastName.ToLower().Contains(normalizedSearch) ||
+                        (l.GoodBoy.User.FirstName + " " + l.GoodBoy.User.LastName).ToLower().Contains(normalizedSearch)
+                    )) ||
+                    // Search by transaction reference
+                    (l.TransactionReference != null && l.TransactionReference.ToLower().Contains(normalizedSearch))
+                );
+
+                // If the search is numeric, add amount search as a separate filter
+                // to avoid the out parameter in expression trees
+                if (isNumeric)
+                {
+                    query = query.Where(l => l.Amount == amount || query.Any());
+                }
+            }
+
+            // Include related entities
+            query = query
+                .Include(l => l.Trader)
+                    .ThenInclude(t => t.User)
+                .Include(l => l.GoodBoy)
+                    .ThenInclude(g => g.User)
+                .OrderByDescending(l => l.PaymentDate);
+
+            // Apply pagination using our extension method
+            return await query.Paginate(paginationFilter);
+        }
         public void DeleteLevyPayment(LevyPayment levy) => Delete(levy);
 
         // Added method to get market-specific levy configuration

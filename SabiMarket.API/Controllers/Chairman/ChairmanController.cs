@@ -52,6 +52,34 @@ public class ChairmanController : ControllerBase
             ? StatusCode(StatusCodes.Status500InternalServerError, response)
             : Ok(response);
     }
+    /// <summary>
+    /// Search levy payments for a chairman's market
+    /// </summary>
+    /// <param name="chairmanId">ID of the chairman</param>
+    /// <param name="query">Search term to filter levy payments</param>
+    /// <param name="pageNumber">Page number for pagination (defaults to 1)</param>
+    /// <param name="pageSize">Number of items per page (defaults to 10)</param>
+    /// <returns>Paginated list of levy payments matching the search criteria</returns>
+    [HttpGet("searchlevies")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SearchLevyPayments(
+        string chairmanId,
+        [FromQuery] string query,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var paginationFilter = new PaginationFilter
+        {
+            PageNumber = pageNumber < 1 ? 1 : pageNumber,
+            PageSize = pageSize > 50 ? 50 : (pageSize < 1 ? 10 : pageSize)
+        };
+
+        var response = await _chairmanService.SearchLevyPayments(chairmanId, query, paginationFilter);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
 
     [HttpGet("search-localgovernmentarea")]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>), StatusCodes.Status200OK)]
@@ -83,7 +111,7 @@ public class ChairmanController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> DeleteChairman(string chairmanId)
     {
-        var response = await _chairmanService.DeleteChairmanById(chairmanId);
+        var response = await _chairmanService.DeleteChairmanByAdmin(chairmanId);
 
         if (!response.IsSuccessful)
         {
