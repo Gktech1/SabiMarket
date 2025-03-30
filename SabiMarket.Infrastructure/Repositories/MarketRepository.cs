@@ -186,6 +186,47 @@ namespace SabiMarket.Infrastructure.Repositories
         }
 
         public async Task<Market> GetMarketByIdAsync(string marketId, bool trackChanges)
+{
+    // Fetch the market with its relationships
+    var market = await FindByCondition(m => m.Id == marketId, trackChanges)
+        .Include(m => m.Caretaker)
+            .ThenInclude(c => c.User)
+        .Include(m => m.Traders)
+            .ThenInclude(t => t.User)
+        .Include(m => m.Chairman)
+        .Include(m => m.LocalGovernment)
+        .Include(m => m.MarketSections)
+        .FirstOrDefaultAsync();
+
+    if (market != null)
+    {
+        // Initialize AdditionalCaretakers if null
+        if (market.AdditionalCaretakers == null)
+            market.AdditionalCaretakers = new List<Caretaker>();
+            
+        // Load all caretakers for this market
+        var allCaretakers = await _context.Caretakers
+            .Include(c => c.User)
+            .Where(c => c.MarketId == marketId)
+            .AsNoTracking()
+            .ToListAsync();
+            
+        // Filter out the primary caretaker
+        var additionalCaretakers = market.CaretakerId != null
+            ? allCaretakers.Where(c => c.Id != market.CaretakerId).ToList()
+            : allCaretakers;
+            
+        // Add to collection
+        foreach (var caretaker in additionalCaretakers)
+        {
+            market.AdditionalCaretakers.Add(caretaker);
+        }
+    }
+    
+    return market;
+}
+
+     /*   public async Task<Market> GetMarketByIdAsync(string marketId, bool trackChanges)
         {
             // Fetch the market with its primary caretaker
             var market = await FindByCondition(m => m.Id == marketId, trackChanges)
@@ -196,6 +237,8 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Include(m => m.Chairman)
                 .Include(m => m.LocalGovernment)
                 .Include(m => m.MarketSections)
+                .Include(m => m.AdditionalCaretakers) // Include additional caretakers directly
+                    .ThenInclude(c => c.User)
                 .FirstOrDefaultAsync();
 
             if (market != null)
@@ -220,7 +263,7 @@ namespace SabiMarket.Infrastructure.Repositories
             }
 
             return market;
-        }
+        }*/
         /*   public async Task<Market> GetMarketByIdAsync(string marketId, bool trackChanges)
            {
                var query = FindByCondition(m => m.Id == marketId, trackChanges);

@@ -497,12 +497,34 @@ public class MappingProfile : Profile
 
                 return caretakers;
             }))
-            .ForMember(dest => dest.Traders, opt => opt.MapFrom(src => src.Traders));
-        // Make sure you also have this mapping for the Caretaker entity
-        CreateMap<Caretaker, CaretakerResponseDto>();
+                .ForMember(dest => dest.Traders, opt => opt.MapFrom(src => src.Traders));
+           
+        CreateMap<Trader, TraderResponseDto>()
+           .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+           .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.User != null ?
+               $"{src.User.FirstName} {src.User.LastName}" : "Unknown"))
+           .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User != null ?
+               src.User.PhoneNumber : null))
+           .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User != null ?
+               src.User.Email : null))
+           .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.User != null ?
+               src.User.Gender : null))
+           .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
+           .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market != null ?
+               src.Market.MarketName : null))
+           .ForMember(dest => dest.QRCode, opt => opt.MapFrom(src => src.QRCode))
+           .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => !src.IsActive));
 
-        // And this mapping for the Trader entity
-        CreateMap<Trader, TraderResponseDto>();
+        CreateMap<Caretaker, CaretakerResponseDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.User != null ?
+                $"{src.User.FirstName} {src.User.LastName}" : "Unknown"))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User != null ?
+                src.User.PhoneNumber : null))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User != null ?
+                src.User.Email : null))
+            .ForMember(dest => dest.ProfileImageUrl, opt => opt.MapFrom(src => src.User != null ?
+                src.User.ProfileImageUrl : null));
 
         CreateMap<CreateGoodBoyRequestDto, ApplicationUser>()
            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
