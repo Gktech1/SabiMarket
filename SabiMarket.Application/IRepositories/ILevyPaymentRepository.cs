@@ -17,6 +17,11 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     string searchQuery,
     PaginationFilter paginationFilter,
     bool trackChanges);
+    Task<PaginatorDto<IEnumerable<LevyPayment>>> GetPagedPaymentWithDetails(
+       PaymentPeriodEnum? period,
+       string? searchQuery,
+       PaginationFilter paginationFilter,
+       bool trackChanges = false);
     Task<decimal> GetTotalLeviesAsync(DateTime startDate, DateTime endDate);
     void DeleteLevyPayment(LevyPayment levy);
     Task<decimal> GetTotalRevenueAsync();

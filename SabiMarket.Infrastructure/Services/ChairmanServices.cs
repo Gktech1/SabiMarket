@@ -14,7 +14,6 @@ using SabiMarket.Infrastructure.Helpers;
 using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Entities.LevyManagement;
-using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Enum;
 using SabiMarket.Infrastructure.Utilities;
 using SabiMarket.Domain.Entities;
@@ -22,9 +21,6 @@ using Microsoft.AspNetCore.Http;
 using ValidationException = FluentValidation.ValidationException;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using iText.Commons.Actions.Contexts;
-using Microsoft.Extensions.Configuration.UserSecrets;
-using System.Security.Claims;
 using SabiMarket.Infrastructure.Data;
 
 namespace SabiMarket.Infrastructure.Services
@@ -807,11 +803,11 @@ namespace SabiMarket.Infrastructure.Services
 
                 // Ensure chairman has a Caretaker 
                 var caretakerbyLGAid = await _repository.CaretakerRepository.GetCaretakerByLocalGovernmentId(chairman.LocalGovernmentId, false);
-              /*  if (caretakerbyLGAid == null)
-                {
-                    caretakerbyLGAid.Id = null;
-                }
-*/
+                /*  if (caretakerbyLGAid == null)
+                  {
+                      caretakerbyLGAid.Id = null;
+                  }
+  */
 
 
                 // Log market creation attempt
@@ -832,7 +828,7 @@ namespace SabiMarket.Infrastructure.Services
                 market.MarketCapacity = 0;
                 market.ChairmanId = chairman.Id;
                 market.CaretakerId = caretakerbyLGAid?.Id! ?? null;
-                
+
 
 
                 // Save Market
@@ -1336,6 +1332,171 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
+
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>>> GetLevyPayments(
+    PaymentPeriodEnum? period,
+    string searchQuery,
+    PaginationFilter paginationFilter)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Levy Payments Query",
+                    $"CorrelationId: {correlationId} - Retrieving levy payments with period: {period}, search: {searchQuery}",
+                    "Levy Management"
+                );
+
+                // Get paginated data
+                var pagedPayments = await _repository.LevyPaymentRepository.GetPagedPaymentWithDetails(
+                    period,
+                    searchQuery,
+                    paginationFilter,
+                    false);
+
+                // Add debug logging to see what's loaded
+                foreach (var payment in pagedPayments.PageItems)
+                {
+                    _logger.LogInformation($"Payment {payment.Id}, TraderId: {payment.TraderId}, " +
+                        $"Trader is null: {payment.Trader == null}, " +
+                        $"Trader.User is null: {payment.Trader?.User == null}");
+                }
+
+                // Map to DTOs with safer null handling and extra logging
+                var levyPaymentDtos = pagedPayments.PageItems.Select(payment =>
+                {
+                    string traderName = "Unknown";
+
+                    try
+                    {
+                        // Try to get trader name
+                        if (payment.Trader?.User != null)
+                        {
+                            traderName = $"{payment.Trader.User.FirstName} {payment.Trader.User.LastName}";
+                            _logger.LogInformation($"Found trader name: {traderName} for payment {payment.Id}");
+                        }
+                        // If trader not found, try GoodBoy
+                        else if (payment.GoodBoy?.User != null)
+                        {
+                            traderName = $"{payment.GoodBoy.User.FirstName} {payment.GoodBoy.User.LastName}";
+                            _logger.LogInformation($"Found goodboy name: {traderName} for payment {payment.Id}");
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"No trader or goodboy user found for payment {payment.Id}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error getting trader name for payment {payment.Id}");
+                    }
+
+                    return new LevyPaymentWithTraderDto
+                    {
+                        Id = payment.Id,
+                        Amount = payment.Amount,
+                        TraderName = traderName,
+                        PaymentDate = payment.PaymentDate,
+                        PaymentStatus = payment.PaymentStatus
+                    };
+                }).ToList();
+
+                // Create paginator result
+                var result = new PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>
+                {
+                    PageItems = levyPaymentDtos,
+                    CurrentPage = pagedPayments.CurrentPage,
+                    PageSize = pagedPayments.PageSize,
+                    NumberOfPages = pagedPayments.NumberOfPages
+                };
+
+                await CreateAuditLog(
+                    "Levy Payments Retrieved",
+                    $"CorrelationId: {correlationId} - Retrieved {levyPaymentDtos.Count()} payments",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(result, "Levy payments retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Levy Payments Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Levy Management"
+                );
+                _logger.LogError(ex, "Error retrieving levy payments: {Message}", ex.Message);
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>>(ex, "An unexpected error occurred");
+            }
+        }
+
+
+        /*  public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyPaymentListDto>>>> GetLevyPayments(
+        PaymentPeriodEnum? period,
+        string searchQuery,
+        PaginationFilter paginationFilter)
+          {
+              var correlationId = Guid.NewGuid().ToString();
+              try
+              {
+                  await CreateAuditLog(
+                      "Levy Payments Query",
+                      $"CorrelationId: {correlationId} - Retrieving levy payments with period: {period}, search: {searchQuery}",
+                      "Levy Management"
+                  );
+
+                  // Get paginated data
+                  var pagedPayments = await _repository.LevyPaymentRepository.GetPagedPaymentWithDetails(
+                      period,
+                      searchQuery,
+                      paginationFilter,
+                      false);
+
+                  // Map to DTOs with sequential SN
+                  var levyPaymentDtos = pagedPayments.PageItems.Select((payment, index) => new LevyPaymentListDto
+                  {
+                      Id = payment.Id,
+                      Amount = payment.Amount,
+                      // Handle trader name based on payment source
+                      TraderName = payment.Trader != null
+                          ? $"{payment.Trader.User.FirstName} {payment.Trader.User.LastName}"
+                          : payment.GoodBoy != null
+                              ? $"{payment.GoodBoy.User.FirstName} {payment.GoodBoy.User.LastName}"
+                              : "Unknown",
+                      PaymentDate = payment.PaymentDate,
+                      PaymentStatus = payment.PaymentStatus
+                  }).ToList();
+
+                  // Create paginator result
+                  var result = new PaginatorDto<IEnumerable<LevyPaymentListDto>>
+                  {
+                      PageItems = levyPaymentDtos,
+                      CurrentPage = pagedPayments.CurrentPage,
+                      PageSize = pagedPayments.PageSize,
+                      NumberOfPages = pagedPayments.NumberOfPages
+                  };
+
+                  await CreateAuditLog(
+                      "Levy Payments Retrieved",
+                      $"CorrelationId: {correlationId} - Retrieved {levyPaymentDtos.Count()} payments",
+                      "Levy Management"
+                  );
+
+                  return ResponseFactory.Success(result, "Levy payments retrieved successfully");
+              }
+              catch (Exception ex)
+              {
+                  await CreateAuditLog(
+                      "Levy Payments Query Failed",
+                      $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                      "Levy Management"
+                  );
+                  _logger.LogError(ex, "Error retrieving levy payments: {Message}", ex.Message);
+                  return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyPaymentListDto>>>(ex, "An unexpected error occurred");
+              }
+          }
+  */
+
 
         public async Task<BaseResponse<IEnumerable<LevySetupResponseDto>>> GetLevySetups()
         {

@@ -6,6 +6,7 @@ using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
 using SabiMarket.Domain.Exceptions;
+using SabiMarket.Domain.Enum;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -160,6 +161,22 @@ public class ChairmanController : ControllerBase
     {
         var response = await _chairmanService.GetReportMetrics(dateRange.StartDate, dateRange.EndDate);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+    [HttpGet("levypayments")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetLevyPayments(
+    [FromQuery] PaymentPeriodEnum? period,
+    [FromQuery] string? search,
+    [FromQuery] PaginationFilter paginationFilter)
+    {
+        var response = await _chairmanService.GetLevyPayments(period, search, paginationFilter);
+
+        return response.IsSuccessful
+            ? Ok(response)
+            : BadRequest(response);
     }
 
     [HttpDelete("markets/{marketId}")]
