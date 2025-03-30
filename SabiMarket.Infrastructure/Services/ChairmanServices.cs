@@ -25,6 +25,7 @@ using System.Text.Json;
 using iText.Commons.Actions.Contexts;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using System.Security.Claims;
+using SabiMarket.Infrastructure.Data;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -40,6 +41,7 @@ namespace SabiMarket.Infrastructure.Services
         private readonly IValidator<CreateAssistantOfficerRequestDto> _createAssistOfficerValidator;
         private readonly IValidator<CreateMarketRequestDto> _createMarketValidator;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ApplicationDbContext _context;
 
         // Add these properties to your ChairmanService class
         private readonly IValidator<CreateLevyRequestDto> _createLevyValidator;
@@ -58,7 +60,8 @@ namespace SabiMarket.Infrastructure.Services
             ICurrentUserService currentUser,
             IHttpContextAccessor httpContextAccessor,
             IValidator<CreateMarketRequestDto> createMarketValidator,
-            IValidator<CreateAssistantOfficerRequestDto> createAssistOfficerValidator)
+            IValidator<CreateAssistantOfficerRequestDto> createAssistOfficerValidator,
+            ApplicationDbContext context)
         {
             _repository = repository;
             _logger = logger;
@@ -72,6 +75,7 @@ namespace SabiMarket.Infrastructure.Services
             _httpContextAccessor = httpContextAccessor;
             _createMarketValidator = createMarketValidator;
             _createAssistOfficerValidator = createAssistOfficerValidator;
+            _context = context;
         }
 
         private string GetCurrentIpAddress()
@@ -304,7 +308,7 @@ namespace SabiMarket.Infrastructure.Services
                 // Map the chairmen entities to response DTOs
                 var chairmanDtos = chairmenPage.PageItems.Select(c => new ChairmanResponseDto
                 {
-                    Id = c.Id,
+                    Id = c.UserId,
                     FullName = string.IsNullOrEmpty(c.FullName)
                         ? (c.User != null ? $"{c.User.FirstName} {c.User.LastName}" : string.Empty)
                         : c.FullName,
@@ -619,6 +623,88 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<ChairmanDashboardStatsDto>(ex, "An unexpected error occurred");
             }
         }
+
+        /// <summary>
+        /// Searches for levy payments in a chairman's market
+        /// </summary>
+        /// <param name="chairmanId">The ID of the chairman</param>
+        /// <param name="searchQuery">The search query string</param>
+        /// <param name="paginationFilter">Pagination parameters</param>
+        /// <returns>A paginated list of levy payments matching the search criteria</returns>
+
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>> SearchLevyPayments(
+    string chairmanId,
+    string searchQuery,
+    PaginationFilter paginationFilter)
+        {
+            try
+            {
+                // First get the chairman to check existence
+                var chairman = await _repository.ChairmanRepository.GetChairmanByChairmanIdId(chairmanId, trackChanges: false);
+                if (chairman == null)
+                {
+                    await CreateAuditLog(
+                        "Levy Search Failed",
+                        $"Chairman not found for ID: {chairmanId}",
+                        "Levy Management"
+                    );
+                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>(
+                        new NotFoundException("Chairman not found"),
+                        "Chairman not found");
+                }
+
+                var marketId = chairman.MarketId;
+                if (string.IsNullOrEmpty(marketId))
+                {
+                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>(
+                        new BadRequestException("Chairman is not associated with any market"),
+                        "Chairman is not associated with any market");
+                }
+
+                // Use repository method to search
+                var searchResult = await _repository.LevyPaymentRepository.SearchLevyPaymentsInMarket(
+                    marketId,
+                    searchQuery,
+                    paginationFilter,
+                    trackChanges: false
+                );
+
+                // Create DTO list from search results
+                var dtoList = searchResult.PageItems.Select(l => new LevyPaymentDetailDto
+                {
+                    PaymentId = l.Id,
+                    AmountPaid = l.Amount,
+                    PaidBy = l.Trader != null ? l.Trader.User.FirstName + " " + l.Trader.User.LastName :
+                            l.GoodBoy != null ? l.GoodBoy.User.FirstName + " " + l.GoodBoy.User.LastName : "Unknown",
+                    PaymentDate = l.PaymentDate,
+                    PaymentMethod = l.PaymentMethod.ToString(),
+                    PaymentStatus = l.PaymentStatus
+                }).ToList();
+
+                // Create new PaginatorDto with the properties that exist in your class
+                var resultDto = new PaginatorDto<IEnumerable<LevyPaymentDetailDto>>
+                {
+                    PageItems = dtoList,
+                    PageSize = searchResult.PageSize,
+                    CurrentPage = searchResult.CurrentPage,
+                    NumberOfPages = searchResult.NumberOfPages
+                };
+
+                await CreateAuditLog(
+                    "Levy Search",
+                    $"Searched levy payments for chairman ID: {chairmanId}, Query: {searchQuery}",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(resultDto, "Levy payments retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching levy payments: {Message}", ex.Message);
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>(ex, "An unexpected error occurred");
+            }
+        }
+
         /*   public async Task<BaseResponse<ChairmanDashboardStatsDto>> GetChairmanDashboardStats(string chairmanId)
            {
                try
@@ -721,14 +807,11 @@ namespace SabiMarket.Infrastructure.Services
 
                 // Ensure chairman has a Caretaker 
                 var caretakerbyLGAid = await _repository.CaretakerRepository.GetCaretakerByLocalGovernmentId(chairman.LocalGovernmentId, false);
-                if (caretakerbyLGAid == null)
+              /*  if (caretakerbyLGAid == null)
                 {
-                    return ResponseFactory.Fail<MarketResponseDto>(
-                        new NotFoundException("Caretaker not found"),
-                        "Invalid caretaker"
-                    );
+                    caretakerbyLGAid.Id = null;
                 }
-
+*/
 
 
                 // Log market creation attempt
@@ -748,7 +831,7 @@ namespace SabiMarket.Infrastructure.Services
                 market.StartDate = DateTime.UtcNow;
                 market.MarketCapacity = 0;
                 market.ChairmanId = chairman.Id;
-                market.CaretakerId = caretakerbyLGAid.Id;
+                market.CaretakerId = caretakerbyLGAid?.Id! ?? null;
                 
 
 
@@ -1486,28 +1569,130 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        /*    public async Task<BaseResponse<bool>> DeleteMarket(string marketId)
+            {
+                var correlationId = Guid.NewGuid().ToString();
+                try
+                {
+                    await CreateAuditLog(
+                        "Market Deletion",
+                        $"CorrelationId: {correlationId} - Attempting to delete market: {marketId}",
+                        "Market Management"
+                    );
+
+                    var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, true);
+                    _repository.MarketRepository.DeleteMarket(market);
+                    await _repository.SaveChangesAsync();
+
+                    await CreateAuditLog(
+                        "Market Deleted",
+                        $"CorrelationId: {correlationId} - Market deleted successfully",
+                        "Market Management"
+                    );
+
+                    return ResponseFactory.Success(true, "Market deleted successfully");
+                }
+                catch (Exception ex)
+                {
+                    await CreateAuditLog(
+                        "Market Deletion Failed",
+                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                        "Market Management"
+                    );
+                    return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+                }
+            }
+    */
         public async Task<BaseResponse<bool>> DeleteMarket(string marketId)
         {
             var correlationId = Guid.NewGuid().ToString();
             try
             {
                 await CreateAuditLog(
-                    "Market Deletion",
-                    $"CorrelationId: {correlationId} - Attempting to delete market: {marketId}",
+                    "Market Deletion With Dependencies",
+                    $"CorrelationId: {correlationId} - Attempting to delete market and all dependencies: {marketId}",
                     "Market Management"
                 );
 
+                // Get market
                 var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, true);
+                if (market == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Market not found"),
+                        "Market not found");
+                }
+
+                // 1. Delete LevyPayments first since that's causing the constraint violation
+                var levyPayments = await _context.LevyPayments
+                    .Where(lp => lp.MarketId == marketId)
+                    .ToListAsync();
+
+                foreach (var payment in levyPayments)
+                {
+                    _context.LevyPayments.Remove(payment);
+                }
+                await _repository.SaveChangesAsync();
+
+                // 2. Handle sections and traders
+                if (market.MarketSections != null && market.MarketSections.Any())
+                {
+                    foreach (var section in market.MarketSections.ToList())
+                    {
+                        _context.MarketSections.Remove(section);
+                    }
+                    await _repository.SaveChangesAsync();
+                }
+
+                // 3. Handle the chairman relationship
+                if (market.Chairman != null)
+                {
+                    market.Chairman.MarketId = null;
+                    await _repository.SaveChangesAsync();
+                }
+
+                // 4. Handle traders
+                var traders = await _context.Traders
+                    .Where(t => t.MarketId == marketId)
+                    .ToListAsync();
+
+                foreach (var trader in traders)
+                {
+                    _context.Traders.Remove(trader);
+                }
+                await _repository.SaveChangesAsync();
+
+                // 5. Handle caretakers - IMPORTANT: Delete caretakers instead of setting MarketId to null
+                // Since MarketId is non-nullable in Caretakers table
+                if (market.Caretaker != null)
+                {
+                    // Delete primary caretaker
+                    _context.Caretakers.Remove(market.Caretaker);
+                    await _repository.SaveChangesAsync();
+                }
+
+                // Delete additional caretakers
+                var additionalCaretakers = await _context.Caretakers
+                    .Where(c => c.MarketId == marketId)
+                    .ToListAsync();
+
+                foreach (var caretaker in additionalCaretakers)
+                {
+                    // Delete caretaker instead of setting MarketId to null
+                    _context.Caretakers.Remove(caretaker);
+                }
+                await _repository.SaveChangesAsync();
+
+                // 6. Finally delete the market
                 _repository.MarketRepository.DeleteMarket(market);
                 await _repository.SaveChangesAsync();
 
                 await CreateAuditLog(
-                    "Market Deleted",
-                    $"CorrelationId: {correlationId} - Market deleted successfully",
+                    "Market Deleted With Dependencies",
+                    $"CorrelationId: {correlationId} - Market and all its dependencies deleted successfully",
                     "Market Management"
                 );
-
-                return ResponseFactory.Success(true, "Market deleted successfully");
+                return ResponseFactory.Success(true, "Market and all its dependencies deleted successfully");
             }
             catch (Exception ex)
             {
@@ -1516,10 +1701,10 @@ namespace SabiMarket.Infrastructure.Services
                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
                     "Market Management"
                 );
+                _logger.LogError(ex, "Error deleting market with dependencies: {MarketId}, Error: {ErrorMessage}", marketId, ex.Message);
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
-
         public async Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers()
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -2627,19 +2812,41 @@ namespace SabiMarket.Infrastructure.Services
             return ((current - previous) / previous) * 100;
         }
 
-        public async Task<BaseResponse<bool>> DeleteChairmanById(string chairmanId)
+        public async Task<BaseResponse<bool>> DeleteChairmanByAdmin(string chairmanId)
         {
             var correlationId = Guid.NewGuid().ToString();
+            var adminId = _currentUser.GetUserId();
             try
             {
-                await CreateAuditLog(
-                    "Chairman Deletion",
-                    $"CorrelationId: {correlationId} - Attempting to delete chairman: {chairmanId}",
-                    "Chairman Management"
-                );
+                // First verify the admin exists and has proper permissions
+                var admin = await _repository.AdminRepository.GetAdminByIdAsync(adminId, trackChanges: false);
+                if (admin == null)
+                {
+                    await CreateAuditLog(
+                        "Chairman Deletion Failed",
+                        $"CorrelationId: {correlationId} - Admin not found with ID: {adminId}",
+                        "Chairman Management"
+                    );
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Admin not found"),
+                        "Admin not found");
+                }
 
-                // Get chairman with tracking for deletion
-                var chairman = await _repository.ChairmanRepository.GetChairmanById(chairmanId, true);
+                // Check if admin has role management permissions
+                if (!admin.HasRoleManagementAccess)
+                {
+                    await CreateAuditLog(
+                        "Chairman Deletion Failed",
+                        $"CorrelationId: {correlationId} - Admin does not have permission to manage roles: {adminId}",
+                        "Chairman Management"
+                    );
+                    return ResponseFactory.Fail<bool>(
+                        new UnauthorizedException("Admin does not have permission to manage roles"),
+                        "Admin does not have permission to manage roles");
+                }
+
+                // Now get the chairman to delete
+                var chairman = await _repository.ChairmanRepository.GetChairmanById(chairmanId, trackChanges: true);
                 if (chairman == null)
                 {
                     await CreateAuditLog(
@@ -2658,12 +2865,12 @@ namespace SabiMarket.Infrastructure.Services
                 {
                     await CreateAuditLog(
                         "Chairman Deletion Failed",
-                        $"CorrelationId: {correlationId} - Chairman has active dependencies and cannot be deleted",
+                        $"CorrelationId: {correlationId} - Chairman has active dependencies",
                         "Chairman Management"
                     );
-                    return ResponseFactory.Fail<bool>(
+                    /*return ResponseFactory.Fail<bool>(
                         new InvalidOperationException("Chairman has active dependencies"),
-                        "Cannot delete chairman with active dependencies");
+                        "Cannot delete chairman with active dependencies");*/
                 }
 
                 // Get associated user
@@ -2673,8 +2880,8 @@ namespace SabiMarket.Infrastructure.Services
                     // Remove chairman role from user
                     await _userManager.RemoveFromRoleAsync(user, UserRoles.Chairman);
 
-                    // Update user status
-                    //user.IsActive = false;
+                    // Update user status - you might want to uncomment this depending on your business logic
+                    // user.IsActive = false;
                     await _userManager.UpdateAsync(user);
                 }
 
@@ -2684,7 +2891,7 @@ namespace SabiMarket.Infrastructure.Services
 
                 await CreateAuditLog(
                     "Chairman Deleted",
-                    $"CorrelationId: {correlationId} - Successfully deleted chairman with ID: {chairmanId}",
+                    $"CorrelationId: {correlationId} - Admin {adminId} successfully deleted chairman with ID: {chairmanId}",
                     "Chairman Management"
                 );
 
@@ -2697,11 +2904,87 @@ namespace SabiMarket.Infrastructure.Services
                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
                     "Chairman Management"
                 );
-                _logger.LogError(ex, "Error deleting chairman: {ChairmanId}", chairmanId);
+                _logger.LogError(ex, "Error deleting chairman: {ChairmanId} by admin: {AdminId}", chairmanId, adminId);
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while deleting the chairman");
             }
         }
 
+
+        /*    public async Task<BaseResponse<bool>> DeleteChairmanById(string chairmanId)
+            {
+                var correlationId = Guid.NewGuid().ToString();
+                try
+                {
+                    await CreateAuditLog(
+                        "Chairman Deletion",
+                        $"CorrelationId: {correlationId} - Attempting to delete chairman: {chairmanId}",
+                        "Chairman Management"
+                    );
+
+                    // Get chairman with tracking for deletion
+                    var chairman = await _repository.ChairmanRepository.GetChairmanById(chairmanId, true);
+                    if (chairman == null)
+                    {
+                        await CreateAuditLog(
+                            "Chairman Deletion Failed",
+                            $"CorrelationId: {correlationId} - Chairman not found with ID: {chairmanId}",
+                            "Chairman Management"
+                        );
+                        return ResponseFactory.Fail<bool>(
+                            new NotFoundException("Chairman not found"),
+                            "Chairman not found");
+                    }
+
+                    // Check if there are any dependencies (e.g., markets, caretakers) before deletion
+                    var hasActiveDependencies = await CheckChairmanDependencies(chairman);
+                    if (hasActiveDependencies)
+                    {
+                        await CreateAuditLog(
+                            "Chairman Deletion Failed",
+                            $"CorrelationId: {correlationId} - Chairman has active dependencies and cannot be deleted",
+                            "Chairman Management"
+                        );
+                        return ResponseFactory.Fail<bool>(
+                            new InvalidOperationException("Chairman has active dependencies"),
+                            "Cannot delete chairman with active dependencies");
+                    }
+
+                    // Get associated user
+                    var user = await _userManager.FindByIdAsync(chairman.UserId);
+                    if (user != null)
+                    {
+                        // Remove chairman role from user
+                        await _userManager.RemoveFromRoleAsync(user, UserRoles.Chairman);
+
+                        // Update user status
+                        //user.IsActive = false;
+                        await _userManager.UpdateAsync(user);
+                    }
+
+                    // Delete chairman
+                    _repository.ChairmanRepository.DeleteChairman(chairman);
+                    await _repository.SaveChangesAsync();
+
+                    await CreateAuditLog(
+                        "Chairman Deleted",
+                        $"CorrelationId: {correlationId} - Successfully deleted chairman with ID: {chairmanId}",
+                        "Chairman Management"
+                    );
+
+                    return ResponseFactory.Success(true, "Chairman deleted successfully");
+                }
+                catch (Exception ex)
+                {
+                    await CreateAuditLog(
+                        "Chairman Deletion Failed",
+                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                        "Chairman Management"
+                    );
+                    _logger.LogError(ex, "Error deleting chairman: {ChairmanId}", chairmanId);
+                    return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while deleting the chairman");
+                }
+            }
+    */
         private async Task<bool> CheckChairmanDependencies(Chairman chairman)
         {
             // Check for active markets

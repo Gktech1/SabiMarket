@@ -35,6 +35,10 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<AssistantOfficerResponseDto>> CreateAssistantOfficer(CreateAssistantOfficerRequestDto officerDto);
         Task<BaseResponse<AssistantOfficerResponseDto>> GetAssistantOfficerById(string officerId);
         Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request);
+        Task<BaseResponse<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>> SearchLevyPayments(
+    string chairmanId,
+    string searchQuery,
+    PaginationFilter paginationFilter);
         Task<BaseResponse<bool>> UpdateMarket(string marketId, UpdateMarketRequestDto request);
         Task<BaseResponse<bool>> DeleteMarket(string marketId);
         Task<BaseResponse<MarketDetailsDto>> GetMarketDetails(string marketId);
@@ -68,6 +72,6 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId);
         Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter);
         Task<BaseResponse<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>> GetMarketLevies(string marketId, PaginationFilter paginationFilter);
-        Task<BaseResponse<bool>> DeleteChairmanById(string chairmanId);
+        Task<BaseResponse<bool>> DeleteChairmanByAdmin(string chairmanId);
     }
 }
