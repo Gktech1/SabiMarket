@@ -10,6 +10,8 @@
         public string MarketName { get; set; }
         public string Gender { get; set; }
         public string IdentityNumber { get; set; }
+        public string BusinessName {  get; set; }
+        public string BusinessType { get; set; }    
         public DateTime DateAdded { get; set; }
         public string QRCode { get; set; }
         public bool IsActive { get; set; }

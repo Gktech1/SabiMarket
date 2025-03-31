@@ -22,6 +22,8 @@ using ValidationException = FluentValidation.ValidationException;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using SabiMarket.Infrastructure.Data;
+using SabiMarket.Domain.DTOs;
+using System.Linq.Expressions;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -939,7 +941,28 @@ namespace SabiMarket.Infrastructure.Services
                     $"CorrelationId: {correlationId} - Market details retrieved successfully",
                     "Market Management"
                 );
-                return ResponseFactory.Success(_mapper.Map<MarketDetailsDto>(market), "Market details retrieved successfully");
+
+                var dto = _mapper.Map<MarketDetailsDto>(market);
+
+                // Manually fix the trader names after mapping
+                if (dto.Traders != null && market.Traders != null)
+                {
+                    var traderMap = market.Traders.ToDictionary(t => t.Id);
+
+                    foreach (var traderDto in dto.Traders)
+                    {
+                        if (traderMap.TryGetValue(traderDto.Id, out var trader) && trader.User != null)
+                        {
+                            traderDto.FullName = $"{trader.User.FirstName} {trader.User.LastName}".Trim();
+                            traderDto.Email = trader.User.Email;
+                            traderDto.PhoneNumber = trader.User.PhoneNumber;
+                            traderDto.Gender = trader.User.Gender;
+                        }
+                    }
+                }
+
+                return ResponseFactory.Success(dto, "Market details retrieved successfully");
+               // return ResponseFactory.Success(_mapper.Map<MarketDetailsDto>(market), "Market details retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -985,6 +1008,109 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        public async Task<BaseResponse<PaginatorDto<List<AssistOfficerListDto>>>> GetAssistOfficers(
+              PaginationFilter pagination,
+              string searchTerm = "",
+              string status = "Active")
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Assist Officers Query",
+                    $"CorrelationId: {correlationId} - Fetching assist officers with filters: Page {pagination.PageNumber}, Size {pagination.PageSize}, Search '{searchTerm}', Status '{status}'",
+                    "Officer Management"
+                );
+
+                // Build the filter expression for status
+                Expression<Func<AssistCenterOfficer, bool>> statusExpression;
+                if (status == "All")
+                {
+                    statusExpression = o => true; // Include all records
+                }
+                else
+                {
+                    bool isActive = status == "Active";
+                    statusExpression = o => o.IsBlocked != isActive;
+                }
+
+                // Use repository method for searching or regular query
+                PaginatorDto<IEnumerable<AssistCenterOfficer>> officersPaginated;
+                if (!string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    // Use the search method from repository
+                    officersPaginated = await _repository.AssistCenterOfficerRepository.SearchAssistOfficersAsync(
+                        statusExpression,
+                        searchTerm,
+                        pagination,
+                        trackChanges: false
+                    );
+                }
+                else
+                {
+                    // Use the regular query method
+                    officersPaginated = await _repository.AssistCenterOfficerRepository.GetAssistOfficersAsync(
+                        statusExpression,
+                        pagination,
+                        trackChanges: false
+                    );
+                }
+
+                // Map entities to DTOs
+                var officerDtos = _mapper.Map<List<AssistOfficerListDto>>(officersPaginated.PageItems);
+
+                // Manually fix the officer names and additional info after mapping
+                int index = 0;
+                foreach (var officer in officersPaginated.PageItems)
+                {
+                    if (officer.User != null)
+                    {
+                        officerDtos[index].FullName = $"{officer.User?.FirstName} {officer.User?.LastName}".Trim();
+                        officerDtos[index].Email = officer.User?.Email;
+                        officerDtos[index].PhoneNumber = officer.User?.PhoneNumber;
+
+                        // Set market name if available
+                        if (officer.Market != null)
+                        {
+                            officerDtos[index].MarketName = officer.Market?.MarketName;
+                        }
+
+                        // Set local government name if available
+                        if (officer.LocalGovernment != null)
+                        {
+                            officerDtos[index].LocalGovernmentName = officer.LocalGovernment?.Name;
+                        }
+                    }
+                    index++;
+                }
+
+                // Create final paginated result with DTOs
+                var paginatedResult = new PaginatorDto<List<AssistOfficerListDto>>
+                {
+                    PageItems = officerDtos,
+                    CurrentPage = officersPaginated.CurrentPage,
+                    PageSize = officersPaginated.PageSize,
+                    NumberOfPages = officersPaginated.NumberOfPages
+                };
+
+                await CreateAuditLog(
+                    "Assist Officers Retrieved",
+                    $"CorrelationId: {correlationId} - {officerDtos.Count} assist officers retrieved successfully",
+                    "Officer Management"
+                );
+
+                return ResponseFactory.Success(paginatedResult, "Assist officers retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Assist Officers Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Officer Management"
+                );
+                return ResponseFactory.Fail<PaginatorDto<List<AssistOfficerListDto>>>(ex, "Error retrieving assist officers");
+            }
+        }
         public async Task<BaseResponse<bool>> BlockAssistantOfficer(string officerId)
         {
             var correlationId = Guid.NewGuid().ToString();

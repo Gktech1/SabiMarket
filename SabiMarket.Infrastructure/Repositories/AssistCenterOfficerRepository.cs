@@ -4,6 +4,8 @@ using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Infrastructure.Data;
+using SabiMarket.Infrastructure.Utilities;
+using System.Linq.Expressions;
 using System.Security.Policy;
 
 namespace SabiMarket.Infrastructure.Repositories
@@ -50,6 +52,65 @@ namespace SabiMarket.Infrastructure.Repositories
             }
 
             return await query.FirstOrDefaultAsync();
+        }
+
+        public async Task<PaginatorDto<IEnumerable<AssistCenterOfficer>>> GetAssistOfficersAsync(
+            Expression<Func<AssistCenterOfficer, bool>> expression,
+            PaginationFilter paginationFilter,
+            bool trackChanges)
+        {
+            // Get base query with condition
+            var query = FindByCondition(expression, trackChanges);
+
+            // Include all necessary related entities
+            query = query
+                .Include(o => o.User)
+                .Include(o => o.Market)
+                .Include(o => o.LocalGovernment)
+                .Include(o => o.Chairman)
+                .ThenInclude(c => c.User);
+
+            // Apply ordering
+            var orderedQuery = query.OrderByDescending(o => o.CreatedAt);
+
+            // Use the Paginate extension method
+            return await orderedQuery.Paginate(paginationFilter);
+        }
+
+        public async Task<PaginatorDto<IEnumerable<AssistCenterOfficer>>> SearchAssistOfficersAsync(
+              Expression<Func<AssistCenterOfficer, bool>> baseExpression,
+              string searchTerm,
+              PaginationFilter paginationFilter,
+              bool trackChanges)
+        {
+            // Get base query with condition
+            var query = FindByCondition(baseExpression, trackChanges);
+
+            // Include all necessary related entities
+            query = query
+                .Include(o => o.User)
+                .Include(o => o.Market)
+                .Include(o => o.LocalGovernment)
+                .Include(o => o.Chairman)
+                .ThenInclude(c => c.User);
+
+            // Apply search filters
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(o =>
+                    o.User.FirstName.Contains(searchTerm) ||
+                    o.User.LastName.Contains(searchTerm) ||
+                    (o.User.FirstName + " " + o.User.LastName).Contains(searchTerm) ||
+                    o.User.Email.Contains(searchTerm) ||
+                    o.User.PhoneNumber.Contains(searchTerm)
+                );
+            }
+
+            // Apply ordering
+            var orderedQuery = query.OrderByDescending(o => o.CreatedAt);
+
+            // Use the Paginate extension method
+            return await orderedQuery.Paginate(paginationFilter);
         }
 
     }

@@ -1,5 +1,6 @@
 ﻿using SabiMarket.Application.DTOs;
 using SabiMarket.Domain.Entities.MarketParticipants;
+using System.Linq.Expressions;
 
 namespace SabiMarket.Application.Interfaces
 {
@@ -12,5 +13,14 @@ namespace SabiMarket.Application.Interfaces
     string chairmanId, PaginationFilter paginationFilter, bool trackChanges);
         Task<AssistCenterOfficer> GetByIdAsync(string officerId, bool trackChanges);
         Task<AssistCenterOfficer> GetAssistantOfficerByIdAsync(string officerId, bool trackChanges);
+        Task<PaginatorDto<IEnumerable<AssistCenterOfficer>>> GetAssistOfficersAsync(
+       Expression<Func<AssistCenterOfficer, bool>> expression,
+       PaginationFilter paginationFilter,
+       bool trackChanges);
+        Task<PaginatorDto<IEnumerable<AssistCenterOfficer>>> SearchAssistOfficersAsync(
+              Expression<Func<AssistCenterOfficer, bool>> baseExpression,
+              string searchTerm,
+              PaginationFilter paginationFilter,
+              bool trackChanges);
     }
 }

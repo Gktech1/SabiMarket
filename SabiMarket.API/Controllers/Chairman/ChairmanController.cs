@@ -7,6 +7,7 @@ using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
 using SabiMarket.Domain.Exceptions;
 using SabiMarket.Domain.Enum;
+using SabiMarket.Domain.DTOs;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -53,6 +54,81 @@ public class ChairmanController : ControllerBase
             ? StatusCode(StatusCodes.Status500InternalServerError, response)
             : Ok(response);
     }
+
+    /// <summary>
+    /// Get all assistant officers with pagination, search and status filtering
+    /// </summary>
+    /// <param name="pageNumber">Page number for pagination (default: 1)</param>
+    /// <param name="pageSize">Number of items per page (default: 10)</param>
+    /// <param name="searchTerm">Search term to filter assistant officers</param>
+    /// <param name="status">Status filter (Active, Inactive, All)</param>
+    /// <returns>Paginated list of assistant officers</returns>
+    [HttpGet("get-assistantofficers")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<AssistOfficerListDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAssistantOfficers(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? searchTerm = "",
+        [FromQuery] string status = "Active")
+    {
+        var paginationFilter = new PaginationFilter(pageNumber, pageSize);
+        var response = await _chairmanService.GetAssistOfficers(paginationFilter, searchTerm, status);
+        return Ok(response);
+
+    }
+
+    /// <summary>
+    /// Get assistant officers for a specific market
+    /// </summary>
+    /// <param name="marketId">Market ID</param>
+    /// <param name="pageNumber">Page number for pagination (default: 1)</param>
+    /// <param name="pageSize">Number of items per page (default: 10)</param>
+    /// <returns>List of assistant officers for the specified market</returns>
+  /*  [HttpGet("assistantofficers/market/{marketId}")]
+    [ProducesResponseType(typeof(BaseResponse<List<AssistOfficerListDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAssistantOfficersByMarket(
+        string marketId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(marketId))
+            {
+                return BadRequest(new BaseResponse<string>
+                {
+                    IsSuccessful = false,
+                    Message = "Market ID is required"
+                });
+            }
+
+            var paginationFilter = new PaginationFilter(pageNumber, pageSize);
+            var response = await _chairmanService.GetAssistOfficersByMarket(marketId, paginationFilter);
+
+            if (!response.IsSuccessful)
+            {
+                return NotFound(response);
+            }
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving assistant officers for market {MarketId}", marketId);
+            return StatusCode(500, new BaseResponse<string>
+            {
+                IsSuccessful = false,
+                Message = "Error retrieving assistant officers for market",
+                Data = ex.Message
+            });
+        }
+    }*/
+
     /// <summary>
     /// Search levy payments for a chairman's market
     /// </summary>
