@@ -187,7 +187,7 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<Market> GetMarketByIdAsync(string marketId, bool trackChanges)
         {
-            // Fetch the market with its primary caretaker
+            // Fetch the market with its relationships
             var market = await FindByCondition(m => m.Id == marketId, trackChanges)
                 .Include(m => m.Caretaker)
                     .ThenInclude(c => c.User)
@@ -200,19 +200,23 @@ namespace SabiMarket.Infrastructure.Repositories
 
             if (market != null)
             {
-                var additionalCaretakers = await _context.Caretakers
-                         .Include(c => c.User)
-                         .Where(c => c.MarketId == marketId && (market.CaretakerId == null || c.Id != market.CaretakerId))
-                         .AsNoTracking()  // For performance
-                         .ToListAsync();
-
-                // Create a collection for all caretakers (if not exists)
+                // Initialize AdditionalCaretakers if null
                 if (market.AdditionalCaretakers == null)
-                {
                     market.AdditionalCaretakers = new List<Caretaker>();
-                }
 
-                // Add additional caretakers
+                // Load all caretakers for this market
+                var allCaretakers = await _context.Caretakers
+                    .Include(c => c.User)
+                    .Where(c => c.MarketId == marketId)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                // Filter out the primary caretaker
+                var additionalCaretakers = market.CaretakerId != null
+                    ? allCaretakers.Where(c => c.Id != market.CaretakerId).ToList()
+                    : allCaretakers;
+
+                // Add to collection
                 foreach (var caretaker in additionalCaretakers)
                 {
                     market.AdditionalCaretakers.Add(caretaker);
@@ -221,6 +225,45 @@ namespace SabiMarket.Infrastructure.Repositories
 
             return market;
         }
+
+        /*   public async Task<Market> GetMarketByIdAsync(string marketId, bool trackChanges)
+           {
+               // Fetch the market with its primary caretaker
+               var market = await FindByCondition(m => m.Id == marketId, trackChanges)
+                   .Include(m => m.Caretaker)
+                       .ThenInclude(c => c.User)
+                   .Include(m => m.Traders)
+                       .ThenInclude(t => t.User)
+                   .Include(m => m.Chairman)
+                   .Include(m => m.LocalGovernment)
+                   .Include(m => m.MarketSections)
+                   .Include(m => m.AdditionalCaretakers) // Include additional caretakers directly
+                       .ThenInclude(c => c.User)
+                   .FirstOrDefaultAsync();
+
+               if (market != null)
+               {
+                   var additionalCaretakers = await _context.Caretakers
+                            .Include(c => c.User)
+                            .Where(c => c.MarketId == marketId && (market.CaretakerId == null || c.Id != market.CaretakerId))
+                            .AsNoTracking()  // For performance
+                            .ToListAsync();
+
+                   // Create a collection for all caretakers (if not exists)
+                   if (market.AdditionalCaretakers == null)
+                   {
+                       market.AdditionalCaretakers = new List<Caretaker>();
+                   }
+
+                   // Add additional caretakers
+                   foreach (var caretaker in additionalCaretakers)
+                   {
+                       market.AdditionalCaretakers.Add(caretaker);
+                   }
+               }
+
+               return market;
+           }*/
         /*   public async Task<Market> GetMarketByIdAsync(string marketId, bool trackChanges)
            {
                var query = FindByCondition(m => m.Id == marketId, trackChanges);
@@ -318,3 +361,80 @@ namespace SabiMarket.Infrastructure.Repositories
 
     }
 }
+
+
+/*  public async Task<Market> GetMarketByIdAsync(string marketId, bool trackChanges)
+        {
+            // Fetch the market with its relationships
+            var market = await FindByCondition(m => m.Id == marketId, trackChanges)
+                .Include(m => m.Caretaker)
+                    .ThenInclude(c => c.User)
+                .Include(m => m.Traders)
+                    .ThenInclude(t => t.User)
+                .Include(m => m.Chairman)
+                .Include(m => m.LocalGovernment)
+                .Include(m => m.MarketSections)
+                .FirstOrDefaultAsync();
+
+           *//* if (market != null)
+            {
+                // Debugging: Check if traders have their user data loaded
+                if (market.Traders != null)
+                {
+                    foreach (var trader in market.Traders)
+                    {
+                        // Log or check if User is properly loaded
+                        Console.WriteLine($"Trader ID: {trader.Id}, User loaded: {trader.User != null}");
+
+                        if (trader.User != null)
+                        {
+                            Console.WriteLine($"User details: {trader.User.FirstName} {trader.User.LastName}, Email: {trader.User.Email}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"User is null for trader {trader.Id} with UserId {trader.UserId}");
+
+                            // Try to explicitly load the User if it's null
+                            if (!string.IsNullOrEmpty(trader.UserId))
+                            {
+                                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == trader.UserId);
+                                if (user != null)
+                                {
+                                    trader.User = user;
+                                    Console.WriteLine($"Explicitly loaded user: {user.FirstName} {user.LastName}");
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"Could not find user with ID {trader.UserId}");
+                                }
+                            }
+                        }
+                    }
+                }*//*
+
+                // Rest of your existing code for caretakers...
+                // Initialize AdditionalCaretakers if null
+                if (market.AdditionalCaretakers == null)
+                    market.AdditionalCaretakers = new List<Caretaker>();
+
+                // Load all caretakers for this market
+                var allCaretakers = await _context.Caretakers
+                    .Include(c => c.User)
+                    .Where(c => c.MarketId == marketId)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                // Filter out the primary caretaker
+                var additionalCaretakers = market.CaretakerId != null
+                    ? allCaretakers.Where(c => c.Id != market.CaretakerId).ToList()
+                    : allCaretakers;
+
+                // Add to collection
+                foreach (var caretaker in additionalCaretakers)
+                {
+                    market.AdditionalCaretakers.Add(caretaker);
+                }
+            }
+
+            return market;
+        }*/

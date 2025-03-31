@@ -1,6 +1,8 @@
 ﻿using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
+using SabiMarket.Domain.DTOs;
+using SabiMarket.Domain.Enum;
 
 namespace SabiMarket.Application.IServices
 {
@@ -14,11 +16,19 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<PaginatorDto<IEnumerable<LGResponseDto>>>> GetLocalGovernmentAreas(
            string searchTerm,
              PaginationFilter paginationFilter);
-
         Task<BaseResponse<ChairmanResponseDto>> GetChairmanById(string chairmanId);
+        Task<BaseResponse<PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>>> GetLevyPayments(
+      PaymentPeriodEnum? period,
+      string searchQuery,
+      PaginationFilter paginationFilter);
         Task<BaseResponse<ChairmanResponseDto>> CreateChairman(CreateChairmanRequestDto chairmanDto);
 
         Task<BaseResponse<ChairmanDashboardStatsDto>> GetChairmanDashboardStats(string chairmanId);
+
+        Task<BaseResponse<PaginatorDto<List<AssistOfficerListDto>>>> GetAssistOfficers(
+              PaginationFilter pagination,
+              string searchTerm = "",
+              string status = "Active");
         Task<BaseResponse<bool>> UpdateChairmanProfile(string chairmanId, UpdateProfileDto profileDto);
         Task<BaseResponse<AdminDashboardResponse>> GetChairmen(string? searchTerm, PaginationFilter paginationFilter);
         Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets(string localgovermentId = null, string searchQuery = null);

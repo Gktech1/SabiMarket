@@ -14,6 +14,10 @@
         // Market Details
         public string MarketId { get; set; }
 
+        public string PhoneNumber { get; set; } 
+
+        public string ProfileImageUrl { get; set; } 
+
         public string DefaultPassword { get; set; }    
         public MarketResponseDto Market { get; set; }
 
