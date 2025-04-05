@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
 using SabiMarket.Application.DTOs;
+using SabiMarket.Application.DTOs.Advertisement;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Domain.DTOs;
 using SabiMarket.Domain.Entities;
 using SabiMarket.Domain.Entities.Administration;
+using SabiMarket.Domain.Entities.AdvertisementModule;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
@@ -651,17 +653,27 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Chairman, opt => opt.Ignore())
             .ForMember(dest => dest.LocalGovernment, opt => opt.Ignore());
 
-        // Caretaker -> CaretakerResponseDto
-        /* CreateMap<Caretaker, CaretakerResponseDto>()
-             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-             .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.User.UserName))
-             .ForMember(dest => dest.EmailAddress, opt => opt.MapFrom(src => src.User.Email))
-             .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber))
-             .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Markets.FirstOrDefault().MarketName))
-             .ForMember(dest => dest.IsBlocked, opt => opt.MapFrom(src => src.IsBlocked))
-             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-             .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt));
- */
+        CreateMap<Advertisement, AdvertisementResponseDto>()
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+                .ForMember(dest => dest.VendorName, opt => opt.MapFrom(src => src.Vendor != null ? src.Vendor.User.FirstName + " " + src.Vendor.User.LastName : ""))
+                .ForMember(dest => dest.ViewCount, opt => opt.MapFrom(src => src.Views != null ? src.Views.Count : 0));
+
+        // Advertisement -> AdvertisementDetailResponseDto
+        CreateMap<Advertisement, AdvertisementDetailResponseDto>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.VendorName, opt => opt.MapFrom(src => src.Vendor != null ? src.Vendor.User.FirstName + " " + src.Vendor.User.LastName : ""))
+            .ForMember(dest => dest.AdminName, opt => opt.MapFrom(src => src.Admin != null ? src.Admin.User.FirstName + " " + src.Admin.User.LastName : ""))
+            .ForMember(dest => dest.ViewCount, opt => opt.MapFrom(src => src.Views != null ? src.Views.Count : 0));
+
+        // AdvertisementLanguage -> AdvertisementLanguageDto
+        CreateMap<AdvertisementLanguage, AdvertisementLanguageDto>();
+
+        // AdvertPayment -> AdvertPaymentDto
+        CreateMap<AdvertPayment, AdvertPaymentDto>()
+            .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => src.Status))
+            .ForMember(dest => dest.TransactionReference, opt => opt.MapFrom(src => src.AccountNumber))
+            .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => src.CreatedAt));
+
 
         CreateMap<LevyPayment, LevyPaymentResponseDto>();
 
