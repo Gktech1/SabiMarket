@@ -26,7 +26,7 @@ namespace SabiMarket.Infrastructure.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
-        private readonly ILogger<AuthenticationService> _logger; 
+        private readonly ILogger<AuthenticationService> _logger;
         private readonly IValidator<RegistrationRequestDto> _registrationValidator;
         private readonly IValidator<LoginRequestDto> _loginValidator;
         private readonly RoleManager<ApplicationRole> _roleManager;
@@ -105,17 +105,23 @@ namespace SabiMarket.Infrastructure.Services
                 // Get associated entity based on role
                 var userDetails = await GetUserDetailsByRole(user, roles.First());
 
-                // Update last login
-                //user.IsActive = true;   
-                user.LastLoginAt = DateTime.UtcNow;
-                await _userManager.UpdateAsync(user);
-
                 // Generate JWT token with claims
                 //var (token, expiresAt) = await GenerateJwtTokenAsync(user, roles.First(), userDetails);
                 var (token, expiresAt, jwtId) = await GenerateJwtTokenAsync(user, roles.First(), userDetails);
 
-                // Generate refresh token
+                // Generate and save refresh token with all properties
+
                 user.RefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+                user.RefreshTokenJwtId = jwtId;
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(30); // Set appropriate expiry
+                user.IsRefreshTokenUsed = false;
+                user.LastLoginAt = DateTime.UtcNow;
+
+                // Save the updated user with refresh token
+                await _userManager.UpdateAsync(user);
+
+                // Generate refresh token
+                // user.RefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
                 var response = new LoginResponseDto
                 {
                     AccessToken = token,
@@ -152,10 +158,15 @@ namespace SabiMarket.Infrastructure.Services
             try
             {
                 // Find user with valid refresh token
-                var user = await _userManager.Users.FirstOrDefaultAsync(u =>
+                /*var user = await _userManager.Users.FirstOrDefaultAsync(u =>
                     u.RefreshToken == refreshToken &&
                     u.RefreshTokenExpiryTime > DateTime.UtcNow &&
-                    u.IsRefreshTokenUsed != true);
+                    u.IsRefreshTokenUsed != true);*/
+
+                var user = await _userManager.Users.FirstOrDefaultAsync(u =>
+                                        u.RefreshToken == refreshToken &&
+                                        u.RefreshTokenExpiryTime > DateTime.UtcNow &&
+                                        (u.IsRefreshTokenUsed == null || u.IsRefreshTokenUsed == false));
 
                 if (user == null)
                 {
@@ -301,7 +312,7 @@ namespace SabiMarket.Infrastructure.Services
                             CreatedAt = DateTime.UtcNow
                         };
 
-                         _repositoryMannager.VendorRepository.Create(vendor);
+                        _repositoryMannager.VendorRepository.Create(vendor);
                         break;
 
                     case "CUSTOMER":
