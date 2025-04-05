@@ -11,6 +11,7 @@ namespace SabiMarket.Domain.Enum
         Pending = 1,
         Active,
         Completed,
-        Rejected
+        Rejected,
+        Archived
     }
 }

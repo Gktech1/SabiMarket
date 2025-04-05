@@ -1,4 +1,5 @@
 ﻿using SabiMarket.Application.DTOs;
+using SabiMarket.Application.DTOs.Advertisement;
 
 namespace SabiMarket.Infrastructure.Repositories
 {
@@ -10,6 +11,8 @@ namespace SabiMarket.Infrastructure.Repositories
         Task<Advertisement> GetAdvertisementDetails(string id);
         Task<PaginatorDto<IEnumerable<Advertisement>>> GetAdvertisementsWithPagination(
             PaginationFilter paginationFilter, bool trackChanges);
+        Task<PaginatorDto<IEnumerable<Advertisement>>> GetFilteredAdvertisements(
+           AdvertisementFilterRequestDto filterDto, string vendorId, PaginationFilter paginationFilter);
         Task<bool> AdvertisementExists(string id);
         void CreateAdvertisement(Advertisement advertisement);
         void UpdateAdvertisement(Advertisement advertisement);

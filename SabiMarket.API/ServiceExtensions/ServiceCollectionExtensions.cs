@@ -17,6 +17,10 @@ using SabiMarket.Infrastructure.Helpers;
 using SabiMarket.API.ServiceExtensions;
 using SabiMarket.Application.IServices;
 using SabiMarket.Application.DTOs;
+using SabiMarket.Application.DTOs.Advertisement;
+using SabiMarket.Application.Services.Interfaces;
+using SabiMarket.Application.Services;
+using SabiMarket.Infrastructure.Configuration;
 
 public static class ServiceCollectionExtensions
 {
@@ -27,111 +31,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-   /* public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
-    {
-        services.AddIdentityConfiguration(); // Moved to a separate method
-
-        // Register Services
-        services.AddScoped<DatabaseSeeder>();
-        services.AddScoped<IAuthenticationService, AuthenticationService>();
-        services.AddScoped<IRepositoryManager, RepositoryManager>();
-        services.AddScoped<IServiceManager, ServiceManager>();
-        services.AddScoped<ICloudinaryService, CloudinaryService>();
-        services.AddScoped<ISettingsService, SettingsService>();
-        services.AddScoped<ICurrentUserService, CurrentUserService>();
-
-        // Register Validators
-        services.AddScoped<IValidator<RegistrationRequestDto>, RegistrationRequestValidator>();
-        services.AddScoped<IValidator<LoginRequestDto>, LoginRequestValidator>();
-        services.AddScoped<IValidator<TokenRequestDto>, TokenRequestValidator>();
-        services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordValidator>();
-        services.AddScoped<IValidator<CreateGoodBoyDto>, CreateGoodBoyValidator>();
-        services.AddScoped<IValidator<CreateAdminRequestDto>, CreateAdminRequestValidator>();
-        services.AddScoped<IValidator<UpdateAdminProfileDto>, UpdateAdminProfileValidator>();
-        services.AddScoped<IValidator<CreateRoleRequestDto>, CreateRoleRequestValidator>();
-        services.AddScoped<IValidator<UpdateRoleRequestDto>, UpdateRoleRequestValidator>();
-        services.AddScoped<IValidator<CreateMarketRequestDto>, CreateMarketRequestValidator>();
-        services.AddScoped<IValidator<UpdateMarketRequestDto>, UpdateMarketRequestValidator>();
-        services.AddScoped<IValidator<CaretakerForCreationRequestDto>, CaretakerForCreationRequestDtoValidator>();
-        services.AddScoped<IValidator<CreateAssistantOfficerRequestDto>, CreateAssistantOfficerRequestDtoValidator>();
-        services.AddScoped<IValidator<RegistrationRequestDto>, RegistrationRequestValidator>();
-        services.AddScoped<IValidator<RegistrationRequestDto>, RegistrationRequestValidator>();
-        services.AddScoped<IValidator<LoginRequestDto>, LoginRequestValidator>();
-        services.AddScoped<IRepositoryManager, RepositoryManager>();
-        services.AddScoped<IServiceManager, ServiceManager>();
-        services.AddScoped<ICloudinaryService, CloudinaryService>();
-        services.AddScoped<IValidator<TokenRequestDto>, TokenRequestValidator>();
-        services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordValidator>();
-        services.AddScoped<IValidator<CreateGoodBoyDto>, CreateGoodBoyValidator>();
-        services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordValidator>();
-        services.AddScoped<IValidator<CreateAdminRequestDto>, CreateAdminRequestValidator>();
-        services.AddScoped<IValidator<UpdateAdminProfileDto>, UpdateAdminProfileValidator>();
-        services.AddScoped<IValidator<CreateRoleRequestDto>, CreateRoleRequestValidator>();
-        services.AddScoped<IValidator<UpdateRoleRequestDto>, UpdateRoleRequestValidator>();  // Add this line
-        services.AddScoped<IChairmanService, ChairmanService>();
-        services.AddScoped<ICaretakerService, CaretakerService>();
-        services.AddScoped<IAdminService, AdminService>();
-        services.AddValidatorsFromAssemblyContaining<CreateChairmanRequestDtoValidator>();
-        services.AddScoped<IValidator<UpdateLevyRequestDto>, UpdateLevyRequestDtoValidator>();
-        services.AddValidatorsFromAssemblyContaining<CreateLevyRequestDtoValidator>();
-        services.AddScoped<IValidator<CaretakerForCreationRequestDto>, CreateCaretakerValidator>();
-
-
-        // Register Repositories
-        services.AddScoped<ICaretakerRepository, CaretakerRepository>();
-        services.AddScoped<IMarketRepository, MarketRepository>();
-        services.AddScoped<IChairmanRepository, ChairmanRepository>();
-        services.AddScoped<IRepositoryManager, RepositoryManager>();
-        services.AddScoped<IChairmanService, ChairmanService>();
-        services.AddScoped<ICaretakerService, CaretakerService>();
-        services.AddScoped<IAdminService, AdminService>();
-        services.AddScoped<ICurrentUserService, CurrentUserService>();
-        services.AddHttpContextAccessor();
-        services.AddScoped<IValidator<CreateAssistantOfficerRequestDto>, CreateAssistantOfficerRequestDtoValidator>();
-        
-
-
-        // SMS Service
-        services.AddScoped<ISmsService, AfricasTalkingSmsService>();
-        services.AddHttpClient<ISmsService, AfricasTalkingSmsService>();
-
-        // AutoMapper
-        services.AddAutoMapper(typeof(Program).Assembly);
-
-        // Validators from Assembly
-        services.AddValidatorsFromAssemblyContaining<CreateChairmanRequestDtoValidator>();
-        services.AddValidatorsFromAssemblyContaining<CreateLevyRequestDtoValidator>();
-
-        // Token Configuration
-        services.Configure<DataProtectionTokenProviderOptions>(options =>
-        {
-            options.TokenLifespan = TimeSpan.FromMinutes(10);
-        });
-
-        return services;
-    }*/
-
-    /*public static IServiceCollection AddIdentityConfiguration(this IServiceCollection services)
-    {
-        services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
-        {
-            options.Password.RequireDigit = false;
-            options.Password.RequireLowercase = false;
-            options.Password.RequireUppercase = false;
-            options.Password.RequireNonAlphanumeric = false;
-            options.Password.RequiredLength = 10;
-            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-            options.Lockout.MaxFailedAccessAttempts = 5;
-            options.Lockout.AllowedForNewUsers = true;
-            options.User.RequireUniqueEmail = true;
-            options.SignIn.RequireConfirmedEmail = true;
-        })
-        .AddEntityFrameworkStores<ApplicationDbContext>()
-        .AddDefaultTokenProviders()
-        .AddRoleManager<RoleManager<ApplicationRole>>();
-
-        return services;
-    }*/
+   
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
@@ -190,6 +90,18 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<UpdateMarketRequestDto>, UpdateMarketRequestValidator>();
         services.AddScoped<IValidator<CaretakerForCreationRequestDto>, CaretakerForCreationRequestDtoValidator>();
         services.AddScoped<ISettingsService, SettingsService>();
+
+        // Register repositories
+        services.AddScoped<IAdvertisementRepository, AdvertisementRepository>();
+        services.AddScoped<IBankSettingsService, BankSettingsService>();
+
+        // Register validators
+        services.AddScoped<IValidator<CreateAdvertisementRequestDto>, CreateAdvertisementValidator>();
+        services.AddScoped<IValidator<UpdateAdvertisementRequestDto>, UpdateAdvertisementValidator>();
+        services.AddScoped<IValidator<UploadPaymentProofRequestDto>, UploadPaymentProofValidator>();
+
+        // Register services
+        services.AddScoped<IAdvertisementService, AdvertisementService>();
 
         // Add other services
         services.AddScoped<IAdminService, AdminService>();
