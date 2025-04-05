@@ -6,9 +6,6 @@ using SabiMarket.Application.DTOs.Advertisement;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Services.Interfaces;
 using SabiMarket.Domain.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace SabiMarket.API.Controllers
 {
