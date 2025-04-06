@@ -27,6 +27,8 @@ namespace SabiMarket.Infrastructure.Repositories
         private readonly Lazy<ISowFoodStaffRepository> _staffRepository;
         private readonly Lazy<ICustomerRepository> _customerRepository;
         private readonly Lazy<IAdvertisementRepository> _advertisementRepository;
+        private readonly Lazy<IOfficerMarketAssignmentRepository> _officerMarketAssignmentRepository;
+
 
 
 
@@ -51,6 +53,7 @@ namespace SabiMarket.Infrastructure.Repositories
             _staffRepository = new Lazy<ISowFoodStaffRepository>(() => new SowFoodStaffRepository(_context));
             _advertisementRepository = new Lazy<IAdvertisementRepository>(() => new AdvertisementRepository(_context));
             _customerRepository = new Lazy<ICustomerRepository>(() => new CustomerRepository(_context));
+            _officerMarketAssignmentRepository = new Lazy<IOfficerMarketAssignmentRepository>(() => new OfficerMarketAssignmentRepository(_context));
 
         }
 
@@ -79,7 +82,8 @@ namespace SabiMarket.Infrastructure.Repositories
         public IAdminRepository AdminRepository => _adminRepository.Value;
         public ISowFoodStaffRepository StaffRepository => _staffRepository.Value;
         public IAdvertisementRepository AdvertisementRepository => _advertisementRepository.Value;
-        public ICustomerRepository CustomerRepository => _customerRepository.Value;        
+        public ICustomerRepository CustomerRepository => _customerRepository.Value;
+        public IOfficerMarketAssignmentRepository OfficerMarketAssignmentRepository => _officerMarketAssignmentRepository.Value;
         public Task SaveChangesAsync() => _context.SaveChangesAsync();
     }
 }

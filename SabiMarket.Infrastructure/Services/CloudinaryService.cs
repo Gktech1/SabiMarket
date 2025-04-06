@@ -40,7 +40,7 @@ public class CloudinaryService : ICloudinaryService
     public async Task<BaseResponse<Dictionary<string, string>>> UploadImage(IFormFile photo, string folderName)
     {
         var response = new Dictionary<string, string>();
-        var defaultSize = 500000;
+        var defaultSize = 800000;
         var allowedTypes = new List<string>() { "jpeg", "jpg", "png" };
         Console.WriteLine($"Allowed Types: {string.Join(", ", allowedTypes)}");
 

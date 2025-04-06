@@ -26,8 +26,8 @@ public class CreateAssistantOfficerRequestDtoValidator : AbstractValidator<Creat
             .Must(gender => gender == "Male" || gender == "Female" || gender == "Other")
             .WithMessage("Gender must be 'Male', 'Female', or 'Other'");
 
-        RuleFor(x => x.MarketId)
-            .NotEmpty().WithMessage("Market ID is required")
-            .MaximumLength(50).WithMessage("Market ID cannot exceed 50 characters");
+        RuleForEach(x => x.MarketIds)
+      .NotEmpty().WithMessage("Market ID cannot be empty")
+      .MaximumLength(50).WithMessage("Market ID cannot exceed 50 characters");
     }
 }

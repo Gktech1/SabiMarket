@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Http;
+using System.ComponentModel.DataAnnotations;
 
 namespace SabiMarket.Application.DTOs
 {
@@ -12,21 +13,30 @@ namespace SabiMarket.Application.DTOs
         public string Level { get; set; }
         public string MarketId { get; set; }
     }
+
     public class CreateAssistantOfficerRequestDto
     {
         public string FullName { get; set; }
-
         public string Email { get; set; }
-
         public string PhoneNumber { get; set; }
-
         public string Gender { get; set; }
+        public List<string> MarketIds { get; set; } = new List<string>();
+        public IFormFile ProfileImage { get; set; }
+    }
 
-        public string MarketId { get; set; }
+    public class UpdateAssistantOfficerRequestDto
+    {
+        public string? FullName { get; set; }
+        public string? Email { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? Gender { get; set; }
+        public List<string> MarketIds { get; set; } = new List<string>();
+        public IFormFile ProfileImage { get; set; }
     }
 
 
-    public class UpdateAssistantOfficerRequestDto
+
+ /*   public class UpdateAssistantOfficerRequestDto
     {
         public string? FullName { get; set; }
 
@@ -37,7 +47,7 @@ namespace SabiMarket.Application.DTOs
         public string? Gender { get; set; }
 
         public string? MarketId { get; set; }
-    }
+    }*/
 
     public class BlockAssistantOfficerDto
     {

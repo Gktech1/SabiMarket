@@ -40,5 +40,8 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
         [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual LocalGovernment LocalGovernment { get; set; }
 
+        // Add to AssistCenterOfficer class
+        public virtual ICollection<OfficerMarketAssignment> MarketAssignments { get; set; } = new List<OfficerMarketAssignment>();
+
     }
 }
