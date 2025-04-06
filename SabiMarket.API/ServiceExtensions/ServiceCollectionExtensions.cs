@@ -99,6 +99,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<CreateAdvertisementRequestDto>, CreateAdvertisementValidator>();
         services.AddScoped<IValidator<UpdateAdvertisementRequestDto>, UpdateAdvertisementValidator>();
         services.AddScoped<IValidator<UploadPaymentProofRequestDto>, UploadPaymentProofValidator>();
+        // In your ServiceRegistration.cs
+        services.AddScoped<IValidator<CreateAssistantOfficerRequestDto>, CreateAssistantOfficerValidator>();
+        services.AddScoped<IValidator<UpdateAssistantOfficerRequestDto>, UpdateAssistantOfficerValidator>();
 
         // Register services
         services.AddScoped<IAdvertisementService, AdvertisementService>();

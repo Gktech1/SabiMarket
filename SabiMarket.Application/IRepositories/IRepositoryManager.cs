@@ -34,6 +34,8 @@ namespace SabiMarket.Application.IRepositories
         public IAdvertisementRepository AdvertisementRepository { get; }    
         public ICustomerRepository CustomerRepository { get; }
 
+        public IOfficerMarketAssignmentRepository OfficerMarketAssignmentRepository { get; }    
+
         Task SaveChangesAsync();
     }
 }

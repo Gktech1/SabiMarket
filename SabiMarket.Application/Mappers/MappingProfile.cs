@@ -179,21 +179,64 @@ public class MappingProfile : Profile
               .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
               .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market.MarketName));
 
+        // For CreateAssistantOfficerRequestDto to AssistCenterOfficer mapping
         CreateMap<CreateAssistantOfficerRequestDto, AssistCenterOfficer>()
-         .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
-         // No need to map UserLevel as it's not in the new DTO
-         .ForMember(dest => dest.User, opt => opt.Ignore()) // Handle User creation separately
-         .ForMember(dest => dest.Market, opt => opt.Ignore())
-         .ForMember(dest => dest.Chairman, opt => opt.Ignore())
-         .ForMember(dest => dest.LocalGovernment, opt => opt.Ignore())
-         .ForMember(dest => dest.UserId, opt => opt.Ignore()) // Set manually
-         .ForMember(dest => dest.ChairmanId, opt => opt.Ignore()) // Set manually
-         .ForMember(dest => dest.LocalGovernmentId, opt => opt.Ignore()) // Set manually
-         .ForMember(dest => dest.IsBlocked, opt => opt.MapFrom(src => false))
-         .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
-         .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
-         .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
+            // Map the first MarketId from the list if available (for backward compatibility)
+            .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src =>
+                src.MarketIds != null && src.MarketIds.Count > 0 ? src.MarketIds[0] : null))
+            // Don't try to map MarketIds directly as it's a collection that will be handled separately
+            .ForMember(dest => dest.MarketAssignments, opt => opt.Ignore())
+            // The rest remains the same
+            .ForMember(dest => dest.User, opt => opt.Ignore())
+            .ForMember(dest => dest.Market, opt => opt.Ignore())
+            .ForMember(dest => dest.Chairman, opt => opt.Ignore())
+            .ForMember(dest => dest.LocalGovernment, opt => opt.Ignore())
+            .ForMember(dest => dest.UserId, opt => opt.Ignore())
+            .ForMember(dest => dest.ChairmanId, opt => opt.Ignore())
+            .ForMember(dest => dest.LocalGovernmentId, opt => opt.Ignore())
+            .ForMember(dest => dest.IsBlocked, opt => opt.MapFrom(src => false))
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
 
+        // For UpdateAssistantOfficerRequestDto to AssistCenterOfficer mapping
+        CreateMap<UpdateAssistantOfficerRequestDto, AssistCenterOfficer>()
+            // Map the first MarketId from the list if available (for backward compatibility)
+            .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src =>
+                src.MarketIds != null && src.MarketIds.Count > 0 ? src.MarketIds[0] : null))
+            // Don't try to map MarketIds directly as it's a collection that will be handled separately
+            .ForMember(dest => dest.MarketAssignments, opt => opt.Ignore())
+            // The rest remains the same
+            .ForMember(dest => dest.User, opt => opt.Ignore())
+            .ForMember(dest => dest.Market, opt => opt.Ignore())
+            .ForMember(dest => dest.Chairman, opt => opt.Ignore())
+            .ForMember(dest => dest.LocalGovernment, opt => opt.Ignore())
+            .ForMember(dest => dest.UserId, opt => opt.Ignore())
+            .ForMember(dest => dest.ChairmanId, opt => opt.Ignore())
+            .ForMember(dest => dest.LocalGovernmentId, opt => opt.Ignore())
+            .ForMember(dest => dest.IsBlocked, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+
+        // For AssistCenterOfficer to AssistantOfficerResponseDto mapping
+        CreateMap<AssistCenterOfficer, AssistantOfficerResponseDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => $"{src.User.FirstName} {src.User.LastName}"))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber))
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.User.Gender))
+            .ForMember(dest => dest.ProfileImageUrl, opt => opt.MapFrom(src => src.User.ProfileImageUrl))
+            .ForMember(dest => dest.IsBlocked, opt => opt.MapFrom(src => src.IsBlocked))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+            // Map markets from the MarketAssignments collection
+            .ForMember(dest => dest.Markets, opt => opt.MapFrom(src =>
+                src.MarketAssignments.Select(ma => new MarketDto
+                {
+                    Id = ma.Market.Id,
+                    Name = ma.Market.MarketName
+                })))
+            .ForMember(dest => dest.DefaultPassword, opt => opt.Ignore()); // Set manually where needed
         CreateMap<AssistCenterOfficer, AssistantOfficerResponseDto>()
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
