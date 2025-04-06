@@ -2226,7 +2226,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<AssistantOfficerResponseDto>(ex, "An unexpected error occurred");
             }
         }
-
         public async Task<BaseResponse<AssistantOfficerResponseDto>> UpdateAssistantOfficer(string officerId, UpdateAssistantOfficerRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -2239,20 +2238,6 @@ namespace SabiMarket.Infrastructure.Services
                     $"CorrelationId: {correlationId} - Updating assistant officer with ID: {officerId}",
                     "Officer Management"
                 );
-
-                // Validate request
-              /*  var validationResult = await _updateAssistOfficerValidator.ValidateAsync(request);
-                if (!validationResult.IsValid)
-                {
-                    await CreateAuditLog(
-                        "Update Failed",
-                        $"CorrelationId: {correlationId} - Validation failed",
-                        "Officer Management"
-                    );
-                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                        new ValidationException(validationResult.Errors),
-                        "Validation failed");
-                }*/
 
                 // Get Chairman details (to verify authority)
                 var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
@@ -2295,9 +2280,12 @@ namespace SabiMarket.Infrastructure.Services
                         "Unauthorized access");
                 }
 
-                // Get the user associated with the officer
-                var user = await _userManager.FindByIdAsync(officer.UserId);
-                if (user == null)
+                // Get the user associated with the officer - USING AsNoTracking() to avoid tracking conflicts
+                var userToUpdate = await _userManager.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Id == officer.UserId);
+
+                if (userToUpdate == null)
                 {
                     await CreateAuditLog(
                         "Update Failed",
@@ -2309,50 +2297,50 @@ namespace SabiMarket.Infrastructure.Services
                         "User not found");
                 }
 
-                // Check if email changed and if it's already in use
-                if (request.Email != user.Email)
+                // Apply updates to the user entity
+                if (!string.IsNullOrEmpty(request?.FullName))
                 {
-                    var existingUser = await _userManager.FindByEmailAsync(request.Email);
-                    if (existingUser != null && existingUser.Id != user.Id)
-                    {
-                        await CreateAuditLog(
-                            "Update Failed",
-                            $"CorrelationId: {correlationId} - Email already registered",
-                            "Officer Management"
-                        );
-                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                            new BadRequestException("Email address is already registered"),
-                            "Email already exists");
-                    }
+                    var nameParts = request.FullName.Split(' ');
+                    userToUpdate.FirstName = nameParts.Length > 0 ? nameParts[0] : userToUpdate.FirstName;
+                    userToUpdate.LastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : userToUpdate.LastName;
                 }
 
-                // Update User details
-                var nameParts = request.FullName.Split(' ');
-                user.FirstName = nameParts[0];
-                user.LastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : "";
-                user.Email = request.Email;
-                user.UserName = request.Email; // Update username to match email
-                user.PhoneNumber = request.PhoneNumber;
-                user.Gender = request.Gender;
+                if (!string.IsNullOrEmpty(request?.Email))
+                {
+                    userToUpdate.Email = request.Email;
+                    userToUpdate.UserName = request.Email; // Update username to match email
+                    userToUpdate.NormalizedEmail = request.Email.ToUpper();
+                    userToUpdate.NormalizedUserName = request.Email.ToUpper();
+                }
+
+                if (!string.IsNullOrEmpty(request?.PhoneNumber))
+                {
+                    userToUpdate.PhoneNumber = request.PhoneNumber;
+                }
+
+                if (!string.IsNullOrEmpty(request?.Gender))
+                {
+                    userToUpdate.Gender = request.Gender;
+                }
 
                 // Handle profile image update if provided
-                // Handle profile image update if provided
-                if (request.ProfileImage != null)
+                if (request?.ProfileImage != null)
                 {
                     // If there's an existing image, you might want to delete it first
-                    if (!string.IsNullOrEmpty(user.ProfileImageUrl))
+                    if (!string.IsNullOrEmpty(userToUpdate.ProfileImageUrl))
                     {
-                        await _cloudinaryService.DeletePhotoAsync(user.ProfileImageUrl);
+                        await _cloudinaryService.DeletePhotoAsync(userToUpdate.ProfileImageUrl);
                     }
 
                     var uploadResult = await _cloudinaryService.UploadImage(request.ProfileImage, "assistant-officers");
                     if (uploadResult.IsSuccessful && uploadResult.Data.ContainsKey("Url"))
                     {
-                        user.ProfileImageUrl = uploadResult.Data["Url"];
+                        userToUpdate.ProfileImageUrl = uploadResult.Data["Url"];
                     }
                 }
 
-                var updateUserResult = await _userManager.UpdateAsync(user);
+                // Update user with the detached entity
+                var updateUserResult = await _userManager.UpdateAsync(userToUpdate);
                 if (!updateUserResult.Succeeded)
                 {
                     await CreateAuditLog(
@@ -2369,7 +2357,7 @@ namespace SabiMarket.Infrastructure.Services
                 officer.UpdatedAt = DateTime.UtcNow;
 
                 // For backward compatibility, update the MarketId field if markets changed
-                if (request.MarketIds != null && request.MarketIds.Count > 0)
+                if (request?.MarketIds != null && request.MarketIds.Count > 0)
                 {
                     officer.MarketId = request.MarketIds[0]; // First market
                 }
@@ -2379,7 +2367,7 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Handle market assignments
-                if (request.MarketIds != null)
+                if (request?.MarketIds != null)
                 {
                     // Get current assignments
                     var existingAssignments = officer.MarketAssignments.ToList();
@@ -2406,7 +2394,7 @@ namespace SabiMarket.Infrastructure.Services
                     foreach (var marketId in marketsToAdd)
                     {
                         // Validate that market exists and belongs to chairman's LG
-                        var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, false  );
+                        var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, false);
                         if (market != null && market.LocalGovernmentId == chairman.LocalGovernmentId)
                         {
                             var assignment = new OfficerMarketAssignment
@@ -2428,13 +2416,16 @@ namespace SabiMarket.Infrastructure.Services
                 // Get updated officer with market details for response
                 var updatedOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(officerId, false);
 
+                // Get fresh user data after all updates
+                var updatedUser = await _userManager.FindByIdAsync(officer.UserId);
+
                 // Map response
                 var response = _mapper.Map<AssistantOfficerResponseDto>(updatedOfficer);
-                response.FullName = request.FullName;
-                response.Email = user.Email;
-                response.PhoneNumber = user.PhoneNumber;
-                response.Gender = user.Gender;
-                response.ProfileImageUrl = user.ProfileImageUrl;
+                response.FullName = $"{updatedUser.FirstName} {updatedUser.LastName}".Trim();
+                response.Email = updatedUser.Email;
+                response.PhoneNumber = updatedUser.PhoneNumber;
+                response.Gender = updatedUser.Gender;
+                response.ProfileImageUrl = updatedUser.ProfileImageUrl;
 
                 await CreateAuditLog(
                     "Assistant Officer Updated",
@@ -2456,6 +2447,246 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        /*    public async Task<BaseResponse<AssistantOfficerResponseDto>> UpdateAssistantOfficer(string officerId, UpdateAssistantOfficerRequestDto request)
+            {
+                var correlationId = Guid.NewGuid().ToString();
+                var userId = _currentUser.GetUserId();
+
+                try
+                {
+                    await CreateAuditLog(
+                        "Assistant Officer Update",
+                        $"CorrelationId: {correlationId} - Updating assistant officer with ID: {officerId}",
+                        "Officer Management"
+                    );
+
+                    // Validate request
+                  *//*  var validationResult = await _updateAssistOfficerValidator.ValidateAsync(request);
+                    if (!validationResult.IsValid)
+                    {
+                        await CreateAuditLog(
+                            "Update Failed",
+                            $"CorrelationId: {correlationId} - Validation failed",
+                            "Officer Management"
+                        );
+                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                            new ValidationException(validationResult.Errors),
+                            "Validation failed");
+                    }*//*
+
+                    // Get Chairman details (to verify authority)
+                    var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                    if (chairman == null)
+                    {
+                        await CreateAuditLog(
+                            "Update Failed",
+                            $"CorrelationId: {correlationId} - Chairman not found",
+                            "Officer Management"
+                        );
+                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                            new BadRequestException("Chairman not found"),
+                            "Chairman not found");
+                    }
+
+                    // Get existing officer with market assignments
+                    var officer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(officerId, false);
+                    if (officer == null)
+                    {
+                        await CreateAuditLog(
+                            "Update Failed",
+                            $"CorrelationId: {correlationId} - Assistant officer not found",
+                            "Officer Management"
+                        );
+                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                            new NotFoundException($"Assistant officer with ID {officerId} not found"),
+                            "Assistant officer not found");
+                    }
+
+                    // Verify this chairman has authority over this officer
+                    if (officer.ChairmanId != chairman.Id)
+                    {
+                        await CreateAuditLog(
+                            "Update Failed",
+                            $"CorrelationId: {correlationId} - Unauthorized access",
+                            "Officer Management"
+                        );
+                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                            new UnauthorizedAccessException("You are not authorized to update this assistant officer"),
+                            "Unauthorized access");
+                    }
+
+                    // Get the user associated with the officer
+                    var user = await _userManager.FindByIdAsync(officer.UserId);
+                    if (user == null)
+                    {
+                        await CreateAuditLog(
+                            "Update Failed",
+                            $"CorrelationId: {correlationId} - Associated user not found",
+                            "Officer Management"
+                        );
+                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                            new NotFoundException("Associated user account not found"),
+                            "User not found");
+                    }
+
+                    // Check if email changed and if it's already in use
+                    *//* if (request.Email != user.Email)
+                     {
+                         var existingUser = await _userManager.FindByEmailAsync(request.Email);
+                         if (existingUser != null && existingUser.Id != user.Id)
+                         {
+                             await CreateAuditLog(
+                                 "Update Failed",
+                                 $"CorrelationId: {correlationId} - Email already registered",
+                                 "Officer Management"
+                             );
+                             return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                                 new BadRequestException("Email address is already registered"),
+                                 "Email already exists");
+                         }*//*
+                    // }
+                    string[] nameParts = Array.Empty<string>();
+
+                    // Check if FullName is NOT null or empty before splitting
+                    if (!string.IsNullOrEmpty(request?.FullName))
+                    {
+                        nameParts = request.FullName.Split(' ');
+                        user.FirstName = nameParts.Length > 0 ? nameParts[0] : user.FirstName;
+                        user.LastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : user.LastName; // Keep original LastName if no new value
+                    }
+                    if (!string.IsNullOrEmpty(request?.Email))
+                    {
+                        user.Email = request?.Email;
+                    }
+                    if (!string.IsNullOrEmpty(request?.PhoneNumber))
+                    {
+                        user.PhoneNumber = request?.PhoneNumber;
+                    }
+                    if (!string.IsNullOrEmpty(request?.Gender))
+                    {
+                        user.Gender = request?.Gender;
+                    }
+
+                    // Handle profile image update if provided
+                    if (request.ProfileImage != null)
+                    {
+                        // If there's an existing image, you might want to delete it first
+                        if (!string.IsNullOrEmpty(user.ProfileImageUrl))
+                        {
+                            await _cloudinaryService.DeletePhotoAsync(user.ProfileImageUrl);
+                        }
+
+                        var uploadResult = await _cloudinaryService.UploadImage(request.ProfileImage, "assistant-officers");
+                        if (uploadResult.IsSuccessful && uploadResult.Data.ContainsKey("Url"))
+                        {
+                            user.ProfileImageUrl = uploadResult.Data["Url"];
+                        }
+                    }
+
+                    var updateUserResult = await _userManager.UpdateAsync(user);
+                    if (!updateUserResult.Succeeded)
+                    {
+                        await CreateAuditLog(
+                            "Update Failed",
+                            $"CorrelationId: {correlationId} - Failed to update user account",
+                            "Officer Management"
+                        );
+                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                            new Exception(string.Join(", ", updateUserResult.Errors.Select(e => e.Description))),
+                            "Failed to update user account");
+                    }
+
+                    // Update Officer details
+                    officer.UpdatedAt = DateTime.UtcNow;
+
+                    // For backward compatibility, update the MarketId field if markets changed
+                    if (request.MarketIds != null && request.MarketIds.Count > 0)
+                    {
+                        officer.MarketId = request.MarketIds[0]; // First market
+                    }
+                    else
+                    {
+                        officer.MarketId = null;
+                    }
+
+                    // Handle market assignments
+                    if (request.MarketIds != null)
+                    {
+                        // Get current assignments
+                        var existingAssignments = officer.MarketAssignments.ToList();
+
+                        // Markets to remove (in existing but not in request)
+                        var marketsToRemove = existingAssignments
+                            .Where(a => !request.MarketIds.Contains(a.MarketId))
+                            .ToList();
+
+                        // Markets to add (in request but not in existing)
+                        var existingMarketIds = existingAssignments.Select(a => a.MarketId).ToList();
+                        var marketsToAdd = request.MarketIds
+                            .Where(id => !existingMarketIds.Contains(id))
+                            .Distinct()
+                            .ToList();
+
+                        // Remove markets no longer assigned
+                        foreach (var assignment in marketsToRemove)
+                        {
+                            _repository.OfficerMarketAssignmentRepository.RemoveAssignment(assignment);
+                        }
+
+                        // Add new market assignments
+                        foreach (var marketId in marketsToAdd)
+                        {
+                            // Validate that market exists and belongs to chairman's LG
+                            var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, false  );
+                            if (market != null && market.LocalGovernmentId == chairman.LocalGovernmentId)
+                            {
+                                var assignment = new OfficerMarketAssignment
+                                {
+                                    Id = Guid.NewGuid().ToString(),
+                                    AssistCenterOfficerId = officer.Id,
+                                    MarketId = marketId,
+                                    CreatedAt = DateTime.UtcNow
+                                };
+
+                                _repository.OfficerMarketAssignmentRepository.AddAssignment(assignment);
+                            }
+                        }
+                    }
+
+                    _repository.AssistCenterOfficerRepository.UpdateAssistCenterOfficer(officer);
+                    await _repository.SaveChangesAsync();
+
+                    // Get updated officer with market details for response
+                    var updatedOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(officerId, false);
+
+                    // Map response
+                    var response = _mapper.Map<AssistantOfficerResponseDto>(updatedOfficer);
+                    response.FullName = request.FullName;
+                    response.Email = user.Email;
+                    response.PhoneNumber = user.PhoneNumber;
+                    response.Gender = user.Gender;
+                    response.ProfileImageUrl = user.ProfileImageUrl;
+
+                    await CreateAuditLog(
+                        "Assistant Officer Updated",
+                        $"CorrelationId: {correlationId} - Officer updated successfully with ID: {officer.Id}",
+                        "Officer Management"
+                    );
+
+                    return ResponseFactory.Success(response, "Assistant Officer updated successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error updating assistant officer");
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                        "Officer Management"
+                    );
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(ex, "An unexpected error occurred");
+                }
+            }
+    */
         public async Task<BaseResponse<AssistantOfficerResponseDto>> GetAssistantOfficerById(string officerId)
         {
             var correlationId = Guid.NewGuid().ToString();
