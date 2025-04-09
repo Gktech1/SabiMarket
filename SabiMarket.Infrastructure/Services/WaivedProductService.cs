@@ -204,9 +204,36 @@ public class WaivedProductService : IWaivedProductService
 
         return ResponseFactory.Success(waivedProduct);
     }
+    public async Task<BaseResponse<List<ProductDetailsDto>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter)
+    {
+        var waivedProduct = await _applicationDbContext.WaivedProducts.Where(x => x.IsAvailbleForUrgentPurchase).Include(x => x.Vendor).OrderBy(x => x.ProductName).AsQueryable().Paginate(filter);
+        if (waivedProduct == null)
+        {
+            return ResponseFactory.Fail<List<ProductDetailsDto>>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+        var vendorDtos = waivedProduct.PageItems.Select(v => new ProductDetailsDto
+        {
+            ProductId = v.Id,
+            IsAvailbleForUrgentPurchase = v.IsAvailbleForUrgentPurchase,
+            Category = v.ProductCategory.Name,
+            CurrencyType = v.CurrencyType,
+            Price = v.Price,
+            ProductName = v.ProductName,
+
+        }).ToList();
+        return ResponseFactory.Success(vendorDtos);
+    }
 
     public async Task<BaseResponse<string>> UpdateProduct(UpdateWaivedProductDto dto)
     {
+        var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+        var verifyVendor = ValiateVendor(loggedInUser.Id);
+        if (!verifyVendor.Item1)
+        {
+            return ResponseFactory.Fail<string>(verifyVendor.Item2);
+
+        }
         var product = await _repositoryManager.WaivedProductRepository.GetWaivedProductById(dto.ProductId, true);
         if (product == null)
         {
@@ -230,6 +257,14 @@ public class WaivedProductService : IWaivedProductService
     }
     public async Task<BaseResponse<string>> DeleteProduct(string waiveProductId)
     {
+        var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+        var verifyVendor = ValiateVendor(loggedInUser.Id);
+        if (!verifyVendor.Item1)
+        {
+            return ResponseFactory.Fail<string>(verifyVendor.Item2);
+
+        }
         var product = await _repositoryManager.WaivedProductRepository.GetWaivedProductById(waiveProductId, false);
         if (product == null)
         {
@@ -258,7 +293,10 @@ public class WaivedProductService : IWaivedProductService
                 BusinessName = v.BusinessName,
                 VendorName = v.User.FirstName + " " + v.User.LastName,
                 Email = v.User.Email,
-                PhoneNumber = v.User.PhoneNumber,
+                PhoneNumber = v.User?.PhoneNumber,
+                LGA = v.User?.LocalGovernment.Name,
+                UserAddress = v.User?.Address,
+                BusinessAddress = v.BusinessAddress,
                 Products = v.Products.Select(p => new ProductDto
                 {
                     Id = p.Id,
@@ -281,6 +319,25 @@ public class WaivedProductService : IWaivedProductService
         {
             Log.Error("Exception occurred while getting vendors: " + ex.Message);
             return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorDto>>>(new Exception("An error occurred."), "Try again later.");
+        }
+    }
+    public async Task<BaseResponse<string>> BlockOrUnblockVendor(string userId)
+    {
+        try
+        {
+            var vendor = await _applicationDbContext.Vendors.FirstOrDefaultAsync(x => x.UserId == userId);
+            if (vendor == null)
+                return ResponseFactory.Fail<string>(new Exception("An error occurred."), "Try again later.");
+
+            vendor.IsActive = !vendor.IsActive;
+            await _applicationDbContext.SaveChangesAsync();
+
+            return ResponseFactory.Success("Success");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Exception occurred while blocking or unblocking vendor with UserID ==> {userId}: " + ex.Message);
+            return ResponseFactory.Fail<string>(new Exception("An error occurred."), "Try again later.");
         }
     }
     public async Task<BaseResponse<string>> RegisterCustomerPurchase(CustomerPurchaseDto dto)

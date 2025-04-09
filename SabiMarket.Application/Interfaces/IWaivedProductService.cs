@@ -29,5 +29,7 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedback>>>> GetAllComplaint(PaginationFilter filter);
         Task<BaseResponse<CustomerFeedback>> GetCustomerFeedbackById(string Id);
         Task<BaseResponse<string>> DeleteProduct(string waiveProductId);
+        Task<BaseResponse<string>> BlockOrUnblockVendor(string userId);
+        Task<BaseResponse<List<ProductDetailsDto>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter);
     }
 }
