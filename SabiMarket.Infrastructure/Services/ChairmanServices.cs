@@ -929,6 +929,56 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "Error updating market");
             }
         }
+        /*   public async Task<BaseResponse<MarketDetailsDto>> GetMarketDetails(string marketId)
+           {
+               var correlationId = Guid.NewGuid().ToString();
+               try
+               {
+                   await CreateAuditLog(
+                       "Market Details Query",
+                       $"CorrelationId: {correlationId} - Fetching market details for ID: {marketId}",
+                       "Market Management"
+                   );
+                   var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, trackChanges: false);
+                   await CreateAuditLog(
+                       "Market Details Retrieved",
+                       $"CorrelationId: {correlationId} - Market details retrieved successfully",
+                       "Market Management"
+                   );
+
+                   var dto = _mapper.Map<MarketDetailsDto>(market);
+
+                   // Manually fix the trader names after mapping
+                   if (dto.Traders != null && market.Traders != null)
+                   {
+                       var traderMap = market.Traders.ToDictionary(t => t.Id);
+
+                       foreach (var traderDto in dto.Traders)
+                       {
+                           if (traderMap.TryGetValue(traderDto.Id, out var trader) && trader.User != null)
+                           {
+                               traderDto.FullName = $"{trader.User.FirstName} {trader.User.LastName}".Trim();
+                               traderDto.Email = trader.User.Email;
+                               traderDto.PhoneNumber = trader.User.PhoneNumber;
+                               traderDto.Gender = trader.User.Gender;
+                           }
+                       }
+                   }
+
+                   return ResponseFactory.Success(dto, "Market details retrieved successfully");
+                  // return ResponseFactory.Success(_mapper.Map<MarketDetailsDto>(market), "Market details retrieved successfully");
+               }
+               catch (Exception ex)
+               {
+                   await CreateAuditLog(
+                       "Market Details Query Failed",
+                       $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                       "Market Management"
+                   );
+                   return ResponseFactory.Fail<MarketDetailsDto>(ex, "Error retrieving market details");
+               }
+           }*/
+
         public async Task<BaseResponse<MarketDetailsDto>> GetMarketDetails(string marketId)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -945,14 +995,12 @@ namespace SabiMarket.Infrastructure.Services
                     $"CorrelationId: {correlationId} - Market details retrieved successfully",
                     "Market Management"
                 );
-
                 var dto = _mapper.Map<MarketDetailsDto>(market);
 
                 // Manually fix the trader names after mapping
                 if (dto.Traders != null && market.Traders != null)
                 {
                     var traderMap = market.Traders.ToDictionary(t => t.Id);
-
                     foreach (var traderDto in dto.Traders)
                     {
                         if (traderMap.TryGetValue(traderDto.Id, out var trader) && trader.User != null)
@@ -965,8 +1013,25 @@ namespace SabiMarket.Infrastructure.Services
                     }
                 }
 
+                // Manually fix the caretaker names after mapping
+                if (dto.Caretakers != null && market.AdditionalCaretakers != null)
+                {
+                    var caretakerMap = market.AdditionalCaretakers.ToDictionary(c => c.Id);
+                    foreach (var caretakerDto in dto.Caretakers)
+                    {
+                        if (caretakerMap.TryGetValue(caretakerDto.Id, out var caretaker) && caretaker.User != null)
+                        {
+                            caretakerDto.FirstName = caretaker.User.FirstName ?? "Default";
+                            caretakerDto.LastName = caretaker.User.LastName ?? "User";
+                            caretakerDto.Email = caretaker.User.Email;
+                            caretakerDto.PhoneNumber = caretaker.User.PhoneNumber;
+                            caretakerDto.ProfileImageUrl = caretaker.User.ProfileImageUrl ?? "";
+                            caretakerDto.IsActive = caretaker.User.IsActive;
+                        }
+                    }
+                }
+
                 return ResponseFactory.Success(dto, "Market details retrieved successfully");
-               // return ResponseFactory.Success(_mapper.Map<MarketDetailsDto>(market), "Market details retrieved successfully");
             }
             catch (Exception ex)
             {
