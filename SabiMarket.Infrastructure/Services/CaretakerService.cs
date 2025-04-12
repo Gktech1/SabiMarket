@@ -426,6 +426,48 @@ namespace SabiMarket.Infrastructure.Services
             return password;
         }
 
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<CaretakerResponseDto>>>> GetCaretakers(
+    PaginationFilter paginationFilter)
+        {
+            try
+            {
+                var caretakersPage = await _repository.CaretakerRepository
+                    .GetCaretakersWithPagination(paginationFilter, trackChanges: false);
+
+                // Replace AutoMapper with manual mapping
+                var caretakerDtos = caretakersPage.PageItems.Select(c => new CaretakerResponseDto
+                {
+                    Id = c.Id,
+                    UserId = c.UserId,
+                    Email = c.User?.Email,
+                    FirstName = c.User?.FirstName ?? "Default",  // Provide default if null
+                    LastName = c.User?.LastName ?? "User",      // Provide default if null
+                    MarketId = c.MarketId,
+                    PhoneNumber = c.User?.PhoneNumber,
+                    ProfileImageUrl = c.User?.ProfileImageUrl ?? "",
+                    IsActive = c.User?.IsActive ?? false,
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt,
+                    IsBlocked = c.IsBlocked
+                }).ToList();
+
+                var response = new PaginatorDto<IEnumerable<CaretakerResponseDto>>
+                {
+                    PageItems = caretakerDtos,
+                    CurrentPage = caretakersPage.CurrentPage,
+                    PageSize = caretakersPage.PageSize,
+                    NumberOfPages = caretakersPage.NumberOfPages
+                };
+
+                return ResponseFactory.Success(response, "Caretakers retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving caretakers");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<CaretakerResponseDto>>>(
+                    ex, "An unexpected error occurred");
+            }
+        }
 
 
         /*  public async Task<BaseResponse<CaretakerResponseDto>> CreateCaretaker(CaretakerForCreationRequestDto caretakerDto)
@@ -455,33 +497,35 @@ namespace SabiMarket.Infrastructure.Services
               }
           }
   */
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<CaretakerResponseDto>>>> GetCaretakers(
-            PaginationFilter paginationFilter)
-        {
-            try
-            {
-                var caretakersPage = await _repository.CaretakerRepository
-                    .GetCaretakersWithPagination(paginationFilter, trackChanges: false);
 
-                var caretakerDtos = _mapper.Map<IEnumerable<CaretakerResponseDto>>(caretakersPage.PageItems);
-                var response = new PaginatorDto<IEnumerable<CaretakerResponseDto>>
-                {
-                    PageItems = caretakerDtos,
-                    CurrentPage = caretakersPage.CurrentPage,
-                    PageSize = caretakersPage.PageSize,
-                    NumberOfPages = caretakersPage.NumberOfPages
-                };
+        //Recent on Caretaker 
+        /*  public async Task<BaseResponse<PaginatorDto<IEnumerable<CaretakerResponseDto>>>> GetCaretakers(
+              PaginationFilter paginationFilter)
+          {
+              try
+              {
+                  var caretakersPage = await _repository.CaretakerRepository
+                      .GetCaretakersWithPagination(paginationFilter, trackChanges: false);
 
-                return ResponseFactory.Success(response, "Caretakers retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving caretakers");
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<CaretakerResponseDto>>>(
-                    ex, "An unexpected error occurred");
-            }
-        }
+                  var caretakerDtos = _mapper.Map<IEnumerable<CaretakerResponseDto>>(caretakersPage.PageItems);
+                  var response = new PaginatorDto<IEnumerable<CaretakerResponseDto>>
+                  {
+                      PageItems = caretakerDtos,
+                      CurrentPage = caretakersPage.CurrentPage,
+                      PageSize = caretakersPage.PageSize,
+                      NumberOfPages = caretakersPage.NumberOfPages
+                  };
 
+                  return ResponseFactory.Success(response, "Caretakers retrieved successfully");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Error retrieving caretakers");
+                  return ResponseFactory.Fail<PaginatorDto<IEnumerable<CaretakerResponseDto>>>(
+                      ex, "An unexpected error occurred");
+              }
+          }
+  */
         // Trader Management Methods
         public async Task<BaseResponse<bool>> AssignTraderToCaretaker(string caretakerId, string traderId)
         {

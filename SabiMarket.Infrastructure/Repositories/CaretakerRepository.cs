@@ -4,6 +4,7 @@ using SabiMarket.Application.DTOs;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.MarketParticipants;
+using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
 
@@ -64,17 +65,89 @@ namespace SabiMarket.Infrastructure.Repositories
              return await query.Paginate(paginationFilter);
          }*/
 
+        /*  public async Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersWithPagination(
+      PaginationFilter paginationFilter, bool trackChanges)
+          {
+              var query = FindAll(trackChanges)
+                  .Include(a => a.Markets)
+                  .Include(a => a.GoodBoys)
+                  .Include(a => a.AssignedTraders)
+                  .Include(a => a.User) // Include User to populate firstName, lastName, email, etc.
+                  .OrderBy(c => c.CreatedAt);
+
+              return await query.Paginate(paginationFilter);
+          }*/
+
+        /*    public async Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersWithPagination(
+                PaginationFilter paginationFilter, bool trackChanges)
+            {
+                try
+                {
+                    // Explicitly select query to ensure user properties are included
+                    var query = FindAll(trackChanges)
+                        .Include(a => a.User) // Include User to populate firstName, lastName, email, etc.
+                        .Include(a => a.Markets)
+                        .Include(a => a.GoodBoys)
+                        .Include(a => a.AssignedTraders)
+                        .OrderBy(c => c.CreatedAt);
+
+                     Console.WriteLine("Executing caretaker query with Include(User)");
+
+                    // Debug: Check if User properties are loaded
+                    var testCaretakers = await query.Take(2).ToListAsync();
+                    foreach (var c in testCaretakers)
+                    {
+                        Console.WriteLine($"Caretaker {c.Id} - User null? {c.User == null}");
+                        if (c.User != null)
+                        {
+                            Console.WriteLine($"   User {c.UserId} - FirstName: '{c.User.FirstName}', LastName: '{c.User.LastName}'");
+                        }
+                    }
+
+                    return await query.Paginate(paginationFilter);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error retrieving caretakers with pagination {ex}");
+                    throw;
+                }
+            }*/
+
         public async Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersWithPagination(
     PaginationFilter paginationFilter, bool trackChanges)
         {
-            var query = FindAll(trackChanges)
-                .Include(a => a.Markets)
-                .Include(a => a.GoodBoys)
-                .Include(a => a.AssignedTraders)
-                .Include(a => a.User) // Include User to populate firstName, lastName, email, etc.
-                .OrderBy(c => c.CreatedAt);
+            // Use a more direct approach with manual joining
+            var query = from caretaker in _repositoryContext.Set<Caretaker>()
+                        join user in _repositoryContext.Set<ApplicationUser>() on caretaker.UserId equals user.Id
+                        select new
+                        {
+                            Caretaker = caretaker,
+                            User = user
+                        };
 
-            return await query.Paginate(paginationFilter);
+            // Execute query and populate navigation properties manually
+            var results = await query
+                .Skip((paginationFilter.PageNumber - 1) * paginationFilter.PageSize)
+                .Take(paginationFilter.PageSize)
+                .ToListAsync();
+
+            // Count total for pagination
+            var totalCount = await query.CountAsync();
+
+            // Manually assign User to each Caretaker
+            var caretakers = results.Select(r => {
+                r.Caretaker.User = r.User; // Attach User entity
+                return r.Caretaker;
+            }).ToList();
+
+            // Create paginator result
+            return new PaginatorDto<IEnumerable<Caretaker>>
+            {
+                PageItems = caretakers,
+                CurrentPage = paginationFilter.PageNumber,
+                PageSize = paginationFilter.PageSize,
+                NumberOfPages = (totalCount + paginationFilter.PageSize - 1) / paginationFilter.PageSize
+            };
         }
 
         public async Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersAsync(
