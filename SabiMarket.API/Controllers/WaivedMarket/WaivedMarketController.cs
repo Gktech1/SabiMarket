@@ -60,6 +60,24 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
+        [HttpGet("GetUrgentPurchaseWaivedProduct")]
+        public async Task<IActionResult> GetUrgentPurchaseWaivedProduct([FromQuery] PaginationFilter filter)
+        {
+            var response = await _serviceManager.IWaivedProductService.GetUrgentPurchaseWaivedProduct(filter);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
         [HttpPost("CreateWaivedProducts")]
         public async Task<IActionResult> CreateWaivedProducts(CreateWaivedProductDto dto)
         {
@@ -371,6 +389,25 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetVendorAndProducts([FromQuery] PaginationFilter filter)
         {
             BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>? response = await _serviceManager.IWaivedProductService.GetVendorAndProducts(filter);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPost("BlockOrUnblockVendor")]
+        [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
+        public async Task<IActionResult> BlockOrUnblockVendor(string userId)
+        {
+            var response = await _serviceManager.IWaivedProductService.BlockOrUnblockVendor(userId);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures

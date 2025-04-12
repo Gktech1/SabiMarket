@@ -55,6 +55,9 @@ namespace SabiMarket.Application.DTOs
         public string VendorName { get; set; }
         public string PhoneNumber { get; set; }
         public string Email { get; set; }
+        public string LGA { get; set; }
+        public string UserAddress { get; set; }
+        public string BusinessAddress { get; set; }
 
         // Prevent circular references by not including the full User object
         public List<ProductDto> Products { get; set; } = new();
