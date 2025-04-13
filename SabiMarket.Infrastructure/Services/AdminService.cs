@@ -1572,13 +1572,13 @@ public class AdminService : IAdminService
             return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
         }
     }
+
     public async Task<BaseResponse<TeamMemberResponseDto>> CreateTeamMember(CreateTeamMemberRequestDto requestDto)
     {
         try
         {
             var userId = _currentUser.GetUserId();
             var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
-
             if (currentAdmin == null || !currentAdmin.HasTeamManagementAccess)
             {
                 await CreateAuditLog(
@@ -1605,10 +1605,9 @@ public class AdminService : IAdminService
 
             // Generate a new unique ID for the team member
             var newUserId = Guid.NewGuid().ToString();
-
             var user = new ApplicationUser
             {
-                Id = newUserId,    // Use the new unique ID instead of admin's ID
+                Id = newUserId,
                 UserName = requestDto.EmailAddress,
                 Email = requestDto.EmailAddress,
                 PhoneNumber = requestDto.PhoneNumber,
@@ -1623,7 +1622,10 @@ public class AdminService : IAdminService
                 CreatedAt = DateTime.UtcNow
             };
 
-            var createUserResult = await _userManager.CreateAsync(user);
+            // Generate a default password
+            var defaultPassword = GenerateDefaultPassword(requestDto.FullName);
+            var createUserResult = await _userManager.CreateAsync(user, defaultPassword);
+
             if (!createUserResult.Succeeded)
             {
                 await CreateAuditLog(
@@ -1640,6 +1642,27 @@ public class AdminService : IAdminService
             // Add to team member role
             await _userManager.AddToRoleAsync(user, UserRoles.TeamMember);
 
+            // Create Admin entity with team member privileges
+            var admin = new Admin
+            {
+                UserId = user.Id,
+                AdminLevel = requestDto.AdminLevel ?? "Team Member",
+                Department = requestDto.Department ?? "General",
+                Position = requestDto.Position ?? "Team Member",
+                HasDashboardAccess = requestDto.HasDashboardAccess ?? false,
+                HasRoleManagementAccess = requestDto.HasRoleManagementAccess ?? false,
+                HasTeamManagementAccess = requestDto.HasTeamManagementAccess ?? false,
+                HasAuditLogAccess = requestDto.HasAuditLogAccess ?? false,
+                HasAdvertManagementAccess = requestDto.HasAdvertManagementAccess ?? false,
+                RegisteredLGAs = 0,
+                ActiveChairmen = 0,
+                TotalRevenue = 0,
+                StatsLastUpdatedAt = DateTime.UtcNow
+            };
+
+            _repository.AdminRepository.CreateAdmin(admin);
+            await _repository.SaveChangesAsync();
+
             await CreateAuditLog(
                 "Created Team Member",
                 $"Created team member account for {user.Email} ({requestDto.FullName})",
@@ -1652,10 +1675,11 @@ public class AdminService : IAdminService
                 FullName = requestDto.FullName,
                 PhoneNumber = requestDto.PhoneNumber,
                 EmailAddress = requestDto.EmailAddress,
-                DateAdded = user.CreatedAt
+                DateAdded = user.CreatedAt,
+                DefaultPassword = defaultPassword
             };
 
-            return ResponseFactory.Success(responseDto, "Team member created successfully");
+            return ResponseFactory.Success(responseDto, "Team member created successfully. Please note down the default password.");
         }
         catch (Exception ex)
         {
@@ -1663,6 +1687,212 @@ public class AdminService : IAdminService
             return ResponseFactory.Fail<TeamMemberResponseDto>(ex, "An unexpected error occurred");
         }
     }
+
+    private string GenerateDefaultPassword(string fullName)
+    {
+        // Handle null or empty fullName
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            fullName = "User";
+        }
+
+        var nameParts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var firstName = nameParts.Length > 0 ? nameParts[0] : "User";
+        var lastName = nameParts.Length > 1 ? nameParts[1] : "";
+
+        var random = new Random();
+        var randomNumbers = random.Next(100, 999).ToString(); // Generate a 3-digit random number
+
+        // Special characters pool
+        var specialChars = "!@#$%^&*(),.?\":{}|<>";
+        var specialChar = specialChars[random.Next(specialChars.Length)];
+
+        // Generate random uppercase letter
+        var uppercaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        var uppercaseLetter = uppercaseLetters[random.Next(uppercaseLetters.Length)];
+
+        // Generate random lowercase letter - ensure we have at least one
+        var lowercaseLetters = "abcdefghijklmnopqrstuvwxyz";
+        var lowercaseLetter = lowercaseLetters[random.Next(lowercaseLetters.Length)];
+
+        // Process name parts - ensure they're properly formatted
+        string firstNameProcessed = "";
+        if (firstName.Length > 0)
+        {
+            firstNameProcessed = char.ToUpper(firstName[0]) +
+                (firstName.Length > 1 ? firstName.Substring(1).ToLower() : "");
+        }
+
+        string lastNameProcessed = "";
+        if (!string.IsNullOrEmpty(lastName) && lastName.Length > 0)
+        {
+            lastNameProcessed = char.ToUpper(lastName[0]) +
+                (lastName.Length > 1 ? lastName.Substring(1).ToLower() : "");
+        }
+
+        // Combine all elements ensuring we have all required character types
+        var passwordParts = new List<string>
+    {
+        firstNameProcessed,
+        lastNameProcessed,
+        randomNumbers,          // Ensures numbers
+        uppercaseLetter.ToString(), // Ensures uppercase
+        lowercaseLetter.ToString(), // Ensures lowercase
+        specialChar.ToString()  // Ensures special character
+    };
+
+        // Remove any empty parts
+        passwordParts.RemoveAll(string.IsNullOrEmpty);
+
+        // Shuffle the parts for better security
+        ShuffleList(passwordParts, random);
+
+        var password = string.Join("", passwordParts);
+
+        // Ensure minimum length of 8 characters
+        if (password.Length < 8)
+        {
+            var additionalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+            while (password.Length < 8)
+            {
+                password += additionalChars[random.Next(additionalChars.Length)];
+            }
+        }
+
+        // Final verification to ensure the password meets all requirements
+        if (!ContainsUppercase(password)) password += uppercaseLetters[random.Next(uppercaseLetters.Length)];
+        if (!ContainsLowercase(password)) password += lowercaseLetters[random.Next(lowercaseLetters.Length)];
+        if (!ContainsNumber(password)) password += random.Next(0, 9).ToString();
+        if (!ContainsSpecialChar(password)) password += specialChars[random.Next(specialChars.Length)];
+
+        return password;
+    }
+
+    // Helper method to shuffle a list
+    private void ShuffleList<T>(List<T> list, Random random)
+    {
+        int n = list.Count;
+        while (n > 1)
+        {
+            n--;
+            int k = random.Next(n + 1);
+            T value = list[k];
+            list[k] = list[n];
+            list[n] = value;
+        }
+    }
+
+    // Helper methods to verify password requirements
+    private bool ContainsUppercase(string password)
+    {
+        return password.Any(char.IsUpper);
+    }
+
+    private bool ContainsLowercase(string password)
+    {
+        return password.Any(char.IsLower);
+    }
+
+    private bool ContainsNumber(string password)
+    {
+        return password.Any(char.IsDigit);
+    }
+
+    private bool ContainsSpecialChar(string password)
+    {
+        return password.Any(c => "!@#$%^&*(),.?\":{}|<>".Contains(c));
+    }
+    /*  public async Task<BaseResponse<TeamMemberResponseDto>> CreateTeamMember(CreateTeamMemberRequestDto requestDto)
+      {
+          try
+          {
+              var userId = _currentUser.GetUserId();
+              var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
+
+              if (currentAdmin == null || !currentAdmin.HasTeamManagementAccess)
+              {
+                  await CreateAuditLog(
+                      "Team Member Creation Denied",
+                      $"Unauthorized team member creation attempt by user: {userId}",
+                      "Team Management"
+                  );
+                  return ResponseFactory.Fail<TeamMemberResponseDto>(
+                      new UnauthorizedException("Access denied"),
+                      "You don't have permission to create team members");
+              }
+
+              // Check if email already exists
+              var existingUser = await _userManager.FindByEmailAsync(requestDto.EmailAddress);
+              if (existingUser != null)
+              {
+                  await CreateAuditLog(
+                      "Team Member Creation Failed",
+                      $"Email already exists: {requestDto.EmailAddress}",
+                      "Team Management"
+                  );
+                  return ResponseFactory.Fail<TeamMemberResponseDto>("Email address already exists");
+              }
+
+              // Generate a new unique ID for the team member
+              var newUserId = Guid.NewGuid().ToString();
+
+              var user = new ApplicationUser
+              {
+                  Id = newUserId,                       // Use the new unique ID instead of admin's ID
+                  UserName = requestDto.EmailAddress,
+                  Email = requestDto.EmailAddress,
+                  PhoneNumber = requestDto.PhoneNumber,
+                  NormalizedUserName = requestDto.EmailAddress,
+                  NormalizedEmail = requestDto.EmailAddress,
+                  FirstName = requestDto.FullName.Split(' ')[0],
+                  LastName = requestDto.FullName.Contains(" ") ?
+                      string.Join(" ", requestDto.FullName.Split(' ').Skip(1)) : "",
+                  ProfileImageUrl = "",
+                  IsActive = true,
+                  EmailConfirmed = true,
+                  CreatedAt = DateTime.UtcNow
+              };
+
+              var createUserResult = await _userManager.CreateAsync(user);
+              if (!createUserResult.Succeeded)
+              {
+                  await CreateAuditLog(
+                      "Team Member Creation Failed",
+                      $"Failed to create user account for: {requestDto.EmailAddress}",
+                      "Team Management"
+                  );
+                  return ResponseFactory.Fail<TeamMemberResponseDto>(
+                      new ValidationException(createUserResult.Errors.Select(e =>
+                          new ValidationFailure(e.Code, e.Description))),
+                      "Failed to create user account");
+              }
+
+              // Add to team member role
+              await _userManager.AddToRoleAsync(user, UserRoles.TeamMember);
+
+              await CreateAuditLog(
+                  "Created Team Member",
+                  $"Created team member account for {user.Email} ({requestDto.FullName})",
+                  "Team Management"
+              );
+
+              var responseDto = new TeamMemberResponseDto
+              {
+                  Id = user.Id,
+                  FullName = requestDto.FullName,
+                  PhoneNumber = requestDto.PhoneNumber,
+                  EmailAddress = requestDto.EmailAddress,
+                  DateAdded = user.CreatedAt
+              };
+
+              return ResponseFactory.Success(responseDto, "Team member created successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error creating team member");
+              return ResponseFactory.Fail<TeamMemberResponseDto>(ex, "An unexpected error occurred");
+          }
+      }*/
     public async Task<BaseResponse<TeamMemberResponseDto>> UpdateTeamMember(
        string memberId,
        UpdateTeamMemberRequestDto requestDto)
