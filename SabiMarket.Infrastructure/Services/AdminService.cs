@@ -31,6 +31,7 @@ public class AdminService : IAdminService
     private readonly ILogger<AdminService> _logger;
     private readonly IMapper _mapper;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly ICurrentUserService _currentUser;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IValidator<CreateAdminRequestDto> _createAdminValidator;
@@ -48,7 +49,8 @@ public class AdminService : IAdminService
         IValidator<CreateAdminRequestDto> createAdminValidator,
         IValidator<UpdateAdminProfileDto> updateProfileValidator,
         IValidator<CreateRoleRequestDto> createRoleValidator,
-        IValidator<UpdateRoleRequestDto> updateRoleValidator)
+        IValidator<UpdateRoleRequestDto> updateRoleValidator,
+        RoleManager<ApplicationRole> roleManager)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -60,6 +62,7 @@ public class AdminService : IAdminService
         _updateProfileValidator = updateProfileValidator ?? throw new ArgumentNullException(nameof(updateProfileValidator));
         _createRoleValidator = createRoleValidator ?? throw new ArgumentNullException(nameof(createRoleValidator));
         _updateRoleValidator = updateRoleValidator ?? throw new ArgumentNullException(nameof(updateRoleValidator));
+        _roleManager = roleManager;
     }
 
     private string GetCurrentIpAddress()
@@ -1207,6 +1210,660 @@ public class AdminService : IAdminService
             _logger.LogError(ex, "Error creating role");
             return ResponseFactory.Fail<RoleResponseDto>(ex, "An unexpected error occurred");
         }
+    }
+
+    /* public async Task<BaseResponse<PaginatorDto<IEnumerable<UserResponseDto>>>> GetAllUsers(
+     UserFilterRequestDto filterDto,
+     PaginationFilter paginationFilter)
+     {
+         try
+         {
+             // Verify current user has permission
+             var userId = _currentUser.GetUserId();
+             var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
+             if (currentAdmin == null || !currentAdmin.HasRoleManagementAccess)
+             {
+                 await CreateAuditLog(
+                     "User List Access Denied",
+                     $"Unauthorized attempt to retrieve users by user: {userId}",
+                     "User Management"
+                 );
+                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<UserResponseDto>>>(
+                     new UnauthorizedException("Access denied"),
+                     "You don't have permission to view users");
+             }
+
+             if (paginationFilter == null)
+             {
+                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<UserResponseDto>>>(
+                     new ArgumentNullException(nameof(paginationFilter)),
+                     "Pagination parameters are required");
+             }
+
+             // Create empty filter if null to get all records
+             filterDto ??= new UserFilterRequestDto();
+
+             // Set pagination limits
+             const int MinPageSize = 1;
+             const int DefaultPageSize = 10;
+             const int MaxPageSize = 100;
+             paginationFilter.PageSize = paginationFilter.PageSize switch
+             {
+                 < MinPageSize => DefaultPageSize,
+                 > MaxPageSize => MaxPageSize,
+                 _ => paginationFilter.PageSize
+             };
+
+             // Get users query based on filter
+             var query = _repository.UserRepository.GetFilteredUsersQuery(filterDto);
+             if (query == null)
+             {
+                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<UserResponseDto>>>(
+                     new InvalidOperationException("Query could not be created"),
+                     "Failed to create users query");
+             }
+
+             // Paginate results
+             var paginatedUsers = await query.Paginate(paginationFilter);
+
+             // Map to response DTOs with user type information
+             var userDtos = new List<UserResponseDto>();
+
+             foreach (var user in paginatedUsers.PageItems)
+             {
+                 var userDto = await MapToUserResponseDto(user);
+                 userDtos.Add(userDto);
+             }
+
+             var result = new PaginatorDto<IEnumerable<UserResponseDto>>
+             {
+                 PageItems = userDtos,
+                 PageSize = paginatedUsers.PageSize,
+                 CurrentPage = paginatedUsers.CurrentPage,
+                 NumberOfPages = paginatedUsers.NumberOfPages
+             };
+
+             // Create audit log
+             var searchDescription = string.IsNullOrWhiteSpace(filterDto.SearchTerm)
+                 ? "all users"
+                 : $"users with search: {filterDto.SearchTerm}";
+
+             await CreateAuditLog(
+                 "User List Query",
+                 $"Retrieved {searchDescription} - Page {paginationFilter.PageNumber}, Size {paginationFilter.PageSize}",
+                 "User Management"
+             );
+
+             return ResponseFactory.Success(result, "Users retrieved successfully");
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex,
+                 "Error retrieving users. Filter: {@FilterDto}, Pagination: {@PaginationFilter}",
+                 filterDto,
+                 paginationFilter);
+
+             return ResponseFactory.Fail<PaginatorDto<IEnumerable<UserResponseDto>>>(
+                 ex, "An unexpected error occurred");
+         }
+     }*/
+
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<UserResponseDto>>>> GetAllUsers(
+    UserFilterRequestDto filterDto,
+    PaginationFilter paginationFilter)
+    {
+        try
+        {
+            // Verify current user has permission
+            var userId = _currentUser.GetUserId();
+            var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
+
+            if (currentAdmin == null || !currentAdmin.HasRoleManagementAccess)
+            {
+                await CreateAuditLog(
+                    "User List Access Denied",
+                    $"Unauthorized attempt to retrieve users by user: {userId}",
+                    "User Management"
+                );
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<UserResponseDto>>>(
+                    new UnauthorizedException("Access denied"),
+                    "You don't have permission to view users");
+            }
+
+            if (paginationFilter == null)
+            {
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<UserResponseDto>>>(
+                    new ArgumentNullException(nameof(paginationFilter)),
+                    "Pagination parameters are required");
+            }
+
+            // Create empty filter if null to get all records
+            filterDto ??= new UserFilterRequestDto();
+
+            // Set pagination limits
+            const int MinPageSize = 1;
+            const int DefaultPageSize = 10;
+            const int MaxPageSize = 100;
+            paginationFilter.PageSize = paginationFilter.PageSize switch
+            {
+                < MinPageSize => DefaultPageSize,
+                > MaxPageSize => MaxPageSize,
+                _ => paginationFilter.PageSize
+            };
+
+            // Get users from UserManager and apply filters in memory
+            var users = _userManager.Users.AsQueryable();
+
+            // Apply search term to name or email if provided
+            if (!string.IsNullOrWhiteSpace(filterDto.SearchTerm))
+            {
+                var searchTerm = filterDto.SearchTerm.ToLower();
+                users = users.Where(u =>
+                    u.Email.ToLower().Contains(searchTerm) ||
+                    u.UserName.ToLower().Contains(searchTerm) ||
+                    u.FirstName.ToLower().Contains(searchTerm) ||
+                    u.LastName.ToLower().Contains(searchTerm) ||
+                    (u.FirstName + " " + u.LastName).ToLower().Contains(searchTerm) ||
+                    (u.PhoneNumber != null && u.PhoneNumber.Contains(searchTerm))
+                );
+            }
+
+            // Filter by active status
+            if (filterDto.IsActive.HasValue)
+            {
+                users = users.Where(u => u.IsActive == filterDto.IsActive.Value);
+            }
+
+            // Filter by creation date range
+            if (filterDto.CreatedFrom.HasValue)
+            {
+                users = users.Where(u => u.CreatedAt >= filterDto.CreatedFrom.Value);
+            }
+
+            if (filterDto.CreatedTo.HasValue)
+            {
+                var endDate = filterDto.CreatedTo.Value.AddDays(1); // Include the end date
+                users = users.Where(u => u.CreatedAt < endDate);
+            }
+
+            // Include related entities using explicit loading in Entity Framework
+            users = users.Include(u => u.LocalGovernment);
+
+            // Filter by user type using navigation properties
+            if (!string.IsNullOrWhiteSpace(filterDto.UserType))
+            {
+                switch (filterDto.UserType.ToLower())
+                {
+                    case "admin":
+                        users = users.Include(u => u.Admin).Where(u => u.Admin != null);
+                        break;
+                    case "chairman":
+                        users = users.Include(u => u.Chairman).Where(u => u.Chairman != null);
+                        break;
+                    case "trader":
+                        users = users.Include(u => u.Trader).ThenInclude(t => t.Market)
+                                     .Where(u => u.Trader != null);
+                        break;
+                    case "vendor":
+                        users = users.Include(u => u.Vendor).Where(u => u.Vendor != null);
+                        break;
+                    case "customer":
+                        users = users.Include(u => u.Customer).Where(u => u.Customer != null);
+                        break;
+                    case "caretaker":
+                        users = users.Include(u => u.Caretaker).Where(u => u.Caretaker != null);
+                        break;
+                    case "goodboy":
+                        users = users.Include(u => u.GoodBoy).Where(u => u.GoodBoy != null);
+                        break;
+                    case "assistcenterofficer":
+                        users = users.Include(u => u.AssistCenterOfficer).Where(u => u.AssistCenterOfficer != null);
+                        break;
+                    default:
+                        // Include all entities when no specific type is selected
+                        users = users.Include(u => u.Admin)
+                                     .Include(u => u.Chairman)
+                                     .Include(u => u.Trader).ThenInclude(t => t.Market)
+                                     .Include(u => u.Vendor)
+                                     .Include(u => u.Customer)
+                                     .Include(u => u.Caretaker)
+                                     .Include(u => u.GoodBoy)
+                                     .Include(u => u.AssistCenterOfficer);
+                        break;
+                }
+            }
+            else
+            {
+                // Include all entities when no specific type is selected
+                users = users.Include(u => u.Admin)
+                             .Include(u => u.Chairman)
+                             .Include(u => u.Trader).ThenInclude(t => t.Market)
+                             .Include(u => u.Vendor)
+                             .Include(u => u.Customer)
+                             .Include(u => u.Caretaker)
+                             .Include(u => u.GoodBoy)
+                             .Include(u => u.AssistCenterOfficer);
+            }
+
+            // Execute the query to get the count
+            var totalCount = await users.CountAsync();
+
+            // Apply pagination manually
+            var pagedUsers = await users
+                .OrderByDescending(u => u.CreatedAt)
+                .Skip((paginationFilter.PageNumber - 1) * paginationFilter.PageSize)
+                .Take(paginationFilter.PageSize)
+                .ToListAsync();
+
+            var userDtos = new List<UserResponseDto>();
+            foreach (var user in pagedUsers)
+            {
+                // Get all role names for the user
+                var roleNames = await _userManager.GetRolesAsync(user);
+
+                // Create a list to store roles with IDs
+                var rolesWithIds = new List<UserRoleDto>();
+
+                // Get all roles with their IDs
+                foreach (var roleName in roleNames)
+                {
+                    var role = await _roleManager.FindByNameAsync(roleName);
+                    if (role != null)
+                    {
+                        rolesWithIds.Add(new UserRoleDto
+                        {
+                            Id = role.Id,
+                            Name = role.Name
+                        });
+                    }
+                }
+
+                var userDto = new UserResponseDto
+                {
+                    Id = user.Id,
+                    FullName = $"{user.FirstName} {user.LastName}",
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    IsActive = user.IsActive,
+                    CreatedAt = user.CreatedAt,
+                    LastLoginAt = user.LastLoginAt,
+                    Roles = roleNames.ToList(),          // Keep this for backward compatibility
+                    RolesWithIds = rolesWithIds,         // Add the new collection with role IDs
+                    UserType = DetermineUserType(user, roleNames)  // Pass roleNames as the second parameter
+                };
+
+                // Add entity-specific information
+                if (user.Admin != null)
+                {
+                    userDto.Department = user.Admin.Department;
+                    userDto.Position = user.Admin.Position;
+                }
+                else if (user.Chairman != null && user.LocalGovernment != null)
+                {
+                    userDto.LocalGovernmentName = user.LocalGovernment?.Name;
+                }
+                else if (user.Trader != null)
+                {
+                    userDto.MarketName = user.Trader.Market?.MarketName;
+                }
+
+                userDtos.Add(userDto);
+            }
+
+            // If filtering by role, apply that filter in memory as it can't be done in the query
+            /*if (!string.IsNullOrWhiteSpace(filterDto?.RoleName))
+        {
+            var filteredUsers = new List<ApplicationUser>();
+            foreach (var user in pagedUsers)
+            {
+                if (await _userManager.IsInRoleAsync(user, filterDto.RoleName))
+                {
+                    filteredUsers.Add(user);
+                }
+            }
+            pagedUsers = filteredUsers;
+        }*/
+
+            // Map users to response DTOs
+            // var userDtos = new List<UserResponseDto>();
+            /*  foreach (var user in pagedUsers)
+              {
+                  var roles = await _userManager.GetRolesAsync(user);
+
+                  var userDto = new UserResponseDto
+                  {
+                      Id = user.Id,
+                      FullName = $"{user.FirstName} {user.LastName}",
+                      Email = user.Email,
+                      PhoneNumber = user.PhoneNumber,
+                      IsActive = user.IsActive,
+                      CreatedAt = user.CreatedAt,
+                      LastLoginAt = user.LastLoginAt,
+                      Roles = roles.ToList(),
+                      UserType = DetermineUserType(user)
+                  };
+
+                  // Add entity-specific information
+                  if (user.Admin != null)
+                  {
+                      userDto.Department = user.Admin.Department;
+                      userDto.Position = user.Admin.Position;
+                  }
+                  else if (user.Chairman != null && user.LocalGovernment != null)
+                  {
+                      userDto.LocalGovernmentName = user.LocalGovernment?.Name;
+                  }
+                  else if (user.Trader != null)
+                  {
+                      userDto.MarketName = user.Trader.Market?.MarketName;
+                  }
+
+                  userDtos.Add(userDto);
+              }*/
+
+            // Create paginator result
+            var numberOfPages = (int)Math.Ceiling(totalCount / (double)paginationFilter.PageSize);
+
+            var result = new PaginatorDto<IEnumerable<UserResponseDto>>
+            {
+                PageItems = userDtos,
+                PageSize = paginationFilter.PageSize,
+                CurrentPage = paginationFilter.PageNumber,
+                NumberOfPages = numberOfPages
+            };
+
+            // Create audit log
+            var searchDescription = string.IsNullOrWhiteSpace(filterDto.SearchTerm)
+                ? "all users"
+                : $"users with search: {filterDto.SearchTerm}";
+
+            await CreateAuditLog(
+                "User List Query",
+                $"Retrieved {searchDescription} - Page {paginationFilter.PageNumber}, Size {paginationFilter.PageSize}",
+                "User Management"
+            );
+
+            return ResponseFactory.Success(result, "Users retrieved successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error retrieving users. Filter: {@FilterDto}, Pagination: {@PaginationFilter}",
+                filterDto,
+                paginationFilter);
+
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<UserResponseDto>>>(
+                ex, "An unexpected error occurred");
+        }
+    }
+
+    public async Task<BaseResponse<AssignRoleResponseDto>> AssignUserRoleAndPermissions(string userId, string roleId, List<PermissionDto> permissions, bool removeExistingRoles = false)
+    {
+        var correlationId = Guid.NewGuid().ToString();
+        try
+        {
+            // Verify current user has permission
+            var currentUserId = _currentUser.GetUserId();
+            var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(currentUserId, trackChanges: false);
+            if (currentAdmin == null || !currentAdmin.HasRoleManagementAccess)
+            {
+                await CreateAuditLog(
+                    "Role Assignment Denied",
+                    $"CorrelationId: {correlationId} - Unauthorized role assignment attempt by user: {currentUserId}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<AssignRoleResponseDto>(
+                    new UnauthorizedException("Access denied"),
+                    "You don't have permission to assign roles");
+            }
+
+            // Get the user
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                await CreateAuditLog(
+                    "Role Assignment Failed",
+                    $"CorrelationId: {correlationId} - User not found: {userId}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<AssignRoleResponseDto>(
+                    new NotFoundException($"User with ID {userId} not found"),
+                    "User not found");
+            }
+
+            // Get the role
+            var role = await _roleManager.FindByIdAsync(roleId);
+            if (role == null)
+            {
+                await CreateAuditLog(
+                    "Role Assignment Failed",
+                    $"CorrelationId: {correlationId} - Role not found: {roleId}",
+                    "Role Management"
+                );
+                return ResponseFactory.Fail<AssignRoleResponseDto>(
+                    new NotFoundException($"Role with ID {roleId} not found"),
+                    "Role not found");
+            }
+
+            // Get current user roles
+            var currentRoles = await _userManager.GetRolesAsync(user);
+
+            // Begin transaction to ensure all operations succeed or fail together
+            using var transaction = await _repository.BeginTransactionAsync();
+            try
+            {
+                // Remove user from all current roles if requested
+                if (removeExistingRoles && currentRoles.Any())
+                {
+                    var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                    if (!removeResult.Succeeded)
+                    {
+                        await CreateAuditLog(
+                            "Role Assignment Failed",
+                            $"CorrelationId: {correlationId} - Failed to remove existing roles",
+                            "Role Management"
+                        );
+                        return ResponseFactory.Fail<AssignRoleResponseDto>(
+                            new Exception($"Failed to remove existing roles: {string.Join(", ", removeResult.Errors.Select(e => e.Description))}"),
+                            "Failed to remove existing roles");
+                    }
+                }
+
+                // Add user to new role
+                var addRoleResult = await _userManager.AddToRoleAsync(user, role.Name);
+                if (!addRoleResult.Succeeded)
+                {
+                    await CreateAuditLog(
+                        "Role Assignment Failed",
+                        $"CorrelationId: {correlationId} - Failed to assign role",
+                        "Role Management"
+                    );
+                    return ResponseFactory.Fail<AssignRoleResponseDto>(
+                        new Exception($"Failed to assign role: {string.Join(", ", addRoleResult.Errors.Select(e => e.Description))}"),
+                        "Failed to assign role");
+                }
+
+                // Store user permissions as a JSON string in the Admin entity
+                // This avoids creating a new entity while still tracking user-specific permissions
+                if (permissions != null && permissions.Any())
+                {
+                    // Get or create admin entity for the user
+                    var admin = await _repository.AdminRepository.GetAdminByUserIdAsync(user.Id, true);
+
+                    // If admin doesn't exist, create it regardless of the role
+                    if (admin == null)
+                    {
+                        admin = new Admin
+                        {
+                            UserId = user.Id,
+                            AdminLevel = role.Name,
+                            Department = "General",
+                            Position = role.Name,
+                            HasDashboardAccess = role.Name == UserRoles.Admin,
+                            HasRoleManagementAccess = role.Name == UserRoles.Admin,
+                            HasTeamManagementAccess = role.Name == UserRoles.Admin,
+                            HasAuditLogAccess = role.Name == UserRoles.Admin,
+                            HasAdvertManagementAccess = role.Name == UserRoles.Admin,
+                            RegisteredLGAs = 0,
+                            ActiveChairmen = 0,
+                            TotalRevenue = 0,
+                            StatsLastUpdatedAt = DateTime.UtcNow
+                        };
+
+                        _repository.AdminRepository.CreateAdmin(admin);
+                    }
+
+                    // Serialize the permissions to JSON and store in a custom field 
+                    // (you may need to add this field to your Admin entity)
+                    var permissionsJson = System.Text.Json.JsonSerializer.Serialize(permissions);
+
+                    // Store JSON in Description field of another entity, or in custom property
+                    // This is a workaround since we can't add new entity
+
+                    // For demonstration, I'll use existing Role's Description to store user-specific permissions
+                    var userSpecificRole = new ApplicationRole
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Name = $"User_{userId}_CustomPermissions",
+                        NormalizedName = $"USER_{userId}_CUSTOMPERMISSIONS",
+                        Description = permissionsJson,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = currentUserId,
+                        LastModifiedAt = DateTime.UtcNow,
+                        LastModifiedBy = currentUserId
+                    };
+
+                    // Create or update the role
+                    var existingRole = await _roleManager.FindByNameAsync(userSpecificRole.Name);
+                    if (existingRole != null)
+                    {
+                        existingRole.Description = permissionsJson;
+                        existingRole.LastModifiedAt = DateTime.UtcNow;
+                        existingRole.LastModifiedBy = currentUserId;
+
+                        await _roleManager.UpdateAsync(existingRole);
+                    }
+                    else
+                    {
+                        await _roleManager.CreateAsync(userSpecificRole);
+                    }
+
+                    // Also assign this special role to the user to track custom permissions
+                    await _userManager.AddToRoleAsync(user, userSpecificRole.Name);
+
+                    await _repository.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                throw new Exception("Transaction failed, all changes were rolled back", ex);
+            }
+
+            // Create audit log for successful assignment
+            await CreateAuditLog(
+                "Role Assigned",
+                $"CorrelationId: {correlationId} - Assigned role '{role.Name}' to user {user.Email} ({user.FirstName} {user.LastName})",
+                "Role Management"
+            );
+
+            // Get updated roles
+            var updatedRoles = await _userManager.GetRolesAsync(user);
+
+            // Prepare response
+            var response = new AssignRoleResponseDto
+            {
+                UserId = user.Id,
+                UserEmail = user.Email,
+                UserFullName = $"{user.FirstName} {user.LastName}",
+                AssignedRole = role.Name,
+                PreviousRoles = currentRoles.ToList(),
+                CurrentRoles = updatedRoles.ToList(),
+                AssignedPermissions = permissions?.ToList() ?? new List<PermissionDto>()
+            };
+
+            return ResponseFactory.Success(response, "Role and permissions assigned successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error assigning role and permissions");
+            await CreateAuditLog(
+                "Role Assignment Failed",
+                $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                "Role Management"
+            );
+            return ResponseFactory.Fail<AssignRoleResponseDto>(ex, "An unexpected error occurred");
+        }
+    }
+
+    // Helper method to determine the user type
+    /*private string DetermineUserType(ApplicationUser user)
+    {
+        if (user.Admin != null) return "Admin";
+        if (user.Chairman != null) return "Chairman";
+        if (user.Trader != null) return "Trader";
+        if (user.Vendor != null) return "Vendor";
+        if (user.Customer != null) return "Customer";
+        if (user.Caretaker != null) return "Caretaker";
+        if (user.GoodBoy != null) return "GoodBoy";
+        if (user.AssistCenterOfficer != null) return "AssistCenterOfficer";
+
+        return "User"; // Default if no specific entity is associated
+    }*/
+
+    // Helper method to determine user type and map properties accordingly
+    private async Task<UserResponseDto> MapToUserResponseDto(ApplicationUser user)
+    {
+        var roles = await _userManager.GetRolesAsync(user);
+
+        var userDto = new UserResponseDto
+        {
+            Id = user.Id,
+            FullName = $"{user.FirstName} {user.LastName}",
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt,
+            LastLoginAt = user.LastLoginAt,
+            Roles = roles.ToList(),
+            UserType = DetermineUserType(user, roles)
+        };
+
+        // Additional user details based on type
+        if (user.Admin != null)
+        {
+            userDto.Department = user.Admin.Department;
+            userDto.Position = user.Admin.Position;
+        }
+        else if (user.Chairman != null)
+        {
+            userDto.LocalGovernmentName = user.LocalGovernment?.Name;
+        }
+        else if (user.Trader != null)
+        {
+            userDto.MarketName = user.Trader.Market?.MarketName;
+        }
+
+        return userDto;
+    }
+
+    // Helper method to determine user type
+    private string DetermineUserType(ApplicationUser user, IList<string> roles)
+    {
+        if (user.Admin != null) return UserRoles.Admin;
+        if (user.Chairman != null) return UserRoles.Chairman;
+        if (user.Trader != null) return UserRoles.Trader;
+        if (user.Vendor != null) return UserRoles.Vendor;
+        if (user.Customer != null) return UserRoles.Customer;
+        if (user.Caretaker != null) return UserRoles.Caretaker;
+        if (user.GoodBoy != null) return UserRoles.Goodboy;
+        if (user.AssistCenterOfficer != null) return UserRoles.AssistOfficer;
+
+        // Fallback to the first role if no specific entity is associated
+        return roles.FirstOrDefault() ?? "User";
     }
 
     public async Task<BaseResponse<RoleResponseDto>> UpdateRole(string roleId, UpdateRoleRequestDto updateRoleDto)

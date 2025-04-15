@@ -26,6 +26,37 @@ public class AdminController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("users")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<UserResponseDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<UserResponseDto>>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<UserResponseDto>>>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<UserResponseDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAllUsers([FromQuery] UserFilterRequestDto filterDto, [FromQuery] PaginationFilter paginationFilter)
+    {
+        var response = await _adminService.GetAllUsers(filterDto, paginationFilter);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
+    }
+
+    [HttpPost("users/{userId}/assign-role/{roleId}")]
+    [ProducesResponseType(typeof(BaseResponse<AssignRoleResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<AssignRoleResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<AssignRoleResponseDto>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(BaseResponse<AssignRoleResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<AssignRoleResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> AssignUserRole(string userId, string roleId, List<PermissionDto> permissions, [FromQuery] bool removeExistingRoles = false)
+    {
+        var response = await _adminService.AssignUserRoleAndPermissions(userId, roleId, permissions, removeExistingRoles);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
+    }
+
     [HttpGet("{adminId}")]
     [ProducesResponseType(typeof(BaseResponse<AdminResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<AdminResponseDto>), StatusCodes.Status404NotFound)]

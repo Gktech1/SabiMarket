@@ -1,8 +1,11 @@
-﻿using SabiMarket.Application.Interfaces;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Application.IRepositories.SowFoodIRepositories;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Repositories.SowFoodLinkedRepositories;
+using System.Data;
 
 namespace SabiMarket.Infrastructure.Repositories
 {
@@ -85,5 +88,23 @@ namespace SabiMarket.Infrastructure.Repositories
         public ICustomerRepository CustomerRepository => _customerRepository.Value;
         public IOfficerMarketAssignmentRepository OfficerMarketAssignmentRepository => _officerMarketAssignmentRepository.Value;
         public Task SaveChangesAsync() => _context.SaveChangesAsync();
+        /// <summary>
+        /// Begins a new database transaction
+        /// </summary>
+        /// <returns>The transaction object</returns>
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        }
+
+        /// <summary>
+        /// Begins a new database transaction with the specified isolation level
+        /// </summary>
+        /// <param name="isolationLevel">The isolation level for the transaction</param>
+        /// <returns>The transaction object</returns>
+        public async Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel)
+        {
+            return await _context.Database.BeginTransactionAsync(isolationLevel);
+        }
     }
 }

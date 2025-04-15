@@ -37,6 +37,10 @@ namespace SabiMarket.Application.IServices
          TeamMemberFilterRequestDto filterDto,
          PaginationFilter paginationFilter);
         Task<BaseResponse<byte[]>> ExportReport(ReportExportRequestDto request);
+        Task<BaseResponse<PaginatorDto<IEnumerable<UserResponseDto>>>> GetAllUsers(
+    UserFilterRequestDto filterDto,
+    PaginationFilter paginationFilter);
+        Task<BaseResponse<AssignRoleResponseDto>> AssignUserRoleAndPermissions(string userId, string roleId, List<PermissionDto> permissions, bool removeExistingRoles = false);
     }
 }
 
