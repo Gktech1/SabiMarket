@@ -287,23 +287,28 @@ public class WaivedProductService : IWaivedProductService
             }
 
             // Map Vendor to VendorDto to prevent circular reference
-            var vendorDtos = vendors.PageItems.Select(v => new VendorDto
+            var vendorDtos = vendors.PageItems.Select(v =>
             {
-                Id = v.Id,
-                BusinessName = v.BusinessName,
-                VendorName = v.User.FirstName + " " + v.User.LastName,
-                Email = v.User.Email,
-                PhoneNumber = v.User?.PhoneNumber,
-                LGA = v.User?.LocalGovernment.Name,
-                UserAddress = v.User?.Address,
-                BusinessAddress = v.BusinessAddress,
-                Products = v.Products.Select(p => new ProductDto
+                var user = v.User;
+                return new VendorDto
                 {
-                    Id = p.Id,
-                    ProductName = p.ProductName,
-                    Price = p.Price
-                }).ToList()
+                    Id = v.Id,
+                    BusinessName = v.BusinessName,
+                    VendorName = user != null ? $"{user.FirstName} {user.LastName}" : null,
+                    Email = user?.Email,
+                    PhoneNumber = user?.PhoneNumber,
+                    LGA = user?.LocalGovernment?.Name,
+                    UserAddress = user?.Address,
+                    BusinessAddress = v.BusinessAddress,
+                    Products = v.Products?.Select(p => new ProductDto
+                    {
+                        Id = p.Id,
+                        ProductName = p.ProductName,
+                        Price = p.Price
+                    }).ToList()
+                };
             }).ToList();
+
 
             var response = new PaginatorDto<IEnumerable<VendorDto>>
             {
