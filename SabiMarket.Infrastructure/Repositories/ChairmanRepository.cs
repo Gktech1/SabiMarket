@@ -169,12 +169,25 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Include(c => c.Market)
                 .FirstOrDefaultAsync();
 
+            var stats = new ChairmanDashboardStatsDto();
+
             if (chairman == null)
                 return null;
 
             var marketId = chairman.MarketId;
             if (string.IsNullOrEmpty(marketId))
-                return null;
+            {
+                stats.PercentageChangeTraders = 0;
+                stats.PercentageChangeCaretakers = 0;
+                stats.PercentageChangeLevies = 0;
+                stats.RecentLevyPayments = new List<LevyPaymentDetail>();
+                stats.DailyRevenue = 0;
+                stats.MonthlyRevenue = 0;   
+                stats.TotalCaretakers = 0;  
+                stats.TotalLevies = 0;  
+                return stats;
+            }
+             
 
             var now = DateTime.UtcNow;
             var startOfDay = now.Date;
@@ -185,10 +198,11 @@ namespace SabiMarket.Infrastructure.Repositories
             var normalizedMarketId = marketId.ToUpper();
 
             // Create stats object
-            var stats = new ChairmanDashboardStatsDto
+            stats = new ChairmanDashboardStatsDto
             {
                 // Count total traders in the chairman's market - remove .Where() temporarily to debug
                 TotalTraders = await _dbContext.Traders
+                    .Where(t => t.MarketId.ToUpper() == normalizedMarketId)
                     .Where(t => t.MarketId.ToUpper() == normalizedMarketId)
                     .CountAsync(),
 

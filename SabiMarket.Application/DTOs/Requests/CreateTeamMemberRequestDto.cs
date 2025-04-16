@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace SabiMarket.Application.DTOs.Requests
 {
-    // CreateTeamMemberRequestDto.cs
     public class CreateTeamMemberRequestDto
     {
         [Required]
@@ -21,6 +15,18 @@ namespace SabiMarket.Application.DTOs.Requests
         [Required]
         [EmailAddress]
         public string EmailAddress { get; set; }
+
+        public string? AdminLevel { get; set; }
+
+        public string? Department { get; set; }
+        public string? Position { get; set; }
+
+        // Optional access permissions
+        public bool? HasDashboardAccess { get; set; }
+        public bool? HasRoleManagementAccess { get; set; }
+        public bool? HasTeamManagementAccess { get; set; }
+        public bool? HasAuditLogAccess { get; set; }
+        public bool? HasAdvertManagementAccess { get; set; }
     }
 
     // UpdateTeamMemberRequestDto.cs

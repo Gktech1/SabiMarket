@@ -42,7 +42,7 @@ namespace SabiMarket.Infrastructure.Utilities
             int newNumber = lastNumber + 1;
 
             // Generate the ApprovalId in the format ALTBANK/REQ/yyMMdd/0001
-            var generatedId = $"ALTBANK/REQ/{DateTime.UtcNow:yyMMdd}/{newNumber:D4}";
+            var generatedId = $"SABIMARKET/REQ/{DateTime.UtcNow:yyMMdd}/{newNumber:D4}";
 
             return generatedId;
         }

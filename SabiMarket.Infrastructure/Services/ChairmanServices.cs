@@ -929,6 +929,56 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "Error updating market");
             }
         }
+        /*   public async Task<BaseResponse<MarketDetailsDto>> GetMarketDetails(string marketId)
+           {
+               var correlationId = Guid.NewGuid().ToString();
+               try
+               {
+                   await CreateAuditLog(
+                       "Market Details Query",
+                       $"CorrelationId: {correlationId} - Fetching market details for ID: {marketId}",
+                       "Market Management"
+                   );
+                   var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, trackChanges: false);
+                   await CreateAuditLog(
+                       "Market Details Retrieved",
+                       $"CorrelationId: {correlationId} - Market details retrieved successfully",
+                       "Market Management"
+                   );
+
+                   var dto = _mapper.Map<MarketDetailsDto>(market);
+
+                   // Manually fix the trader names after mapping
+                   if (dto.Traders != null && market.Traders != null)
+                   {
+                       var traderMap = market.Traders.ToDictionary(t => t.Id);
+
+                       foreach (var traderDto in dto.Traders)
+                       {
+                           if (traderMap.TryGetValue(traderDto.Id, out var trader) && trader.User != null)
+                           {
+                               traderDto.FullName = $"{trader.User.FirstName} {trader.User.LastName}".Trim();
+                               traderDto.Email = trader.User.Email;
+                               traderDto.PhoneNumber = trader.User.PhoneNumber;
+                               traderDto.Gender = trader.User.Gender;
+                           }
+                       }
+                   }
+
+                   return ResponseFactory.Success(dto, "Market details retrieved successfully");
+                  // return ResponseFactory.Success(_mapper.Map<MarketDetailsDto>(market), "Market details retrieved successfully");
+               }
+               catch (Exception ex)
+               {
+                   await CreateAuditLog(
+                       "Market Details Query Failed",
+                       $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                       "Market Management"
+                   );
+                   return ResponseFactory.Fail<MarketDetailsDto>(ex, "Error retrieving market details");
+               }
+           }*/
+
         public async Task<BaseResponse<MarketDetailsDto>> GetMarketDetails(string marketId)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -945,14 +995,12 @@ namespace SabiMarket.Infrastructure.Services
                     $"CorrelationId: {correlationId} - Market details retrieved successfully",
                     "Market Management"
                 );
-
                 var dto = _mapper.Map<MarketDetailsDto>(market);
 
                 // Manually fix the trader names after mapping
                 if (dto.Traders != null && market.Traders != null)
                 {
                     var traderMap = market.Traders.ToDictionary(t => t.Id);
-
                     foreach (var traderDto in dto.Traders)
                     {
                         if (traderMap.TryGetValue(traderDto.Id, out var trader) && trader.User != null)
@@ -965,8 +1013,25 @@ namespace SabiMarket.Infrastructure.Services
                     }
                 }
 
+                // Manually fix the caretaker names after mapping
+                if (dto.Caretakers != null && market.AdditionalCaretakers != null)
+                {
+                    var caretakerMap = market.AdditionalCaretakers.ToDictionary(c => c.Id);
+                    foreach (var caretakerDto in dto.Caretakers)
+                    {
+                        if (caretakerMap.TryGetValue(caretakerDto.Id, out var caretaker) && caretaker.User != null)
+                        {
+                            caretakerDto.FirstName = caretaker.User.FirstName ?? "Default";
+                            caretakerDto.LastName = caretaker.User.LastName ?? "User";
+                            caretakerDto.Email = caretaker.User.Email;
+                            caretakerDto.PhoneNumber = caretaker.User.PhoneNumber;
+                            caretakerDto.ProfileImageUrl = caretaker.User.ProfileImageUrl ?? "";
+                            caretakerDto.IsActive = caretaker.User.IsActive;
+                        }
+                    }
+                }
+
                 return ResponseFactory.Success(dto, "Market details retrieved successfully");
-               // return ResponseFactory.Success(_mapper.Map<MarketDetailsDto>(market), "Market details retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -3504,7 +3569,123 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<ChairmanResponseDto>(ex, "An unexpected error occurred");
             }
         }
+
         private string GenerateDefaultPassword(string fullName)
+        {
+            // Handle null or empty fullName
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                fullName = "User";
+            }
+
+            var nameParts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var firstName = nameParts.Length > 0 ? nameParts[0] : "User";
+            var lastName = nameParts.Length > 1 ? nameParts[1] : "";
+
+            var random = new Random();
+            var randomNumbers = random.Next(100, 999).ToString(); // Generate a 3-digit random number
+
+            // Special characters pool
+            var specialChars = "!@#$%^&*(),.?\":{}|<>";
+            var specialChar = specialChars[random.Next(specialChars.Length)];
+
+            // Generate random uppercase letter
+            var uppercaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var uppercaseLetter = uppercaseLetters[random.Next(uppercaseLetters.Length)];
+
+            // Generate random lowercase letter - ensure we have at least one
+            var lowercaseLetters = "abcdefghijklmnopqrstuvwxyz";
+            var lowercaseLetter = lowercaseLetters[random.Next(lowercaseLetters.Length)];
+
+            // Process name parts - ensure they're properly formatted
+            string firstNameProcessed = "";
+            if (firstName.Length > 0)
+            {
+                firstNameProcessed = char.ToUpper(firstName[0]) +
+                    (firstName.Length > 1 ? firstName.Substring(1).ToLower() : "");
+            }
+
+            string lastNameProcessed = "";
+            if (!string.IsNullOrEmpty(lastName) && lastName.Length > 0)
+            {
+                lastNameProcessed = char.ToUpper(lastName[0]) +
+                    (lastName.Length > 1 ? lastName.Substring(1).ToLower() : "");
+            }
+
+            // Combine all elements ensuring we have all required character types
+            var passwordParts = new List<string>
+    {
+        firstNameProcessed,
+        lastNameProcessed,
+        randomNumbers,          // Ensures numbers
+        uppercaseLetter.ToString(), // Ensures uppercase
+        lowercaseLetter.ToString(), // Ensures lowercase
+        specialChar.ToString()  // Ensures special character
+    };
+
+            // Remove any empty parts
+            passwordParts.RemoveAll(string.IsNullOrEmpty);
+
+            // Shuffle the parts for better security
+            ShuffleList(passwordParts, random);
+
+            var password = string.Join("", passwordParts);
+
+            // Ensure minimum length of 8 characters
+            if (password.Length < 8)
+            {
+                var additionalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+                while (password.Length < 8)
+                {
+                    password += additionalChars[random.Next(additionalChars.Length)];
+                }
+            }
+
+            // Final verification to ensure the password meets all requirements
+            if (!ContainsUppercase(password)) password += uppercaseLetters[random.Next(uppercaseLetters.Length)];
+            if (!ContainsLowercase(password)) password += lowercaseLetters[random.Next(lowercaseLetters.Length)];
+            if (!ContainsNumber(password)) password += random.Next(0, 9).ToString();
+            if (!ContainsSpecialChar(password)) password += specialChars[random.Next(specialChars.Length)];
+
+            return password;
+        }
+
+        // Helper method to shuffle a list
+        private void ShuffleList<T>(List<T> list, Random random)
+        {
+            int n = list.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = random.Next(n + 1);
+                T value = list[k];
+                list[k] = list[n];
+                list[n] = value;
+            }
+        }
+
+        // Helper methods to verify password requirements
+        private bool ContainsUppercase(string password)
+        {
+            return password.Any(char.IsUpper);
+        }
+
+        private bool ContainsLowercase(string password)
+        {
+            return password.Any(char.IsLower);
+        }
+
+        private bool ContainsNumber(string password)
+        {
+            return password.Any(char.IsDigit);
+        }
+
+        private bool ContainsSpecialChar(string password)
+        {
+            return password.Any(c => "!@#$%^&*(),.?\":{}|<>".Contains(c));
+        }
+
+        /*private string GenerateDefaultPassword(string fullName)
         {
             var nameParts = fullName.Split(' '); // Split the full name into first name and last name
             var firstName = nameParts[0];
@@ -3545,7 +3726,7 @@ namespace SabiMarket.Infrastructure.Services
 
             return password;
         }
-
+*/
         /*  private string GenerateDefaultPassword(string fullName)
           {
               var firstName = fullName.Split(' ')[0];
