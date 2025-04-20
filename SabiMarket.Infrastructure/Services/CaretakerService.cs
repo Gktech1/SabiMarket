@@ -95,7 +95,46 @@ namespace SabiMarket.Infrastructure.Services
                         "Caretaker not found");
                 }
 
-                var caretakerDto = _mapper.Map<CaretakerResponseDto>(caretaker);
+                // Replace AutoMapper with manual mapping
+                var caretakerDto = new CaretakerResponseDto
+                {
+                    Id = caretaker.Id,
+                    UserId = caretaker.UserId,
+                    Email = caretaker.User?.Email,
+                    FirstName = caretaker.User?.FirstName ?? "Default",
+                    LastName = caretaker.User?.LastName ?? "User",
+                    MarketId = caretaker.MarketId,
+                    PhoneNumber = caretaker.User?.PhoneNumber,
+                    ProfileImageUrl = caretaker.User?.ProfileImageUrl ?? "",
+                    IsActive = caretaker.User?.IsActive ?? false,
+                    CreatedAt = caretaker.CreatedAt,
+                    UpdatedAt = caretaker.UpdatedAt,
+                    IsBlocked = caretaker.IsBlocked
+                };
+
+                // Map Market information if available
+                if (caretaker.Markets != null && caretaker.Markets.Any())
+                {
+                    var primaryMarket = caretaker.Markets.FirstOrDefault();
+                    if (primaryMarket != null)
+                    {
+                        caretakerDto.Market = new MarketResponseDto
+                        {
+                            Id = primaryMarket.Id,
+                            MarketName = primaryMarket.MarketName,
+                            Location = primaryMarket.Location,
+                            Description = primaryMarket.Description,
+                            TotalTraders = primaryMarket.TotalTraders,
+                            Capacity = primaryMarket.Capacity,
+                            //ContactPhone = primaryMarket.ContactPhone,
+                           // ContactEmail = primaryMarket.ContactEmail,
+                            CreatedAt = primaryMarket.CreatedAt,
+                            UpdatedAt = primaryMarket.UpdatedAt,
+                            CaretakerId = primaryMarket.CaretakerId
+                        };
+                    }
+                }
+
                 return ResponseFactory.Success(caretakerDto, "Caretaker retrieved successfully");
             }
             catch (Exception ex)
@@ -104,7 +143,28 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<CaretakerResponseDto>(ex, "An unexpected error occurred");
             }
         }
+        /* public async Task<BaseResponse<CaretakerResponseDto>> GetCaretakerById(string userId)
+         {
+             try
+             {
+                 var caretaker = await _repository.CaretakerRepository.GetCaretakerById(userId, trackChanges: false);
+                 if (caretaker == null)
+                 {
+                     return ResponseFactory.Fail<CaretakerResponseDto>(
+                         new NotFoundException("Caretaker not found"),
+                         "Caretaker not found");
+                 }
 
+                 var caretakerDto = _mapper.Map<CaretakerResponseDto>(caretaker);
+                 return ResponseFactory.Success(caretakerDto, "Caretaker retrieved successfully");
+             }
+             catch (Exception ex)
+             {
+                 _logger.LogError(ex, "Error retrieving caretaker");
+                 return ResponseFactory.Fail<CaretakerResponseDto>(ex, "An unexpected error occurred");
+             }
+         }
+ */
         public async Task<BaseResponse<CaretakerResponseDto>> CreateCaretaker(CaretakerForCreationRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -705,71 +765,218 @@ namespace SabiMarket.Infrastructure.Services
         // GoodBoy Management
         public async Task<BaseResponse<GoodBoyResponseDto>> AddGoodBoy(string caretakerId, CreateGoodBoyDto goodBoyDto)
         {
+            var correlationId = Guid.NewGuid().ToString();
             try
             {
+                await CreateAuditLog(
+                    "GoodBoy Creation",
+                    $"CorrelationId: {correlationId} - Creating new GoodBoy: {goodBoyDto.FullName}",
+                    "GoodBoy Management"
+                );
+
+                // Validate request
                 var validationResult = await _createGoodBoyValidator.ValidateAsync(goodBoyDto);
                 if (!validationResult.IsValid)
                 {
+                    await CreateAuditLog(
+                        "Creation Failed",
+                        $"CorrelationId: {correlationId} - Validation failed",
+                        "GoodBoy Management"
+                    );
                     return ResponseFactory.Fail<GoodBoyResponseDto>(
-                        new FluentValidation.ValidationException(validationResult.Errors),
+                        new ValidationException(validationResult.Errors),
                         "Validation failed");
                 }
 
+                // Check if caretaker exists
                 var caretaker = await _repository.CaretakerRepository
                     .GetCaretakerById(caretakerId, trackChanges: true);
-
                 if (caretaker == null)
                 {
+                    await CreateAuditLog(
+                        "Creation Failed",
+                        $"CorrelationId: {correlationId} - Caretaker not found",
+                        "GoodBoy Management"
+                    );
                     return ResponseFactory.Fail<GoodBoyResponseDto>(
                         new NotFoundException("Caretaker not found"),
                         "Caretaker not found");
                 }
 
+                // Check if email already exists
+                var existingUser = await _userManager.FindByEmailAsync(goodBoyDto.Email);
+                if (existingUser != null)
+                {
+                    await CreateAuditLog(
+                        "Creation Failed",
+                        $"CorrelationId: {correlationId} - Email already registered",
+                        "GoodBoy Management"
+                    );
+                    return ResponseFactory.Fail<GoodBoyResponseDto>(
+                        new BadRequestException("Email address is already registered"),
+                        "Email already exists");
+                }
+
+                // Parse name parts
                 var nameParts = goodBoyDto.FullName.Trim().Split(' ', 2);
                 var firstName = nameParts[0];
                 var lastName = nameParts.Length > 1 ? nameParts[1] : string.Empty;
 
-
-                // Create user account for GoodBoy
+                // Create ApplicationUser
+                var defaultPassword = GenerateDefaultPassword(goodBoyDto.FullName);
                 var user = new ApplicationUser
                 {
+                    Id = Guid.NewGuid().ToString(),
                     UserName = goodBoyDto.Email,
                     Email = goodBoyDto.Email,
                     PhoneNumber = goodBoyDto.PhoneNumber,
                     FirstName = firstName,
-                    LastName = lastName
+                    LastName = lastName,
+                    EmailConfirmed = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    Gender = "",
+                    ProfileImageUrl = "",
+                    LocalGovernmentId = caretaker.LocalGovernmentId
                 };
-               
-                var password = goodBoyDto.PhoneNumber.TrimStart('0');
 
-                var result = await _userManager.CreateAsync(user, password);
-                if (!result.Succeeded)
+                var createUserResult = await _userManager.CreateAsync(user, defaultPassword);
+                if (!createUserResult.Succeeded)
                 {
+                    await CreateAuditLog(
+                        "Creation Failed",
+                        $"CorrelationId: {correlationId} - Failed to create user account",
+                        "GoodBoy Management"
+                    );
                     return ResponseFactory.Fail<GoodBoyResponseDto>(
-                        new BadRequestException(result.Errors.First().Description),
+                        new Exception(string.Join(", ", createUserResult.Errors.Select(e => e.Description))),
                         "Failed to create user account");
+                }
+
+                // Assign role
+                var roleResult = await _userManager.AddToRoleAsync(user, UserRoles.Goodboy);
+                if (!roleResult.Succeeded)
+                {
+                    // Rollback user creation if role assignment fails
+                    await _userManager.DeleteAsync(user);
+                    await CreateAuditLog(
+                        "Creation Failed",
+                        $"CorrelationId: {correlationId} - Failed to assign GoodBoy role",
+                        "GoodBoy Management"
+                    );
+                    return ResponseFactory.Fail<GoodBoyResponseDto>(
+                        new Exception("Failed to assign GoodBoy role"),
+                        "Role assignment failed");
                 }
 
                 // Create GoodBoy entity
                 var goodBoy = new GoodBoy
                 {
+                    Id = Guid.NewGuid().ToString(),
                     UserId = user.Id,
-                    CaretakerId = caretakerId
+                    CaretakerId = caretakerId,
+                    MarketId = caretaker?.MarketId ?? "",  
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    User = user
                 };
 
-                 _repository.GoodBoyRepository.AddGoodBoy(goodBoy);    
-                 await _repository.SaveChangesAsync();
+                _repository.GoodBoyRepository.AddGoodBoy(goodBoy);
+                await _repository.SaveChangesAsync();
 
+                // Map response
                 var goodBoyResponseDto = _mapper.Map<GoodBoyResponseDto>(goodBoy);
-                return ResponseFactory.Success(goodBoyResponseDto, "GoodBoy created successfully");
+                goodBoyResponseDto.DefaultPassword = defaultPassword;
+
+                await CreateAuditLog(
+                    "GoodBoy Created",
+                    $"CorrelationId: {correlationId} - GoodBoy created successfully with ID: {goodBoy.Id}",
+                    "GoodBoy Management"
+                );
+
+                return ResponseFactory.Success(goodBoyResponseDto,
+                    "GoodBoy created successfully. Please note down the default password.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating GoodBoy");
+                await CreateAuditLog(
+                    "Creation Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "GoodBoy Management"
+                );
                 return ResponseFactory.Fail<GoodBoyResponseDto>(ex, "An unexpected error occurred");
             }
         }
 
+        /*    public async Task<BaseResponse<GoodBoyResponseDto>> AddGoodBoy(string caretakerId, CreateGoodBoyDto goodBoyDto)
+            {
+                try
+                {
+                    var validationResult = await _createGoodBoyValidator.ValidateAsync(goodBoyDto);
+                    if (!validationResult.IsValid)
+                    {
+                        return ResponseFactory.Fail<GoodBoyResponseDto>(
+                            new FluentValidation.ValidationException(validationResult.Errors),
+                            "Validation failed");
+                    }
+
+                    var caretaker = await _repository.CaretakerRepository
+                        .GetCaretakerById(caretakerId, trackChanges: true);
+
+                    if (caretaker == null)
+                    {
+                        return ResponseFactory.Fail<GoodBoyResponseDto>(
+                            new NotFoundException("Caretaker not found"),
+                            "Caretaker not found");
+                    }
+
+                    var nameParts = goodBoyDto.FullName.Trim().Split(' ', 2);
+                    var firstName = nameParts[0];
+                    var lastName = nameParts.Length > 1 ? nameParts[1] : string.Empty;
+
+
+                    // Create user account for GoodBoy
+                    var user = new ApplicationUser
+                    {
+                        UserName = goodBoyDto.Email,
+                        Email = goodBoyDto.Email,
+                        PhoneNumber = goodBoyDto.PhoneNumber,
+                        FirstName = firstName,
+                        LastName = lastName
+                    };
+
+                    var password = goodBoyDto.PhoneNumber.TrimStart('0');
+
+                    var result = await _userManager.CreateAsync(user, password);
+                    if (!result.Succeeded)
+                    {
+                        return ResponseFactory.Fail<GoodBoyResponseDto>(
+                            new BadRequestException(result.Errors.First().Description),
+                            "Failed to create user account");
+                    }
+
+                    // Create GoodBoy entity
+                    var goodBoy = new GoodBoy
+                    {
+                        UserId = user.Id,
+                        CaretakerId = caretakerId,
+
+                    };
+
+                     _repository.GoodBoyRepository.AddGoodBoy(goodBoy);    
+                     await _repository.SaveChangesAsync();
+
+                    var goodBoyResponseDto = _mapper.Map<GoodBoyResponseDto>(goodBoy);
+                    return ResponseFactory.Success(goodBoyResponseDto, "GoodBoy created successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error creating GoodBoy");
+                    return ResponseFactory.Fail<GoodBoyResponseDto>(ex, "An unexpected error occurred");
+                }
+            }
+    */
         public async Task<BaseResponse<PaginatorDto<IEnumerable<GoodBoyResponseDto>>>> GetGoodBoys(
             string caretakerId, PaginationFilter paginationFilter)
         {

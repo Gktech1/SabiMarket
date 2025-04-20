@@ -104,7 +104,7 @@ public class CaretakerController : ControllerBase
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
 
-    [HttpPost("{caretakerId}/goodboys")]
+    [HttpPost("create-goodboys")]
     [Authorize(Policy = PolicyNames.RequireCaretakerOnly)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status400BadRequest)]

@@ -80,56 +80,6 @@ public class ChairmanController : ControllerBase
     }
 
     /// <summary>
-    /// Get assistant officers for a specific market
-    /// </summary>
-    /// <param name="marketId">Market ID</param>
-    /// <param name="pageNumber">Page number for pagination (default: 1)</param>
-    /// <param name="pageSize">Number of items per page (default: 10)</param>
-    /// <returns>List of assistant officers for the specified market</returns>
-  /*  [HttpGet("assistantofficers/market/{marketId}")]
-    [ProducesResponseType(typeof(BaseResponse<List<AssistOfficerListDto>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetAssistantOfficersByMarket(
-        string marketId,
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 10)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(marketId))
-            {
-                return BadRequest(new BaseResponse<string>
-                {
-                    IsSuccessful = false,
-                    Message = "Market ID is required"
-                });
-            }
-
-            var paginationFilter = new PaginationFilter(pageNumber, pageSize);
-            var response = await _chairmanService.GetAssistOfficersByMarket(marketId, paginationFilter);
-
-            if (!response.IsSuccessful)
-            {
-                return NotFound(response);
-            }
-
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving assistant officers for market {MarketId}", marketId);
-            return StatusCode(500, new BaseResponse<string>
-            {
-                IsSuccessful = false,
-                Message = "Error retrieving assistant officers for market",
-                Data = ex.Message
-            });
-        }
-    }*/
-
-    /// <summary>
     /// Search levy payments for a chairman's market
     /// </summary>
     /// <param name="chairmanId">ID of the chairman</param>
