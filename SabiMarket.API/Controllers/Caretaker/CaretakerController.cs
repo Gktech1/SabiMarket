@@ -24,6 +24,7 @@ public class CaretakerController : ControllerBase
     }
 
     [HttpPost("createcaretaker")]
+    [Authorize(Policy = PolicyNames.RequireMarketManagement)] 
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status500InternalServerError)]
@@ -34,7 +35,6 @@ public class CaretakerController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [Authorize(Policy = PolicyNames.RequireMarketManagement)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status500InternalServerError)]
@@ -45,7 +45,6 @@ public class CaretakerController : ControllerBase
     }
 
     [HttpGet("getcaretakers")]
-    [Authorize(Policy = PolicyNames.RequireMarketManagement)]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<CaretakerResponseDto>>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<CaretakerResponseDto>>>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetCaretakers([FromQuery] PaginationFilter paginationFilter)
