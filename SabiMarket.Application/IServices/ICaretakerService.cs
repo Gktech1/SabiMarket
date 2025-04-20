@@ -22,7 +22,9 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<LevyPaymentResponseDto>> GetLevyPaymentDetails(string levyId);
 
         // GoodBoy Management
-        Task<BaseResponse<GoodBoyResponseDto>> AddGoodBoy(string caretakerId, CreateGoodBoyDto goodBoyDto);
+        //Task<BaseResponse<GoodBoyResponseDto>> AddGoodBoy(string caretakerId, CreateGoodBoyDto goodBoyDto);
+        Task<BaseResponse<GoodBoyResponseDto>> CreateGoodBoy(string caretakerId, CreateGoodBoyDto request);
+        Task<BaseResponse<GoodBoyResponseDto>> UpdateGoodBoy(string goodBoyId, UpdateGoodBoyRequestDto request);
         Task<BaseResponse<PaginatorDto<IEnumerable<GoodBoyResponseDto>>>> GetGoodBoys(string caretakerId, PaginationFilter paginationFilter);
         Task<BaseResponse<bool>> BlockGoodBoy(string caretakerId, string goodBoyId);
         Task<BaseResponse<bool>> UnblockGoodBoy(string caretakerId, string goodBoyId);

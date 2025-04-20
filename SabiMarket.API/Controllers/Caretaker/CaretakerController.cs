@@ -103,15 +103,25 @@ public class CaretakerController : ControllerBase
         var response = await _caretakerService.GetLevyPaymentDetails(levyId);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
-
     [HttpPost("create-goodboys")]
     [Authorize(Policy = PolicyNames.RequireCaretakerOnly)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddGoodBoy(string caretakerId, [FromBody] CreateGoodBoyDto request)
+    public async Task<IActionResult> AddGoodBoy(string caretakerId, [FromForm] CreateGoodBoyDto request)
     {
-        var response = await _caretakerService.AddGoodBoy(caretakerId, request);
+        var response = await _caretakerService.CreateGoodBoy(caretakerId, request);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+    [HttpPut("update-goodboys/{goodBoyId}")]
+    [Authorize(Policy = PolicyNames.RequireCaretakerOnly)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateGoodBoy(string goodBoyId, [FromForm] UpdateGoodBoyRequestDto request)
+    {
+        var response = await _caretakerService.UpdateGoodBoy(goodBoyId, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 

@@ -8,9 +8,6 @@ namespace SabiMarket.Application.Validators
     {
         public CreateGoodBoyValidator()
         {
-            RuleFor(x => x.UserId)
-                .NotEmpty().WithMessage("User ID is required");
-
             RuleFor(x => x.FullName)
                 .NotEmpty().WithMessage("Full name is required")
                 .MinimumLength(2).WithMessage("Full name must be at least 2 characters")
