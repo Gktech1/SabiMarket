@@ -31,5 +31,6 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<string>> DeleteProduct(string waiveProductId);
         Task<BaseResponse<string>> BlockOrUnblockVendor(string userId);
         Task<BaseResponse<List<ProductDetailsDto>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter);
+        public Task<BaseResponse<int>> GetUrgentPurchaseWaivedProductCount();
     }
 }

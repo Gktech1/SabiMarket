@@ -45,6 +45,7 @@ namespace SabiMarket.Infrastructure.Services
                 {
                     Amount = dto.Amount,
                     ProofOfPayment = dto.ProofOfPayment ?? "",
+                    SubscriberType = dto.SubscriberType,
                     SubscriberId = dto.SubscriberId ?? loggedInUser.Id, // FIXED: Use an existing user ID
                     IsSubscriberConfirmPayment = !string.IsNullOrEmpty(dto.ProofOfPayment) ? true : false,
                 };
@@ -60,7 +61,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<string>($"Error: {ex.Message}");
             }
         }
-
         public async Task<BaseResponse<bool>> CheckActiveVendorSubscription(string userId)
         {
             var getUser = await _applicationDbContext.Vendors.Where(x => x.UserId == userId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();

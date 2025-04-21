@@ -223,6 +223,15 @@ public class WaivedProductService : IWaivedProductService
         }).ToList();
         return ResponseFactory.Success(vendorDtos);
     }
+    public async Task<BaseResponse<int>> GetUrgentPurchaseWaivedProductCount()
+    {
+        var urgentpurchaseCount = await _applicationDbContext.WaivedProducts.Where(x => x.IsAvailbleForUrgentPurchase).CountAsync();
+        if (urgentpurchaseCount == null)
+        {
+            return ResponseFactory.Fail<int>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+        return ResponseFactory.Success(urgentpurchaseCount);
+    }
 
     public async Task<BaseResponse<string>> UpdateProduct(UpdateWaivedProductDto dto)
     {
