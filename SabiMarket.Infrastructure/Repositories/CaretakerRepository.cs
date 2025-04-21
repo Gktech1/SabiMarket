@@ -233,6 +233,15 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Include(c => c.AssignedTraders)
                 .ToListAsync();
 
+        public async Task<bool> CaretakerExistsAsync(string useriId)
+        {
+            if (string.IsNullOrEmpty(useriId))
+                return false;
+
+            return await _repositoryContext.Caretakers
+                .AnyAsync(c => c.UserId == useriId);
+        }
+
         public async Task<bool> ExistsAsync(string id)
         {
             if (string.IsNullOrEmpty(id))

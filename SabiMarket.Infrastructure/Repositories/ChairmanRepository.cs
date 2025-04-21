@@ -54,6 +54,13 @@ namespace SabiMarket.Infrastructure.Repositories
             // Execute the query
             return await finalQuery.FirstOrDefaultAsync();
         }
+
+        public async Task<Chairman> GetChairmanByUserId(string userId, bool trackChanges) =>
+         await FindByCondition(x => x.UserId == userId, trackChanges)
+             .Include(a => a.User)  // Include the User entity
+             .Include(a => a.Market)
+             .Include(c => c.LocalGovernment)
+             .FirstOrDefaultAsync();
         public async Task<Chairman> GetChairmanById(string UserId, bool trackChanges)
         {
             // Store the query type properly with a var to avoid explicit typing
