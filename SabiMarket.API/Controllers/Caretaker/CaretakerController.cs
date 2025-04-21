@@ -5,6 +5,7 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
+using SabiMarket.Infrastructure.Services;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -24,6 +25,7 @@ public class CaretakerController : ControllerBase
     }
 
     [HttpPost("createcaretaker")]
+    [Authorize(Policy = PolicyNames.RequireMarketManagement)] 
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status500InternalServerError)]
@@ -33,8 +35,18 @@ public class CaretakerController : ControllerBase
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 
+    [HttpDelete("delete-caretaker/{caretakerId}")]
+    [Authorize(Policy = PolicyNames.RequireAdminOnly)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteCaretaker(string caretakerId)
+    {
+        var response = await _caretakerService.DeleteCaretakerByChairman(caretakerId);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
     [HttpGet("{id}")]
-    [Authorize(Policy = PolicyNames.RequireMarketManagement)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status500InternalServerError)]
@@ -45,7 +57,6 @@ public class CaretakerController : ControllerBase
     }
 
     [HttpGet("getcaretakers")]
-    [Authorize(Policy = PolicyNames.RequireMarketManagement)]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<CaretakerResponseDto>>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<CaretakerResponseDto>>>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetCaretakers([FromQuery] PaginationFilter paginationFilter)
@@ -104,15 +115,25 @@ public class CaretakerController : ControllerBase
         var response = await _caretakerService.GetLevyPaymentDetails(levyId);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
-
-    [HttpPost("{caretakerId}/goodboys")]
+    [HttpPost("create-goodboys")]
     [Authorize(Policy = PolicyNames.RequireCaretakerOnly)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddGoodBoy(string caretakerId, [FromBody] CreateGoodBoyDto request)
     {
-        var response = await _caretakerService.AddGoodBoy(caretakerId, request);
+        var response = await _caretakerService.CreateGoodBoy(caretakerId, request);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+    [HttpPut("update-goodboys/{goodBoyId}")]
+    [Authorize(Policy = PolicyNames.RequireCaretakerOnly)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateGoodBoy(string goodBoyId, [FromBody] UpdateGoodBoyRequestDto request)
+    {
+        var response = await _caretakerService.UpdateGoodBoy(goodBoyId, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 

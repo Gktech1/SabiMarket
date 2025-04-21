@@ -28,6 +28,7 @@ namespace SabiMarket.Infrastructure.Repositories
         }
         public async Task<Caretaker> GetCaretakerById(string userId, bool trackChanges) =>
          await FindByCondition(x => x.UserId == userId, trackChanges)
+             .Include(a => a.User)  // Include the User entity
              .Include(a => a.Markets)
              .Include(a => a.GoodBoys)
                  .ThenInclude(gb => gb.LevyPayments)

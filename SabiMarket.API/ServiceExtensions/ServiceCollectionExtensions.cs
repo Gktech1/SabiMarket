@@ -21,6 +21,7 @@ using SabiMarket.Application.DTOs.Advertisement;
 using SabiMarket.Application.Services.Interfaces;
 using SabiMarket.Application.Services;
 using SabiMarket.Infrastructure.Configuration;
+using Microsoft.AspNetCore.Authorization;
 
 public static class ServiceCollectionExtensions
 {
@@ -182,6 +183,8 @@ public static class ServiceCollectionExtensions
                 }
             };
         });
+
+        services.AddSingleton<IAuthorizationHandler, CaseInsensitiveRoleHandler>();
 
         return services;
     }

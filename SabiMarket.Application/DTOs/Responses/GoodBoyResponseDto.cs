@@ -20,6 +20,7 @@ namespace SabiMarket.Application.DTOs.Responses
         public string PaymentFrequency { get; set; }
         public decimal Amount { get; set; }
         public DateTime LastPaymentDate { get; set; }
+        public string DefaultPassword { get; set; } 
         public ICollection<LevyPaymentResponseDto> LevyPayments { get; set; }
     }
 }
