@@ -5,6 +5,7 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
+using SabiMarket.Infrastructure.Services;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -31,6 +32,17 @@ public class CaretakerController : ControllerBase
     public async Task<IActionResult> CreateCaretaker([FromBody] CaretakerForCreationRequestDto request)
     {
         var response = await _caretakerService.CreateCaretaker(request);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+    [HttpDelete("delete-caretaker/{caretakerId}")]
+    [Authorize(Policy = PolicyNames.RequireAdminOnly)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteCaretaker(string caretakerId)
+    {
+        var response = await _caretakerService.DeleteCaretakerByChairman(caretakerId);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 
@@ -108,7 +120,7 @@ public class CaretakerController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddGoodBoy(string caretakerId, [FromForm] CreateGoodBoyDto request)
+    public async Task<IActionResult> AddGoodBoy(string caretakerId, [FromBody] CreateGoodBoyDto request)
     {
         var response = await _caretakerService.CreateGoodBoy(caretakerId, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
@@ -119,7 +131,7 @@ public class CaretakerController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateGoodBoy(string goodBoyId, [FromForm] UpdateGoodBoyRequestDto request)
+    public async Task<IActionResult> UpdateGoodBoy(string goodBoyId, [FromBody] UpdateGoodBoyRequestDto request)
     {
         var response = await _caretakerService.UpdateGoodBoy(goodBoyId, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);

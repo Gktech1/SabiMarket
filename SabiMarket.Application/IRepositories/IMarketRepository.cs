@@ -17,6 +17,7 @@ namespace SabiMarket.Application.IRepositories
         Task<Market> GetMarketByIdAsync(string marketId, bool trackChanges);
         Task<Market> GetMarketRevenueAsync(string marketId, DateTime startDate, DateTime endDate);
         Task<Market> GetComplianceRatesAsync(string marketId);
+        IQueryable<Market> GetMarketsByCaretakerId(string caretakerId);
 
     }
 }

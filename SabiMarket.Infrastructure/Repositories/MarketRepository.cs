@@ -55,40 +55,13 @@ namespace SabiMarket.Infrastructure.Repositories
 
                  return await query.ToListAsync();
              }*/
-        /*    public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges, string searchQuery = null)
-            {
-                var query = FindAll(trackChanges)
-                    .Include(a => a.Caretaker)
-                    .Include(a => a.Traders)
-                    .Include(m => m.Chairman)
-                    .Include(a => a.LocalGovernment)
-                    .Include(a => a.MarketSections);
 
-                // If implementing search at repository level for better performance
-                if (!string.IsNullOrEmpty(searchQuery))
-                {
-                    searchQuery = searchQuery.ToLower();
-                    query = query.Where(m =>
-                        m.MarketName.ToLower().Contains(searchQuery) ||
-                        (m.Location != null && m.Location.ToLower().Contains(searchQuery)) ||
-                        (m.Description != null && m.Description.ToLower().Contains(searchQuery)) ||
-                        (m.LocalGovernment != null && m.LocalGovernment.Name.ToLower().Contains(searchQuery)) ||
-                        (m.LocalGovernmentName != null && m.LocalGovernmentName.ToLower().Contains(searchQuery)) ||
-                        (m.Chairman != null && (m.Chairman.User.FirstName.ToLower().Contains(searchQuery) || m.Chairman.User.LastName.ToLower().Contains(searchQuery))) ||
-                        (m.Caretaker != null && (m.Caretaker.User.FirstName.ToLower().Contains(searchQuery) || m.Caretaker.LastName.ToLower().Contains(searchQuery))) ||
-                        (m.MarketType != null && m.MarketType.ToLower().Contains(searchQuery))
-                    );
-                }
-
-                return await query.ToListAsync();
-            }
-           */ /* public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges) => await FindAll(trackChanges).Include(a => a.Caretaker)
-                 .Include(a => a.Traders)
-                 .Include(m => m.Chairman)
-                 .Include(m => m.Caretaker)
-                 .Include(a => a.LocalGovernment)
-                 .Include(a => a.MarketSections).ToListAsync();*/
-
+        public IQueryable<Market> GetMarketsByCaretakerId(string caretakerId)
+        {
+            return FindByCondition(m => m.CaretakerId == caretakerId, false)
+                .Include(m => m.Caretaker)
+                .Include(m => m.LocalGovernment);
+        }
         public async Task<IEnumerable<Market>> GetAllMarketForExport(bool trackChanges, string searchQuery = null)
         {
             // Start with base query
