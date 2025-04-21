@@ -206,7 +206,7 @@ public class WaivedProductService : IWaivedProductService
     }
     public async Task<BaseResponse<List<ProductDetailsDto>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter)
     {
-        var waivedProduct = await _applicationDbContext.WaivedProducts.Where(x => x.IsAvailbleForUrgentPurchase).Include(x => x.Vendor).OrderBy(x => x.ProductName).AsQueryable().Paginate(filter);
+        var waivedProduct = await _applicationDbContext.WaivedProducts.Where(x => x.IsAvailbleForUrgentPurchase).Include(x => x.Vendor).Include(x => x.ProductCategory).OrderBy(x => x.ProductName).AsQueryable().Paginate(filter);
         if (waivedProduct == null)
         {
             return ResponseFactory.Fail<List<ProductDetailsDto>>(new NotFoundException("No Record Found."), "Record not found.");
@@ -215,7 +215,7 @@ public class WaivedProductService : IWaivedProductService
         {
             ProductId = v.Id,
             IsAvailbleForUrgentPurchase = v.IsAvailbleForUrgentPurchase,
-            Category = v.ProductCategory.Name,
+            Category = v.ProductCategory?.Name ?? "N/A", // Fallback if null
             CurrencyType = v.CurrencyType,
             Price = v.Price,
             ProductName = v.ProductName,
@@ -493,6 +493,50 @@ public class WaivedProductService : IWaivedProductService
         {
 
             return ResponseFactory.Fail<string>("An Error Occurred. Try again later");
+
+        }
+    }
+    public async Task<BaseResponse<string>> CreateNextWaiveMarketDate(DateTime nextWaiveMarketDate)
+    {
+        try
+        {
+            var lastDate = _applicationDbContext.WaiveMarketDates.OrderByDescending(x => x.CreatedAt).FirstOrDefault();
+            if (lastDate != null)
+            {
+                lastDate.IsActive = false;
+            }
+            var nextDate = new WaiveMarketDates
+            {
+                NextWaiveMarket = nextWaiveMarketDate,
+                IsActive = true
+            };
+            _applicationDbContext.WaiveMarketDates.Add(nextDate);
+            await _repositoryManager.SaveChangesAsync();
+            return ResponseFactory.Success("Success", "Next Waive Market Date Created Successfully.");
+        }
+        catch (Exception)
+        {
+
+            return ResponseFactory.Fail<string>("An Error Occurred. Try again later");
+
+        }
+    }
+    public async Task<BaseResponse<DateTime>> GetNextWaiveMarketDate()
+    {
+        try
+        {
+            var lastDate = await _applicationDbContext.WaiveMarketDates.Where(i => i.IsActive).OrderByDescending(x => x.CreatedAt).FirstOrDefaultAsync();
+            if (lastDate == null)
+            {
+                return ResponseFactory.Fail<DateTime>(new NotFoundException($"Next Waive Market not Found."), "Next Waive Market not Found.");
+            };
+
+            return ResponseFactory.Success(lastDate.NextWaiveMarket, "Success");
+        }
+        catch (Exception)
+        {
+
+            return ResponseFactory.Fail<DateTime>("An Error Occurred. Try again later");
 
         }
     }

@@ -617,5 +617,39 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
             return Ok(response);
         }
+        [HttpPost("CreateNextWaiveMarketDate")]
+        public async Task<IActionResult> CreateNextWaiveMarketDate(DateTime nextWaiveMarketDate)
+        {
+            var response = await _serviceManager.IWaivedProductService.CreateNextWaiveMarketDate(nextWaiveMarketDate);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+        [HttpGet("GetNextWaiveMarketDate")]
+        public async Task<IActionResult> GetNextWaiveMarketDate()
+        {
+            var response = await _serviceManager.IWaivedProductService.GetNextWaiveMarketDate();
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
     }
 }
