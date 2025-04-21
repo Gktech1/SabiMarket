@@ -55,6 +55,7 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<SowFoodCompanyStaffAttendance> SowFoodStaffAttendances { get; set; }
         public DbSet<SowFoodCompany> SowFoodCompanies { get; set; }
         public DbSet<CustomerPurchase> CustomerPurchases { get; set; }
+        public DbSet<WaiveMarketDates> WaiveMarketDates { get; set; }
         public DbSet<OfficerMarketAssignment> OfficerMarketAssignments { get; set; }
 
         #endregion
@@ -71,20 +72,20 @@ namespace SabiMarket.Infrastructure.Data
             // In your ApplicationDbContext
 
             // In OnModelCreating method
-                modelBuilder.Entity<OfficerMarketAssignment>()
-            .HasKey(o => o.Id);
+            modelBuilder.Entity<OfficerMarketAssignment>()
+        .HasKey(o => o.Id);
 
-                modelBuilder.Entity<OfficerMarketAssignment>()
-            .HasOne(o => o.AssistCenterOfficer)
-            .WithMany(a => a.MarketAssignments)
-            .HasForeignKey(o => o.AssistCenterOfficerId)
-            .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<OfficerMarketAssignment>()
+        .HasOne(o => o.AssistCenterOfficer)
+        .WithMany(a => a.MarketAssignments)
+        .HasForeignKey(o => o.AssistCenterOfficerId)
+        .OnDelete(DeleteBehavior.Cascade);
 
-                modelBuilder.Entity<OfficerMarketAssignment>()
-            .HasOne(o => o.Market)
-            .WithMany()
-            .HasForeignKey(o => o.MarketId)
-            .OnDelete(DeleteBehavior.NoAction);
+            modelBuilder.Entity<OfficerMarketAssignment>()
+        .HasOne(o => o.Market)
+        .WithMany()
+        .HasForeignKey(o => o.MarketId)
+        .OnDelete(DeleteBehavior.NoAction);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

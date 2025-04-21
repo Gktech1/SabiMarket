@@ -63,10 +63,19 @@ namespace SabiMarket.Infrastructure.Services
 
         public async Task<BaseResponse<bool>> CheckActiveVendorSubscription(string userId)
         {
-            var getUser = await _applicationDbContext.Vendors.Where(x => x.UserId == userId).FirstOrDefaultAsync();
+            var getUser = await _applicationDbContext.Vendors.Where(x => x.UserId == userId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
+            var getSubscription = await _applicationDbContext.Subscriptions.Where(s => s.SubscriberId == userId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
+            if (getSubscription == null)
+            {
+                return ResponseFactory.Fail<bool>(new NotFoundException("No subscription found for this Customer."), "No subscription found for this Customer.");
+            }
             if (getUser == null)
             {
-                return ResponseFactory.Fail<bool>(new NotFoundException("User is not a Vendor."), "Vendor not found.");
+                return ResponseFactory.Fail<bool>(new NotFoundException("User is not a Customer."), "Customer not found.");
+            }
+            if (getSubscription.IsSubscriberConfirmPayment && !string.IsNullOrEmpty(getSubscription.ProofOfPayment))
+            {
+                return ResponseFactory.Success<bool>(true, "Your subscription is pending approval.");
             }
             if (!getUser.IsSubscriptionActive && getUser.SubscriptionEndDate < DateTime.UtcNow.AddHours(1))
             {
@@ -77,14 +86,23 @@ namespace SabiMarket.Infrastructure.Services
         }
         public async Task<BaseResponse<bool>> CheckActiveCustomerSubscription(string userId)
         {
-            var getCustomer = await _applicationDbContext.Customers.Where(x => x.UserId == userId).FirstOrDefaultAsync();
+            var getCustomer = await _applicationDbContext.Customers.Where(x => x.UserId == userId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
+            var getSubscription = await _applicationDbContext.Subscriptions.Where(s => s.SubscriberId == userId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
+            if (getSubscription == null)
+            {
+                return ResponseFactory.Fail<bool>(new NotFoundException("No subscription found for this Customer."), "No subscription found for this Customer.");
+            }
             if (getCustomer == null)
             {
                 return ResponseFactory.Fail<bool>(new NotFoundException("User is not a Customer."), "Customer not found.");
             }
+            if (getSubscription.IsSubscriberConfirmPayment && !string.IsNullOrEmpty(getSubscription.ProofOfPayment))
+            {
+                return ResponseFactory.Success<bool>(true, "Your subscription is pending approval.");
+            }
             if (!getCustomer.IsSubscriptionActive && getCustomer.SubscriptionEndDate < DateTime.UtcNow.AddHours(1))
             {
-                return ResponseFactory.Success<bool>(false, "User does not have an active subscription");
+                return ResponseFactory.Fail<bool>("User does not have an active subscription");
             }
             return ResponseFactory.Success<bool>(true, "User has an active subscription.");
         }
@@ -94,7 +112,7 @@ namespace SabiMarket.Infrastructure.Services
             {
                 var loggedInUser = Helper.GetUserDetails(_contextAccessor);
 
-                var getSubscriptions = await _applicationDbContext.Subscriptions.Where(x => x.Id == subscriptionId).FirstOrDefaultAsync();
+                var getSubscriptions = await _applicationDbContext.Subscriptions.Where(x => x.Id == subscriptionId).Include(x => x.Subscriber).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
                 if (getSubscriptions == null)
                 {
                     return ResponseFactory.Fail<bool>(new NotFoundException("Subscription not found."), "Subscription not found.");
@@ -108,6 +126,7 @@ namespace SabiMarket.Infrastructure.Services
                 getSubscriptions.SubscriptionStartDate = DateTime.UtcNow.AddHours(1);
                 getSubscriptions.SubscriptionEndDate = DateTime.UtcNow.AddMonths(1);
                 getSubscriptions.SubscriptionActivatorId = loggedInUser.Id;
+
                 _applicationDbContext.SaveChanges();
                 return ResponseFactory.Success<bool>(true, "Subscription confirmed successfully.");
             }
@@ -118,7 +137,7 @@ namespace SabiMarket.Infrastructure.Services
         }
         public async Task<BaseResponse<bool>> UserConfirmSubscriptionPayment(string subscriptionId)
         {
-            var getSubscriptions = await _applicationDbContext.Subscriptions.Where(x => x.Id == subscriptionId).FirstOrDefaultAsync();
+            var getSubscriptions = await _applicationDbContext.Subscriptions.Where(x => x.Id == subscriptionId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
             if (getSubscriptions == null)
             {
                 return ResponseFactory.Fail<bool>(new NotFoundException("Subscription not found."), "Subscription not found.");
