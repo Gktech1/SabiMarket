@@ -28,6 +28,7 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<PaginatorDto<IEnumerable<GoodBoyResponseDto>>>> GetGoodBoys(string caretakerId, PaginationFilter paginationFilter);
         Task<BaseResponse<bool>> BlockGoodBoy(string caretakerId, string goodBoyId);
         Task<BaseResponse<bool>> UnblockGoodBoy(string caretakerId, string goodBoyId);
-        Task<BaseResponse<bool>> DeleteCaretakerByChairman(string caretakerId);
+        //Task<BaseResponse<bool>> DeleteCaretakerByChairman(string caretakerId);
+        Task<BaseResponse<bool>> DeleteCaretaker(string caretakerId);
     }
 }

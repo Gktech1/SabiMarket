@@ -185,7 +185,7 @@ namespace SabiMarket.Infrastructure.Repositories
             string caretakerId, PaginationFilter paginationFilter, bool trackChanges)
         {
             var query = _repositoryContext.GoodBoys
-                .Where(gb => gb.CaretakerId == caretakerId)
+                .Where(gb => gb.UserId == caretakerId)
                 .Include(gb => gb.User)
                 .Include(gb => gb.LevyPayments)
                 .OrderBy(gb => gb.CreatedAt);
@@ -232,6 +232,15 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Include(c => c.GoodBoys)
                 .Include(c => c.AssignedTraders)
                 .ToListAsync();
+
+        public async Task<bool> CaretakerExistsAsync(string useriId)
+        {
+            if (string.IsNullOrEmpty(useriId))
+                return false;
+
+            return await _repositoryContext.Caretakers
+                .AnyAsync(c => c.UserId == useriId);
+        }
 
         public async Task<bool> ExistsAsync(string id)
         {

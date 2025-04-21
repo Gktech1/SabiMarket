@@ -22,5 +22,6 @@ namespace SabiMarket.Application.Interfaces
         Task<IEnumerable<Caretaker>> GetAllCaretakers(bool trackChanges);
         Task<bool> ExistsAsync(string id);
         Task<Caretaker> GetCaretakerByLocalGovernmentId(string LGAId, bool trackChanges);
+        Task<bool> CaretakerExistsAsync(string useriId);
     }
 }

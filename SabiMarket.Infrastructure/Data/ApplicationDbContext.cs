@@ -71,9 +71,20 @@ namespace SabiMarket.Infrastructure.Data
             base.OnModelCreating(modelBuilder);
             // In your ApplicationDbContext
 
+            // GoodBoy-Caretaker relationship
+            modelBuilder.Entity<GoodBoy>()
+                .Property(g => g.CaretakerId)
+                .IsRequired(false);
+
+            modelBuilder.Entity<GoodBoy>()
+                .HasOne(g => g.Caretaker)
+                .WithMany(c => c.GoodBoys)
+                .HasForeignKey(g => g.CaretakerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             // In OnModelCreating method
             modelBuilder.Entity<OfficerMarketAssignment>()
-        .HasKey(o => o.Id);
+            .HasKey(o => o.Id);
 
             modelBuilder.Entity<OfficerMarketAssignment>()
         .HasOne(o => o.AssistCenterOfficer)

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SabiMarket.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SabiMarket.Infrastructure.Data;
 namespace SabiMarket.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250421152545_modifyColumn")]
+    partial class modifyColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -106,44 +109,84 @@ namespace SabiMarket.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("GoodBoy", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+            {
+                b.Property<string>("Id")
+                    .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("CaretakerId")
-                        .HasColumnType("nvarchar(450)");
+                b.Property<string>("CaretakerId")
+                    .HasColumnType("nvarchar(450)"); // Explicitly nullable
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                b.Property<bool>("IsActive")
+                    .HasColumnType("bit");
 
-                    b.Property<string>("MarketId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                b.Property<string>("MarketId")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(450)");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
+                b.Property<int>("Status")
+                    .HasColumnType("int");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                b.Property<string>("UserId")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(450)");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("CaretakerId");
+                b.HasIndex("CaretakerId");
 
-                    b.HasIndex("MarketId");
+                b.HasIndex("MarketId");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                b.HasIndex("UserId")
+                    .IsUnique();
 
-                    b.ToTable("GoodBoys");
-                });
+                b.ToTable("GoodBoys");
+            });
+
+            /* modelBuilder.Entity("GoodBoy", b =>
+                 {
+                     b.Property<string>("Id")
+                         .HasColumnType("nvarchar(450)");
+
+                     b.Property<string>("CaretakerId")
+                         .HasColumnType("nvarchar(450)");
+
+                     b.Property<DateTime>("CreatedAt")
+                         .HasColumnType("datetime2");
+
+                     b.Property<bool>("IsActive")
+                         .HasColumnType("bit");
+
+                     b.Property<string>("MarketId")
+                         .IsRequired()
+                         .HasColumnType("nvarchar(450)");
+
+                     b.Property<int>("Status")
+                         .HasColumnType("int");
+
+                     b.Property<DateTime?>("UpdatedAt")
+                         .HasColumnType("datetime2");
+
+                     b.Property<string>("UserId")
+                         .IsRequired()
+                         .HasColumnType("nvarchar(450)");
+
+                     b.HasKey("Id");
+
+                     b.HasIndex("CaretakerId");
+
+                     b.HasIndex("MarketId");
+
+                     b.HasIndex("UserId")
+                         .IsUnique();
+
+                     b.ToTable("GoodBoys");
+                 });*/
 
             modelBuilder.Entity("Market", b =>
                 {
@@ -1478,10 +1521,6 @@ namespace SabiMarket.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("SubscriberType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("SubscriptionActivatorId")
                         .HasColumnType("nvarchar(450)");
 
@@ -1594,28 +1633,6 @@ namespace SabiMarket.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Vendors");
-                });
-
-            modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.WaiveMarketDates", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("NextWaiveMarket")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("WaiveMarketDates");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.WaivedProduct", b =>

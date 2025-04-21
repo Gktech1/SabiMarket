@@ -36,13 +36,12 @@ public class CaretakerController : ControllerBase
     }
 
     [HttpDelete("delete-caretaker/{caretakerId}")]
-    [Authorize(Policy = PolicyNames.RequireAdminOnly)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteCaretaker(string caretakerId)
     {
-        var response = await _caretakerService.DeleteCaretakerByChairman(caretakerId);
+        var response = await _caretakerService.DeleteCaretaker(caretakerId);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 

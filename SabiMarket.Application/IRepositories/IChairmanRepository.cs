@@ -24,6 +24,7 @@ namespace SabiMarket.Application.IRepositories
         Task<Chairman> GetChairmanById(string UserId, bool trackChanges);
         Task<int> CountAsync(Expression<Func<Chairman, bool>> predicate);
         Task<ChairmanDashboardStatsDto> GetChairmanDashboardStatsAsync(string chairmanId);
+        Task<Chairman> GetChairmanByUserId(string userId, bool trackChanges);
     }
 
 }

@@ -66,5 +66,18 @@ namespace SabiMarket.Infrastructure.Repositories
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
         }
+        public IQueryable<Trader> GetTradersByCaretakerId(string caretakerId, bool trackChanges = false)
+        {
+            return FindByCondition(t => t.CaretakerId == caretakerId, trackChanges)
+                .Include(t => t.User)
+                .Include(t => t.Market)
+                .Include(t => t.LevyPayments)
+                .OrderByDescending(t => t.CreatedAt);
+        }
+
+        public void DeleteTrader(Trader trader)
+        {
+            Delete(trader);
+        }
     }
 }
