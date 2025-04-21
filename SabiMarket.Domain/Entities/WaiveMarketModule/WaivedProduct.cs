@@ -9,13 +9,14 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
 {
     [Table("WaivedProducts")]
     public class WaivedProduct : BaseEntity
-    {  
+    {
         public string ProductName { get; set; }
         public string ImageUrl { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
         public bool IsAvailbleForUrgentPurchase { get; set; }
         public string? ProductCategoryId { get; set; }
-        
+
         [ForeignKey("ProductCategoryId")]
         [DeleteBehavior(DeleteBehavior.NoAction)]
         public ProductCategory ProductCategory { get; set; }

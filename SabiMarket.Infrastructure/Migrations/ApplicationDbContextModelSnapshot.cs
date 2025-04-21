@@ -1479,6 +1479,10 @@ namespace SabiMarket.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("SubscriberType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("SubscriptionActivatorId")
                         .HasColumnType("nvarchar(450)");
 
@@ -1591,6 +1595,28 @@ namespace SabiMarket.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Vendors");
+                });
+
+            modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.WaiveMarketDates", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("NextWaiveMarket")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WaiveMarketDates");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.WaivedProduct", b =>
