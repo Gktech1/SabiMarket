@@ -70,8 +70,19 @@ namespace SabiMarket.Infrastructure.Data
             base.OnModelCreating(modelBuilder);
             // In your ApplicationDbContext
 
+            // GoodBoy-Caretaker relationship
+            modelBuilder.Entity<GoodBoy>()
+                .Property(g => g.CaretakerId)
+                .IsRequired(false); // Explicitly make the property nullable
+
+            modelBuilder.Entity<GoodBoy>()
+                .HasOne(g => g.Caretaker)
+                .WithMany(c => c.GoodBoys)
+                .HasForeignKey(g => g.CaretakerId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             // In OnModelCreating method
-                modelBuilder.Entity<OfficerMarketAssignment>()
+            modelBuilder.Entity<OfficerMarketAssignment>()
             .HasKey(o => o.Id);
 
                 modelBuilder.Entity<OfficerMarketAssignment>()

@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Domain.Entities;
 using SabiMarket.Domain.Entities.LevyManagement;
-using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Enum;
@@ -14,8 +13,7 @@ public class GoodBoy : BaseEntity
     [Required]
     public string UserId { get; set; }
 
-    [Required]
-    public string CaretakerId { get; set; }
+    public string? CaretakerId { get; set; }
 
     [Required]
     public string MarketId { get; set; }
