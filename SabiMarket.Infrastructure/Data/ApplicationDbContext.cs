@@ -73,13 +73,13 @@ namespace SabiMarket.Infrastructure.Data
             // GoodBoy-Caretaker relationship
             modelBuilder.Entity<GoodBoy>()
                 .Property(g => g.CaretakerId)
-                .IsRequired(false); // Explicitly make the property nullable
+                .IsRequired(false);
 
             modelBuilder.Entity<GoodBoy>()
                 .HasOne(g => g.Caretaker)
                 .WithMany(c => c.GoodBoys)
                 .HasForeignKey(g => g.CaretakerId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.NoAction);
 
             // In OnModelCreating method
             modelBuilder.Entity<OfficerMarketAssignment>()

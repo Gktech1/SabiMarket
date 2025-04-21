@@ -185,7 +185,7 @@ namespace SabiMarket.Infrastructure.Repositories
             string caretakerId, PaginationFilter paginationFilter, bool trackChanges)
         {
             var query = _repositoryContext.GoodBoys
-                .Where(gb => gb.CaretakerId == caretakerId)
+                .Where(gb => gb.UserId == caretakerId)
                 .Include(gb => gb.User)
                 .Include(gb => gb.LevyPayments)
                 .OrderBy(gb => gb.CreatedAt);

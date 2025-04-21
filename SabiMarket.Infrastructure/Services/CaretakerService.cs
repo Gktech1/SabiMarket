@@ -358,13 +358,44 @@ namespace SabiMarket.Infrastructure.Services
                         await _repository.SaveChangesAsync();
 
                         // 5. Delete the associated user account
+                        /* var user = await _userManager.FindByIdAsync(caretaker.UserId);
+                         if (user != null)
+                         {
+                             var deleteUserResult = await _userManager.DeleteAsync(user);
+                             if (!deleteUserResult.Succeeded)
+                             {
+                                 throw new Exception("Failed to delete user account");
+                             }
+                         }*/
+
+                        // 5. Delete the associated user account
                         var user = await _userManager.FindByIdAsync(caretaker.UserId);
                         if (user != null)
                         {
+                            // First, handle any audit logs referencing this user
+                            var auditLogs = await _repository.AuditLogRepository
+                                        .FindByCondition(al => al.UserId == user.Id, trackChanges: false) // Add trackChanges parameter
+                                        .ToListAsync();
+                            
+
+                            if (auditLogs.Any())
+                            {
+                                // Option 1: Update audit logs to remove user reference
+                                foreach (var log in auditLogs)
+                                {
+                                    log.UserId = null; // Or set to a default/system user ID
+                                    _repository.AuditLogRepository.Update(log);
+                                }
+                                await _repository.SaveChangesAsync();
+                            }
+
+                            // Now proceed with user deletion
                             var deleteUserResult = await _userManager.DeleteAsync(user);
                             if (!deleteUserResult.Succeeded)
                             {
-                                throw new Exception("Failed to delete user account");
+                                return ResponseFactory.Fail<bool>(
+                       new NotFoundException("Failed to delete user account"),
+                       "Failed to delete user account");
                             }
                         }
 
@@ -1689,7 +1720,53 @@ namespace SabiMarket.Infrastructure.Services
                 }
             }
     */
+
         public async Task<BaseResponse<PaginatorDto<IEnumerable<GoodBoyResponseDto>>>> GetGoodBoys(
+      string caretakerId, PaginationFilter paginationFilter)
+        {
+            try
+            {
+                var goodBoys = await _repository.CaretakerRepository
+                    .GetGoodBoys(caretakerId, paginationFilter, trackChanges: false);
+
+                // Manual mapping instead of using AutoMapper
+                var goodBoyDtos = goodBoys.PageItems.Select(g => new GoodBoyResponseDto
+                {
+                    Id = g.Id,
+                    UserId = g.UserId,
+                    FullName = g.User != null ? $"{g.User.FirstName} {g.User.LastName}" : "Default User",
+                    Email = g.User?.Email ?? "",
+                    PhoneNumber = g.User?.PhoneNumber ?? "",
+                    MarketId = g.MarketId,
+                    MarketName = g.Market?.MarketName ?? "Unknown Market",
+                    LevyPayments = g.LevyPayments?.Select(lp => new LevyPaymentResponseDto
+                    {
+                        Id = lp.Id,
+                        Amount = lp.Amount,
+                        PaymentDate = lp.PaymentDate,
+                        Status = lp.PaymentStatus.ToString(),
+                        CreatedAt = lp.CreatedAt
+                    }).ToList() ?? new List<LevyPaymentResponseDto>()
+                }).ToList();
+
+                var response = new PaginatorDto<IEnumerable<GoodBoyResponseDto>>
+                {
+                    PageItems = goodBoyDtos,
+                    CurrentPage = goodBoys.CurrentPage,
+                    PageSize = goodBoys.PageSize,
+                    NumberOfPages = goodBoys.NumberOfPages
+                };
+
+                return ResponseFactory.Success(response, "GoodBoys retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving GoodBoys");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<GoodBoyResponseDto>>>(
+                    ex, "An unexpected error occurred");
+            }
+        }
+        /*public async Task<BaseResponse<PaginatorDto<IEnumerable<GoodBoyResponseDto>>>> GetGoodBoys(
             string caretakerId, PaginationFilter paginationFilter)
         {
             try
@@ -1714,7 +1791,7 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<GoodBoyResponseDto>>>(
                     ex, "An unexpected error occurred");
             }
-        }
+        }*/
 
         public async Task<BaseResponse<bool>> BlockGoodBoy(string caretakerId, string goodBoyId)
         {
