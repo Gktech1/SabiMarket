@@ -83,5 +83,7 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter);
         Task<BaseResponse<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>> GetMarketLevies(string marketId, PaginationFilter paginationFilter);
         Task<BaseResponse<bool>> DeleteChairmanByAdmin(string chairmanId);
+
+        Task<BaseResponse<LocalGovernmentWithUsersResponseDto>> GetLocalGovernmentWithUsersByUserId(string userId);
     }
 }

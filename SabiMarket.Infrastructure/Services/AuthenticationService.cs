@@ -137,7 +137,9 @@ namespace SabiMarket.Infrastructure.Services
                         Role = roles.First(),
                         LastLoginAt = user.LastLoginAt ?? DateTime.UtcNow,
                         ProfileImageUrl = user.ProfileImageUrl,
-                        AdditionalDetails = userDetails
+                        AdditionalDetails = userDetails,
+                        LocalgovernmentName = user.LocalGovernment.LGA,
+                        LocalgovernmentId = user.LocalGovernmentId
                     }
                 };
 

@@ -105,7 +105,70 @@ namespace SabiMarket.Infrastructure.Services
             await _repository.SaveChangesAsync();
         }
 
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<LGResponseDto>>>> GetLocalGovernmentAreas(
+
+        public async Task<BaseResponse<LocalGovernmentWithUsersResponseDto>> GetLocalGovernmentWithUsersByUserId(string userId)
+        {
+            try
+            {
+                // First find the user
+                //var user = await _userManager.FindByIdAsync(userId);
+                var user =  await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                if (user == null)
+                {
+                    await CreateAuditLog(
+                        "User Lookup Failed",
+                        $"Failed to find user with ID: {userId}",
+                        "User Query"
+                    );
+                    return ResponseFactory.Fail<LocalGovernmentWithUsersResponseDto>(
+                        new NotFoundException("User not found"),
+                        "User not found");
+                }
+
+                // Check if user has an associated local government
+                if (string.IsNullOrEmpty(user.LocalGovernmentId))
+                {
+                    await CreateAuditLog(
+                        "LocalGovernment Lookup Failed",
+                        $"User with ID: {userId} has no associated LocalGovernment",
+                        "LocalGovernment Query"
+                    );
+                    return ResponseFactory.Fail<LocalGovernmentWithUsersResponseDto>(
+                        new NotFoundException("User has no associated LocalGovernment"),
+                        "User has no associated LocalGovernment");
+                }
+
+                // Get the local government with users
+                var localGovernment = await _repository.LocalGovernmentRepository.GetLocalGovernmentWithUsers(user.LocalGovernmentId, trackChanges: false);
+                if (localGovernment == null)
+                {
+                    await CreateAuditLog(
+                        "LocalGovernment Lookup Failed",
+                        $"Failed to find local government with ID: {user.LocalGovernmentId}",
+                        "LocalGovernment Query"
+                    );
+                    return ResponseFactory.Fail<LocalGovernmentWithUsersResponseDto>(
+                        new NotFoundException("LocalGovernment not found"),
+                        "LocalGovernment not found");
+                }
+
+                //var localGovernmentDto = _mapper.Map<LocalGovernmentWithUsersResponseDto>(localGovernment);
+                var localGovernmentDto = _mapper.Map<LocalGovernmentWithUsersResponseDto>((user, localGovernment));
+                await CreateAuditLog(
+                    "LocalGovernment Lookup",
+                    $"Retrieved local government with users for user ID: {userId}",
+                    "LocalGovernment Query"
+                );
+                return ResponseFactory.Success(localGovernmentDto, "LocalGovernment with users retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving local government with users by user ID");
+                return ResponseFactory.Fail<LocalGovernmentWithUsersResponseDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+            public async Task<BaseResponse<PaginatorDto<IEnumerable<LGResponseDto>>>> GetLocalGovernmentAreas(
        string searchTerm,
        PaginationFilter paginationFilter)
         {

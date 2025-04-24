@@ -67,6 +67,48 @@ public class MappingProfile : Profile
 
         CreateMap<Chairman, ChairmanResponseDto>();
 
+        // New mappings for LocalGovernment
+        CreateMap<LocalGovernment, LocalGovernmentResponseDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.State, opt => opt.MapFrom(src => src.State))
+            .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+            .ForMember(dest => dest.LGA, opt => opt.MapFrom(src => src.LGA))
+            .ForMember(dest => dest.CurrentRevenue, opt => opt.MapFrom(src => src.CurrentRevenue));
+
+        // Map ApplicationUser to UserDto
+        CreateMap<ApplicationUser, UserDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))
+            .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.LastName))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
+            .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+            .ForMember(dest => dest.ProfileImageUrl, opt => opt.MapFrom(src => src.ProfileImageUrl))
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.LastLoginAt, opt => opt.MapFrom(src => src.LastLoginAt));
+
+        // Map for LocalGovernmentWithUsersResponseDto
+        CreateMap<(ApplicationUser User, LocalGovernment LocalGovernment), LocalGovernmentWithUsersResponseDto>()
+            .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User))
+            .ForMember(dest => dest.LocalGovernment, opt => opt.MapFrom(src => src.LocalGovernment));
+
+        // Map for UsersByLocalGovernmentResponseDto
+        CreateMap<(ApplicationUser User, LocalGovernment LocalGovernment), UsersByLocalGovernmentResponseDto>()
+            .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User))
+            .ForMember(dest => dest.LocalGovernment, opt => opt.MapFrom(src => src.LocalGovernment));
+
+        // Map for LocalGovernmentResponseDto
+        CreateMap<LocalGovernment, LocalGovernmentResponseDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.State, opt => opt.MapFrom(src => src.State))
+            .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+            .ForMember(dest => dest.LGA, opt => opt.MapFrom(src => src.LGA))
+            .ForMember(dest => dest.CurrentRevenue, opt => opt.MapFrom(src => src.CurrentRevenue));
+
         CreateMap<Report, ReportExportDto>()
                .ForMember(dest => dest.TotalMarkets, opt => opt.MapFrom(src => src.MarketCount))
                .ForMember(dest => dest.TotalRevenue, opt => opt.MapFrom(src => src.TotalRevenueGenerated))

@@ -3,8 +3,9 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
+using SabiMarket.Domain.Exceptions;
 
-namespace SabiMarket.API.Utility
+namespace SabiMarket.API.Controllers.Utility
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -33,6 +34,27 @@ namespace SabiMarket.API.Utility
             return !response.IsSuccessful
                 ? StatusCode(StatusCodes.Status500InternalServerError, response)
                 : Ok(response);
+        }
+
+        [HttpGet("local-government/user/{userId}")]
+        [ProducesResponseType(typeof(BaseResponse<LocalGovernmentWithUsersResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<LocalGovernmentWithUsersResponseDto>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(BaseResponse<LocalGovernmentWithUsersResponseDto>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BaseResponse<LocalGovernmentWithUsersResponseDto>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetLocalGovernmentByUserId(string userId)
+        {
+            var response = await _chairmanService.GetLocalGovernmentWithUsersByUserId(userId);
+
+            if (!response.IsSuccessful)
+            {
+                if (response.Error is NotFoundException)
+                {
+                    return NotFound(response);
+                }
+                return BadRequest(response);
+            }
+
+            return Ok(response);
         }
 
         [HttpGet("search-localgovernmentarea")]
