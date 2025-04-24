@@ -393,7 +393,7 @@ public class ChairmanController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> CreateAssistantOfficer([FromForm] CreateAssistantOfficerRequestDto request)
+    public async Task<IActionResult> CreateAssistantOfficer([FromBody] CreateAssistantOfficerRequestDto request)
     {
         var response = await _chairmanService.CreateAssistantOfficer(request);
         return response.IsSuccessful ? Ok(response) : BadRequest(response);
@@ -411,7 +411,7 @@ public class ChairmanController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> UpdateAssistantOfficer(string officerId, [FromForm] UpdateAssistantOfficerRequestDto request)
+    public async Task<IActionResult> UpdateAssistantOfficer(string officerId, [FromBody] UpdateAssistantOfficerRequestDto request)
     {
         var response = await _chairmanService.UpdateAssistantOfficer(officerId, request);
         return response.IsSuccessful ? Ok(response) : BadRequest(response);

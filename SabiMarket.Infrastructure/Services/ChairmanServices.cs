@@ -25,6 +25,7 @@ using SabiMarket.Infrastructure.Data;
 using SabiMarket.Domain.DTOs;
 using System.Linq.Expressions;
 using SabiMarket.Application.Interfaces;
+using CloudinaryDotNet.Actions;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -2230,7 +2231,7 @@ namespace SabiMarket.Infrastructure.Services
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     Gender = request.Gender,
-                    ProfileImageUrl = "",
+                    ProfileImageUrl = request.ProfileImage,
                     LocalGovernmentId = chairman.LocalGovernmentId
                 };
 
@@ -2248,24 +2249,24 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Handle profile image update if provided
-                if (request.ProfileImage != null)
-                {
-                    // If there's an existing image, you might want to delete it first
-                    if (!string.IsNullOrEmpty(user.ProfileImageUrl))
-                    {
-                        await _cloudinaryService.DeletePhotoAsync(user.ProfileImageUrl);
-                    }
+                /* if (request.ProfileImage != null)
+                 {
+                     // If there's an existing image, you might want to delete it first
+                     if (!string.IsNullOrEmpty(user.ProfileImageUrl))
+                     {
+                         await _cloudinaryService.DeletePhotoAsync(user.ProfileImageUrl);
+                     }
 
-                    var uploadResult = await _cloudinaryService.UploadImage(request.ProfileImage, "assistant-officers");
-                    if (uploadResult.IsSuccessful && uploadResult.Data.ContainsKey("Url"))
-                    {
-                        user.ProfileImageUrl = uploadResult.Data["Url"];
-                         await _userManager.UpdateAsync(user);
-                    }
-                }
-                
-           
+                     var uploadResult = await _cloudinaryService.UploadImage(request.ProfileImage, "assistant-officers");
+                     if (uploadResult.IsSuccessful && uploadResult.Data.ContainsKey("Url"))
+                     {
+                         user.ProfileImageUrl = uploadResult.Data["Url"];
+                          await _userManager.UpdateAsync(user);
+                     }
+                 }
+                 */
 
+                await _userManager.UpdateAsync(user);
                 // Assign role
                 var roleResult = await _userManager.AddToRoleAsync(user, UserRoles.AssistOfficer);
                 if (!roleResult.Succeeded)
@@ -2452,7 +2453,7 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Handle profile image update if provided
-                if (request?.ProfileImage != null)
+              /*  if (request?.ProfileImage != null)
                 {
                     // If there's an existing image, you might want to delete it first
                     if (!string.IsNullOrEmpty(userToUpdate.ProfileImageUrl))
@@ -2465,8 +2466,8 @@ namespace SabiMarket.Infrastructure.Services
                     {
                         userToUpdate.ProfileImageUrl = uploadResult.Data["Url"];
                     }
-                }
-
+                }*/
+                userToUpdate.ProfileImageUrl = request.ProfileImage;
                 // Update user with the detached entity
                 var updateUserResult = await _userManager.UpdateAsync(userToUpdate);
                 if (!updateUserResult.Succeeded)
