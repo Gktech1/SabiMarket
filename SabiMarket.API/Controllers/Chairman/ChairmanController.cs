@@ -388,8 +388,7 @@ public class ChairmanController : ControllerBase
     /// </summary>
     /// <param name="request">Assistant officer creation details</param>
     /// <returns>Created assistant officer details including default password</returns>
-    [HttpPost("create-assistant-officer")]
-    [Consumes("multipart/form-data")]
+    [HttpPost("createassistant-officer")]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
@@ -406,7 +405,6 @@ public class ChairmanController : ControllerBase
     /// <param name="request">Assistant officer update details</param>
     /// <returns>Updated assistant officer details</returns>
     [HttpPut("updateassistant-officer/{officerId}")]
-    [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status404NotFound)]
