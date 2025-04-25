@@ -25,8 +25,6 @@
         public string? MarketId { get; set; }
         public string? TraderId { get; set; }
         public string? AssistOfficerId { get; set; }
-        public string? LocalgovernmentName { get; set; }
-        public string? LocalgovernmentId { get; set; }
         public IDictionary<string, object> AdditionalDetails { get; set; }
     }
 }

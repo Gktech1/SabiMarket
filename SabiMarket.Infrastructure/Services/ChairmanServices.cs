@@ -2409,8 +2409,8 @@ namespace SabiMarket.Infrastructure.Services
                         "Unauthorized access");
                 }
 
-                // Get the user associated with the officer - USING AsNoTracking() to avoid tracking conflicts
-                var userToUpdate = await _userManager.Users
+                // Get the user information first with AsNoTracking() (this part is fine)
+               /* var userToUpdate = await _userManager.Users
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u => u.Id == officer.UserId);
 
@@ -2424,52 +2424,52 @@ namespace SabiMarket.Infrastructure.Services
                     return ResponseFactory.Fail<AssistantOfficerResponseDto>(
                         new NotFoundException("Associated user account not found"),
                         "User not found");
+                }*/
+
+                // Get the actual user that EF is tracking (instead of updating the detached one)
+                var actualUser = await _userManager.FindByIdAsync(officer.UserId);
+                if (actualUser == null)
+                {
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Associated user not found",
+                        "Officer Management"
+                    );
+                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                        new NotFoundException("Associated user account not found"),
+                        "User not found");
                 }
 
-                // Apply updates to the user entity
-                if (!string.IsNullOrEmpty(request?.FullName))
+                // Apply the same updates to the tracked entity
+                if (!string.IsNullOrEmpty(request?.FullName) && request?.FullName != "string")
                 {
                     var nameParts = request.FullName.Split(' ');
-                    userToUpdate.FirstName = nameParts.Length > 0 ? nameParts[0] : userToUpdate.FirstName;
-                    userToUpdate.LastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : userToUpdate.LastName;
+                    actualUser.FirstName = nameParts.Length > 0 ? nameParts[0] : actualUser.FirstName;
+                    actualUser.LastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : actualUser.LastName;
                 }
 
-                if (!string.IsNullOrEmpty(request?.Email))
+                if (!string.IsNullOrEmpty(request?.Email) && request?.Email != "string")
                 {
-                    userToUpdate.Email = request.Email;
-                    userToUpdate.UserName = request.Email; // Update username to match email
-                    userToUpdate.NormalizedEmail = request.Email.ToUpper();
-                    userToUpdate.NormalizedUserName = request.Email.ToUpper();
+                    actualUser.Email = request.Email;
+                    actualUser.UserName = request.Email; // Update username to match email
+                    actualUser.NormalizedEmail = request.Email.ToUpper();
+                    actualUser.NormalizedUserName = request.Email.ToUpper();
                 }
 
-                if (!string.IsNullOrEmpty(request?.PhoneNumber))
+                if (!string.IsNullOrEmpty(request?.PhoneNumber) && request?.PhoneNumber != "string")
                 {
-                    userToUpdate.PhoneNumber = request.PhoneNumber;
+                    actualUser.PhoneNumber = request.PhoneNumber;
                 }
 
-                if (!string.IsNullOrEmpty(request?.Gender))
+                if (!string.IsNullOrEmpty(request?.Gender) && request?.Gender != "string")
                 {
-                    userToUpdate.Gender = request.Gender;
+                    actualUser.Gender = request.Gender;
                 }
 
-                // Handle profile image update if provided
-              /*  if (request?.ProfileImage != null)
-                {
-                    // If there's an existing image, you might want to delete it first
-                    if (!string.IsNullOrEmpty(userToUpdate.ProfileImageUrl))
-                    {
-                        await _cloudinaryService.DeletePhotoAsync(userToUpdate.ProfileImageUrl);
-                    }
+                actualUser.ProfileImageUrl = request.ProfileImage;
 
-                    var uploadResult = await _cloudinaryService.UploadImage(request.ProfileImage, "assistant-officers");
-                    if (uploadResult.IsSuccessful && uploadResult.Data.ContainsKey("Url"))
-                    {
-                        userToUpdate.ProfileImageUrl = uploadResult.Data["Url"];
-                    }
-                }*/
-                userToUpdate.ProfileImageUrl = request.ProfileImage;
-                // Update user with the detached entity
-                var updateUserResult = await _userManager.UpdateAsync(userToUpdate);
+                // Update the tracked entity
+                var updateUserResult = await _userManager.UpdateAsync(actualUser);
                 if (!updateUserResult.Succeeded)
                 {
                     await CreateAuditLog(
@@ -2481,6 +2481,79 @@ namespace SabiMarket.Infrastructure.Services
                         new Exception(string.Join(", ", updateUserResult.Errors.Select(e => e.Description))),
                         "Failed to update user account");
                 }
+
+                /* // Get the user associated with the officer - USING AsNoTracking() to avoid tracking conflicts
+                 var userToUpdate = await _userManager.Users
+                     .AsNoTracking()
+                     .FirstOrDefaultAsync(u => u.Id == officer.UserId);
+
+                 if (userToUpdate == null)
+                 {
+                     await CreateAuditLog(
+                         "Update Failed",
+                         $"CorrelationId: {correlationId} - Associated user not found",
+                         "Officer Management"
+                     );
+                     return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                         new NotFoundException("Associated user account not found"),
+                         "User not found");
+                 }
+
+                 // Apply updates to the user entity
+                 if (!string.IsNullOrEmpty(request?.FullName) && request?.FullName != "string")
+                 {
+                     var nameParts = request.FullName.Split(' ');
+                     userToUpdate.FirstName = nameParts.Length > 0 ? nameParts[0] : userToUpdate.FirstName;
+                     userToUpdate.LastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : userToUpdate.LastName;
+                 }
+
+                 if (!string.IsNullOrEmpty(request?.Email) && request?.Email != "string")
+                 {
+                     userToUpdate.Email = request.Email;
+                     userToUpdate.UserName = request.Email; // Update username to match email
+                     userToUpdate.NormalizedEmail = request.Email.ToUpper();
+                     userToUpdate.NormalizedUserName = request.Email.ToUpper();
+                 }
+
+                 if (!string.IsNullOrEmpty(request?.PhoneNumber) && request?.PhoneNumber != "string")
+                 {
+                     userToUpdate.PhoneNumber = request.PhoneNumber;
+                 }
+
+                 if (!string.IsNullOrEmpty(request?.Gender) && request?.Gender != "string")
+                 {
+                     userToUpdate.Gender = request.Gender;
+                 }
+
+                 // Handle profile image update if provided
+               *//*  if (request?.ProfileImage != null)
+                 {
+                     // If there's an existing image, you might want to delete it first
+                     if (!string.IsNullOrEmpty(userToUpdate.ProfileImageUrl))
+                     {
+                         await _cloudinaryService.DeletePhotoAsync(userToUpdate.ProfileImageUrl);
+                     }
+
+                     var uploadResult = await _cloudinaryService.UploadImage(request.ProfileImage, "assistant-officers");
+                     if (uploadResult.IsSuccessful && uploadResult.Data.ContainsKey("Url"))
+                     {
+                         userToUpdate.ProfileImageUrl = uploadResult.Data["Url"];
+                     }
+                 }*//*
+                 userToUpdate.ProfileImageUrl = request.ProfileImage;
+                 // Update user with the detached entity
+                 var updateUserResult = await _userManager.UpdateAsync(userToUpdate);
+                 if (!updateUserResult.Succeeded)
+                 {
+                     await CreateAuditLog(
+                         "Update Failed",
+                         $"CorrelationId: {correlationId} - Failed to update user account",
+                         "Officer Management"
+                     );
+                     return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                         new Exception(string.Join(", ", updateUserResult.Errors.Select(e => e.Description))),
+                         "Failed to update user account");
+                 }*/
 
                 // Update Officer details
                 officer.UpdatedAt = DateTime.UtcNow;

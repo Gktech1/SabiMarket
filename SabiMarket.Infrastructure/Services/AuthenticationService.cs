@@ -138,8 +138,6 @@ namespace SabiMarket.Infrastructure.Services
                         LastLoginAt = user.LastLoginAt ?? DateTime.UtcNow,
                         ProfileImageUrl = user.ProfileImageUrl,
                         AdditionalDetails = userDetails,
-                        LocalgovernmentName = user.LocalGovernment.LGA,
-                        LocalgovernmentId = user.LocalGovernmentId
                     }
                 };
 
