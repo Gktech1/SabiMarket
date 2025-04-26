@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using iText.Commons.Actions.Contexts;
+using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories;
@@ -12,7 +13,11 @@ namespace SabiMarket.Infrastructure.Repositories
 {
     public class AssistCenterOfficerRepository : GeneralRepository<AssistCenterOfficer>, IAssistCenterOfficerRepository
     {
-        public AssistCenterOfficerRepository(ApplicationDbContext context) : base(context) { }
+        private readonly ApplicationDbContext _context;
+        public AssistCenterOfficerRepository(ApplicationDbContext context) : base(context) 
+        {
+            _context = context;
+        }
 
         public void AddAssistCenterOfficer(AssistCenterOfficer assistCenter) => Create(assistCenter);
 
@@ -26,7 +31,13 @@ namespace SabiMarket.Infrastructure.Repositories
                 orderBy: query => query.OrderBy(a => a.CreatedAt));
         }
 
-        public void UpdateAssistCenterOfficer(AssistCenterOfficer assistCenter) => Update(assistCenter);
+       public void UpdateAssistCenterOfficer(AssistCenterOfficer assistCenter) => Update(assistCenter);
+
+      /*  public void UpdateAssistCenterOfficer(AssistCenterOfficer assistCenter)
+        {
+            _context.Attach(assistCenter);
+            _context.Entry(assistCenter).State = EntityState.Modified;
+        }*/
 
         public async Task<IEnumerable<AssistCenterOfficer>> GetAllAssistCenterOfficer(bool trackChanges) => await FindAll(trackChanges).ToListAsync();
 

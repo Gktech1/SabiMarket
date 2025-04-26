@@ -2559,7 +2559,8 @@ namespace SabiMarket.Infrastructure.Services
                 officer.UpdatedAt = DateTime.UtcNow;
 
                 // For backward compatibility, update the MarketId field if markets changed
-                if (request?.MarketIds != null && request.MarketIds.Count > 0)
+                if (request?.MarketIds != null && request.MarketIds.Any(id => !string.IsNullOrWhiteSpace(id)))
+                    if (request?.MarketIds != null && request.MarketIds.Count > 0 && request.MarketIds.Any(id => !string.IsNullOrWhiteSpace(id)))
                 {
                     officer.MarketId = request.MarketIds[0]; // First market
                 }
@@ -2610,6 +2611,10 @@ namespace SabiMarket.Infrastructure.Services
                             _repository.OfficerMarketAssignmentRepository.AddAssignment(assignment);
                         }
                     }
+                }
+                if (officer.User != null)
+                {
+                    officer.User = null;  // Remove the ApplicationUser from officer to avoid tracking conflict
                 }
 
                 _repository.AssistCenterOfficerRepository.UpdateAssistCenterOfficer(officer);
