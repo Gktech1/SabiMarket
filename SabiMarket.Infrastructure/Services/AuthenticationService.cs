@@ -69,7 +69,18 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Find user by email
-                var user = await _userManager.FindByEmailAsync(loginRequest.Email);
+                //var user = await _userManager.FindByEmailAsync(loginRequest.Email);
+                var user = await _userManager.Users
+                                        .Include(u => u.Admin)
+                                        .Include(u => u.Chairman)
+                                        .Include(u => u.Trader)
+                                        .Include(u => u.Vendor)
+                                        .Include(u => u.Customer)
+                                        .Include(u => u.GoodBoy)
+                                        .Include(u => u.Caretaker)
+                                        .Include(u => u.AssistCenterOfficer)
+                                        .Include(u => u.LocalGovernment)
+                                        .FirstOrDefaultAsync(u => u.Email == loginRequest.Email);
                 if (user == null)
                 {
                     return ResponseFactory.Fail<LoginResponseDto>(
@@ -423,7 +434,7 @@ namespace SabiMarket.Infrastructure.Services
             switch (role.ToUpper())
             {
                 case "ADMIN":
-                    // Add any admin-specific details
+                    details.Add("admin", user.Admin);
                     break;
 
                 case "CHAIRMAN":
@@ -442,7 +453,11 @@ namespace SabiMarket.Infrastructure.Services
                     {
                         details.Add("traderId", user.Trader.Id);
                         details.Add("businessName", user.Trader.BusinessName);
-                        // Add other trader details
+                        details.Add("businessName", user.Trader.TIN);
+                        details.Add("businessName", user.Trader.BusinessType);
+                        details.Add("businessName", user.Trader.MarketId);
+                        details.Add("businessName", user.Trader.CaretakerId);
+
                     }
                     break;
 
@@ -453,7 +468,9 @@ namespace SabiMarket.Infrastructure.Services
                         details.Add("businessName", user.Vendor.BusinessName);
                         details.Add("businessType", user.Vendor.BusinessDescription);
                         details.Add("businessType", user.Vendor.BusinessAddress);
-                        // Add other vendor-specific details
+                        details.Add("businessType", user.AssistCenterOfficer.LocalGovernmentId);
+                        details.Add("businessType", user.AssistCenterOfficer.ChairmanId);
+                        details.Add("businessType", user.AssistCenterOfficer.MarketId);
                     }
                     break;
 
@@ -464,7 +481,6 @@ namespace SabiMarket.Infrastructure.Services
                         details.Add("customerId", user.Customer.LocalGovernmentId);
                         details.Add("customerType", user.Customer.LocalGovernment);
                         details.Add("preferredMarket", user.Customer.FullName);
-                        // Add other customer-specific details
                     }
                     break;
 
@@ -472,15 +488,24 @@ namespace SabiMarket.Infrastructure.Services
                     if (user.GoodBoy != null)
                     {
                         details.Add("goodBoyId", user.GoodBoy.Id);
-                        // Add other GoodBoy details
+                        details.Add("goodBoyId", user.GoodBoy.Status);
+                        details.Add("goodBoyId", user.GoodBoy?.CaretakerId);
+                        details.Add("goodBoyId", user.GoodBoy.MarketId);
+
                     }
                     break;
 
                 case "CARETAKER":
                     if (user.Caretaker != null)
                     {
-                        details.Add("caretakerId", user.Caretaker.Id);
-                        // Add other caretaker details
+                        details.Add("caretaker", new
+                        {
+                            Id = user.Caretaker.Id,
+                            MarketId = user.Caretaker.MarketId,
+                            ChairmanId = user.Caretaker.ChairmanId,
+                            LocalGovernmentId = user.Caretaker.LocalGovernmentId,
+                            IsBlocked = user.Caretaker.IsBlocked
+                        });
                     }
                     break;
 
@@ -488,7 +513,11 @@ namespace SabiMarket.Infrastructure.Services
                     if (user.AssistCenterOfficer != null)
                     {
                         details.Add("officerId", user.AssistCenterOfficer.Id);
-                        // Add other officer details
+                        details.Add("officerId", user.AssistCenterOfficer.ChairmanId);
+                        details.Add("officerId", user.AssistCenterOfficer.LocalGovernmentId);
+                        details.Add("officerId", user.AssistCenterOfficer?.MarketId);
+                        details.Add("officerId", user.AssistCenterOfficer.IsActive);
+                        details.Add("officerId", user.AssistCenterOfficer.IsBlocked);
                     }
                     break;
 
