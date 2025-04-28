@@ -1461,5 +1461,102 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        public async Task<BaseResponse<bool>> DeleteGoodBoyByCaretaker(string goodBoyId)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            var caretakerId = _currentUser.GetUserId();
+            try
+            {
+                // First verify the admin exists and has proper permissions
+                var caretaker = await _repository.CaretakerRepository.GetCaretakerById(caretakerId, trackChanges: false);
+                if (caretaker == null)
+                {
+                    await CreateAuditLog(
+                        "GoodBoy Deletion Failed",
+                        $"CorrelationId: {correlationId} - Admin not found with ID: {caretakerId}",
+                        "GoodBoy Management"
+                    );
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Admin not found"),
+                        "Admin not found");
+                }
+
+                // Now get the goodboy to delete
+                var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyById(goodBoyId, trackChanges: true);
+                if (goodBoy == null)
+                {
+                    await CreateAuditLog(
+                        "GoodBoy Deletion Failed",
+                        $"CorrelationId: {correlationId} - GoodBoy not found with ID: {goodBoyId}",
+                        "GoodBoy Management"
+                    );
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("GoodBoy not found"),
+                        "GoodBoy not found");
+                }
+
+                // Check if there are any dependencies before deletion
+                var hasActiveDependencies = await CheckGoodBoyDependencies(goodBoy);
+                if (hasActiveDependencies)
+                {
+                    await CreateAuditLog(
+                        "GoodBoy Deletion Failed",
+                        $"CorrelationId: {correlationId} - GoodBoy has active dependencies",
+                        "GoodBoy Management"
+                    );
+                    // Uncomment if you want to prevent deletion when dependencies exist
+                    /*return ResponseFactory.Fail<bool>(
+                        new InvalidOperationException("GoodBoy has active dependencies"),
+                        "Cannot delete GoodBoy with active dependencies");*/
+                }
+
+                // Get associated user
+                var user = await _userManager.FindByIdAsync(goodBoy.UserId);
+                if (user != null)
+                {
+                    // Remove goodboy role from user
+                    await _userManager.RemoveFromRoleAsync(user, UserRoles.Goodboy);
+
+                    // Update user status if needed
+                    // user.IsActive = false;
+                    await _userManager.UpdateAsync(user);
+                }
+
+                // Delete goodboy
+                _repository.GoodBoyRepository.DeleteGoodBoy(goodBoy);
+                await _repository.SaveChangesAsync();
+
+                await CreateAuditLog(
+                    "GoodBoy Deleted",
+                    $"CorrelationId: {correlationId} - Admin {caretakerId} successfully deleted GoodBoy with ID: {goodBoyId}",
+                    "GoodBoy Management"
+                );
+
+                return ResponseFactory.Success(true, "GoodBoy deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "GoodBoy Deletion Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "GoodBoy Management"
+                );
+                _logger.LogError(ex, "Error deleting GoodBoy: {GoodBoyId} by admin: {AdminId}", goodBoyId, caretakerId);
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while deleting the GoodBoy");
+            }
+        }
+
+        // Helper method to check for any dependencies
+        private async Task<bool> CheckGoodBoyDependencies(GoodBoy goodBoy)
+        {
+            // Check if goodboy has any active levy payments
+            var hasActivePayments = goodBoy.LevyPayments.Any(lp => !lp.IsActive);
+
+            // Add any other dependency checks as needed
+            // For example, checking if the goodboy has any pending tasks or responsibilities
+
+            return hasActivePayments;
+        }
+
     }
 }

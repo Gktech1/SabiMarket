@@ -30,5 +30,6 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<bool>> UnblockGoodBoy(string caretakerId, string goodBoyId);
         //Task<BaseResponse<bool>> DeleteCaretakerByChairman(string caretakerId);
         Task<BaseResponse<bool>> DeleteCaretaker(string caretakerId);
+        Task<BaseResponse<bool>> DeleteGoodBoyByCaretaker(string goodBoyId);
     }
 }
