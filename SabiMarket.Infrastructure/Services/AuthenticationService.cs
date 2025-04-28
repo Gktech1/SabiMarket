@@ -434,7 +434,8 @@ namespace SabiMarket.Infrastructure.Services
             switch (role.ToUpper())
             {
                 case "ADMIN":
-                    details.Add("admin", user.Admin);
+                    details.Add("admin", user.AdminId);
+                    details.Add("address", user.Address);
                     break;
 
                 case "CHAIRMAN":
