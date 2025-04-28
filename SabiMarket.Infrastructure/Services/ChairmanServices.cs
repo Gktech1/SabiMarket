@@ -2482,79 +2482,6 @@ namespace SabiMarket.Infrastructure.Services
                         "Failed to update user account");
                 }
 
-                /* // Get the user associated with the officer - USING AsNoTracking() to avoid tracking conflicts
-                 var userToUpdate = await _userManager.Users
-                     .AsNoTracking()
-                     .FirstOrDefaultAsync(u => u.Id == officer.UserId);
-
-                 if (userToUpdate == null)
-                 {
-                     await CreateAuditLog(
-                         "Update Failed",
-                         $"CorrelationId: {correlationId} - Associated user not found",
-                         "Officer Management"
-                     );
-                     return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                         new NotFoundException("Associated user account not found"),
-                         "User not found");
-                 }
-
-                 // Apply updates to the user entity
-                 if (!string.IsNullOrEmpty(request?.FullName) && request?.FullName != "string")
-                 {
-                     var nameParts = request.FullName.Split(' ');
-                     userToUpdate.FirstName = nameParts.Length > 0 ? nameParts[0] : userToUpdate.FirstName;
-                     userToUpdate.LastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : userToUpdate.LastName;
-                 }
-
-                 if (!string.IsNullOrEmpty(request?.Email) && request?.Email != "string")
-                 {
-                     userToUpdate.Email = request.Email;
-                     userToUpdate.UserName = request.Email; // Update username to match email
-                     userToUpdate.NormalizedEmail = request.Email.ToUpper();
-                     userToUpdate.NormalizedUserName = request.Email.ToUpper();
-                 }
-
-                 if (!string.IsNullOrEmpty(request?.PhoneNumber) && request?.PhoneNumber != "string")
-                 {
-                     userToUpdate.PhoneNumber = request.PhoneNumber;
-                 }
-
-                 if (!string.IsNullOrEmpty(request?.Gender) && request?.Gender != "string")
-                 {
-                     userToUpdate.Gender = request.Gender;
-                 }
-
-                 // Handle profile image update if provided
-               *//*  if (request?.ProfileImage != null)
-                 {
-                     // If there's an existing image, you might want to delete it first
-                     if (!string.IsNullOrEmpty(userToUpdate.ProfileImageUrl))
-                     {
-                         await _cloudinaryService.DeletePhotoAsync(userToUpdate.ProfileImageUrl);
-                     }
-
-                     var uploadResult = await _cloudinaryService.UploadImage(request.ProfileImage, "assistant-officers");
-                     if (uploadResult.IsSuccessful && uploadResult.Data.ContainsKey("Url"))
-                     {
-                         userToUpdate.ProfileImageUrl = uploadResult.Data["Url"];
-                     }
-                 }*//*
-                 userToUpdate.ProfileImageUrl = request.ProfileImage;
-                 // Update user with the detached entity
-                 var updateUserResult = await _userManager.UpdateAsync(userToUpdate);
-                 if (!updateUserResult.Succeeded)
-                 {
-                     await CreateAuditLog(
-                         "Update Failed",
-                         $"CorrelationId: {correlationId} - Failed to update user account",
-                         "Officer Management"
-                     );
-                     return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                         new Exception(string.Join(", ", updateUserResult.Errors.Select(e => e.Description))),
-                         "Failed to update user account");
-                 }*/
-
                 // Update Officer details
                 officer.UpdatedAt = DateTime.UtcNow;
 
@@ -4408,6 +4335,116 @@ namespace SabiMarket.Infrastructure.Services
                 _logger.LogError(ex, "Error deleting chairman: {ChairmanId} by admin: {AdminId}", chairmanId, adminId);
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while deleting the chairman");
             }
+        }
+
+        public async Task<BaseResponse<bool>> DeleteAssistCenterOfficerByAdmin(string officerId)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            var chairmanId = _currentUser.GetUserId();
+            try
+            {
+                // First verify the admin exists and has proper permissions
+                var chairman = await _repository.ChairmanRepository.GetChairmanByChairmanIdId(chairmanId, trackChanges: false);
+                if (chairman == null)
+                {
+                    await CreateAuditLog(
+                        "Assistant Officer Deletion Failed",
+                        $"CorrelationId: {correlationId} - Admin not found with ID: {chairmanId}",
+                        "Assistant Officer Management"
+                    );
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Admin not found"),
+                        "Admin not found");
+                }
+
+                // Check if admin has role management permissions
+           /*     if (!chairman.HasRoleManagementAccess)
+                {
+                    await CreateAuditLog(
+                        "Assistant Officer Deletion Failed",
+                        $"CorrelationId: {correlationId} - Admin does not have permission to manage roles: {chairmanId}",
+                        "Assistant Officer Management"
+                    );
+                    return ResponseFactory.Fail<bool>(
+                        new UnauthorizedException("Admin does not have permission to manage roles"),
+                        "Admin does not have permission to manage roles");
+                }
+*/
+                // Now get the assistant officer to delete
+                var assistOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(officerId, trackChanges: true);
+                if (assistOfficer == null)
+                {
+                    await CreateAuditLog(
+                        "Assistant Officer Deletion Failed",
+                        $"CorrelationId: {correlationId} - Assistant Officer not found with ID: {officerId}",
+                        "Assistant Officer Management"
+                    );
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Assistant Officer not found"),
+                        "Assistant Officer not found");
+                }
+
+                // Check if there are any dependencies before deletion
+                var hasActiveDependencies = await CheckAssistOfficerDependencies(assistOfficer);
+                if (hasActiveDependencies)
+                {
+                    await CreateAuditLog(
+                        "Assistant Officer Deletion Failed",
+                        $"CorrelationId: {correlationId} - Assistant Officer has active dependencies",
+                        "Assistant Officer Management"
+                    );
+                    // Uncomment if you want to prevent deletion when dependencies exist
+                    /*return ResponseFactory.Fail<bool>(
+                        new InvalidOperationException("Assistant Officer has active dependencies"),
+                        "Cannot delete Assistant Officer with active dependencies");*/
+                }
+
+                // Get associated user
+                var user = await _userManager.FindByIdAsync(assistOfficer.UserId);
+                if (user != null)
+                {
+                    // Remove assistant officer role from user
+                    await _userManager.RemoveFromRoleAsync(user, UserRoles.AssistOfficer);
+
+                    // Update user status if needed
+                    // user.IsActive = false;
+                    await _userManager.UpdateAsync(user);
+                }
+
+                // Delete assistant officer
+                _repository.AssistCenterOfficerRepository.DeleteAssistOfficer(assistOfficer);
+                await _repository.SaveChangesAsync();
+
+                await CreateAuditLog(
+                    "Assistant Officer Deleted",
+                    $"CorrelationId: {correlationId} - Admin {chairmanId} successfully deleted Assistant Officer with ID: {officerId}",
+                    "Assistant Officer Management"
+                );
+
+                return ResponseFactory.Success(true, "Assistant Officer deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Assistant Officer Deletion Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Assistant Officer Management"
+                );
+                _logger.LogError(ex, "Error deleting Assistant Officer: {OfficerId} by admin: {AdminId}", officerId, chairmanId);
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while deleting the Assistant Officer");
+            }
+        }
+
+        // Helper method to check for any dependencies
+        private async Task<bool> CheckAssistOfficerDependencies(AssistCenterOfficer assistOfficer)
+        {
+            // Check if officer has any active market assignments
+            var hasActiveAssignments = assistOfficer.MarketAssignments.Any(ma => ma.IsActive);
+
+            // Add any other dependency checks as needed
+            // For example, checking if the officer has any pending transactions, reports, etc.
+
+            return hasActiveAssignments;
         }
 
 

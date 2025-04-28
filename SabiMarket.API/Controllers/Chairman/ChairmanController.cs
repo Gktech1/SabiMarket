@@ -455,6 +455,21 @@ public class ChairmanController : ControllerBase
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
 
+    [HttpDelete("deleteassistofficer/{officerId}")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteAssistantOfficer(string officerId)
+    {
+        var response = await _chairmanService.DeleteAssistCenterOfficerByAdmin(officerId);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
+    }
+
     [HttpGet("chairman/{id}/reports")]
     [ProducesResponseType(typeof(BaseResponse<ReportResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<ReportResponseDto>), StatusCodes.Status500InternalServerError)]

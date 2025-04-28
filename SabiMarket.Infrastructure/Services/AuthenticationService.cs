@@ -530,7 +530,11 @@ namespace SabiMarket.Infrastructure.Services
             //{
             //    details.Add("localGovernmentId", user.LocalGovernmentId.Value);
             //}
-            if (user.LocalGovernmentId != null)
+            /* if (user.LocalGovernmentId != null)
+             {
+                 details.Add("localGovernmentId", user.LocalGovernmentId);
+             }*/
+            if (user.LocalGovernmentId != null && !details.ContainsKey("localGovernmentId"))
             {
                 details.Add("localGovernmentId", user.LocalGovernmentId);
             }

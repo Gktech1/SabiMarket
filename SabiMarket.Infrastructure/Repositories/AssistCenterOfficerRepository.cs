@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories;
+using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
@@ -123,6 +124,8 @@ namespace SabiMarket.Infrastructure.Repositories
             // Use the Paginate extension method
             return await orderedQuery.Paginate(paginationFilter);
         }
+
+        public void DeleteAssistOfficer(AssistCenterOfficer assistCenterOfficer) => Delete(assistCenterOfficer);
 
     }
 }
