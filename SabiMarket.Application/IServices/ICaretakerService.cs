@@ -1,4 +1,5 @@
 ﻿using SabiMarket.Application.DTOs;
+using SabiMarket.Application.DTOs.MarketParticipants;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 
@@ -31,5 +32,6 @@ namespace SabiMarket.Application.IServices
         //Task<BaseResponse<bool>> DeleteCaretakerByChairman(string caretakerId);
         Task<BaseResponse<bool>> DeleteCaretaker(string caretakerId);
         Task<BaseResponse<bool>> DeleteGoodBoyByCaretaker(string goodBoyId);
+        Task<BaseResponse<CaretakerResponseDto>> UpdateCaretaker(string caretakerId, UpdateCaretakerRequestDto request);
     }
 }

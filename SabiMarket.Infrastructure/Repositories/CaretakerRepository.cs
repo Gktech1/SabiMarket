@@ -199,6 +199,8 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public void CreateCaretaker(Caretaker caretaker) => Create(caretaker);
 
+        public void UpdateCaretaker(Caretaker updatecaretaker) => Update(updatecaretaker);
+
         public void DeleteCaretaker(Caretaker caretaker) => Delete(caretaker);
 
         /*public async Task<int> GetCaretakerCountAsync()

@@ -20,6 +20,7 @@ using SabiMarket.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SabiMarket.Application.DTOs.MarketParticipants;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -268,6 +269,187 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        public async Task<BaseResponse<CaretakerResponseDto>> UpdateCaretaker(string caretakerId, UpdateCaretakerRequestDto request)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            var userId = _currentUser.GetUserId();
+
+            try
+            {
+                await CreateAuditLog(
+                    "Caretaker Update",
+                    $"CorrelationId: {correlationId} - Updating caretaker with ID: {caretakerId}",
+                    "Caretaker Management"
+                );
+
+                // Get Chairman details (to verify authority)
+                var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                if (chairman == null)
+                {
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Chairman not found",
+                        "Caretaker Management"
+                    );
+                    return ResponseFactory.Fail<CaretakerResponseDto>(
+                        new BadRequestException("Chairman not found"),
+                        "Chairman not found");
+                }
+
+                // Get existing caretaker with market assignments
+                var caretaker = await _repository.CaretakerRepository.GetCaretakerById(caretakerId, false);
+                if (caretaker == null)
+                {
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Caretaker not found",
+                        "Caretaker Management"
+                    );
+                    return ResponseFactory.Fail<CaretakerResponseDto>(
+                        new NotFoundException($"Caretaker with ID {caretakerId} not found"),
+                        "Caretaker not found");
+                }
+
+                // Verify this chairman has authority over this caretaker
+                if (caretaker.ChairmanId != chairman.Id)
+                {
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Unauthorized access",
+                        "Caretaker Management"
+                    );
+                    return ResponseFactory.Fail<CaretakerResponseDto>(
+                        new UnauthorizedAccessException("You are not authorized to update this caretaker"),
+                        "Unauthorized access");
+                }
+
+                // Get the actual user that EF is tracking
+                var actualUser = await _userManager.FindByIdAsync(caretaker.UserId);
+                if (actualUser == null)
+                {
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Associated user not found",
+                        "Caretaker Management"
+                    );
+                    return ResponseFactory.Fail<CaretakerResponseDto>(
+                        new NotFoundException("Associated user account not found"),
+                        "User not found");
+                }
+
+                // Apply updates to the tracked entity
+                if (!string.IsNullOrEmpty(request?.FullName) && request?.FullName != "string")
+                {
+                    var nameParts = request.FullName.Split(' ');
+                    actualUser.FirstName = nameParts.Length > 0 ? nameParts[0] : actualUser.FirstName;
+                    actualUser.LastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : actualUser.LastName;
+                }
+
+                if (!string.IsNullOrEmpty(request?.Email) && request?.Email != "string")
+                {
+                    actualUser.Email = request.Email;
+                    actualUser.UserName = request.Email; // Update username to match email
+                    actualUser.NormalizedEmail = request.Email.ToUpper();
+                    actualUser.NormalizedUserName = request.Email.ToUpper();
+                }
+
+                if (!string.IsNullOrEmpty(request?.PhoneNumber) && request?.PhoneNumber != "string")
+                {
+                    actualUser.PhoneNumber = request.PhoneNumber;
+                }
+
+                if (!string.IsNullOrEmpty(request?.Gender) && request?.Gender != "string")
+                {
+                    actualUser.Gender = request.Gender;
+                }
+
+                if (request?.ProfileImage != null && request?.ProfileImage != "string")
+                {
+                    actualUser.ProfileImageUrl = request.ProfileImage;
+                }
+
+                // Update the tracked entity
+                var updateUserResult = await _userManager.UpdateAsync(actualUser);
+                if (!updateUserResult.Succeeded)
+                {
+                    await CreateAuditLog(
+                        "Update Failed",
+                        $"CorrelationId: {correlationId} - Failed to update user account",
+                        "Caretaker Management"
+                    );
+                    return ResponseFactory.Fail<CaretakerResponseDto>(
+                        new Exception(string.Join(", ", updateUserResult.Errors.Select(e => e.Description))),
+                        "Failed to update user account");
+                }
+
+                // Update Caretaker details
+                caretaker.UpdatedAt = DateTime.UtcNow;
+
+                // Handle market assignment
+                if (!string.IsNullOrEmpty(request?.MarketId) && request.MarketId != "string")
+                {
+                    // Validate that market exists and belongs to chairman's LG
+                    var market = await _repository.MarketRepository.GetMarketByIdAsync(request.MarketId, false);
+                    if (market != null && market.LocalGovernmentId == chairman.LocalGovernmentId)
+                    {
+                        caretaker.MarketId = request.MarketId;
+                        // Update Local Government ID based on the market
+                        caretaker.LocalGovernmentId = market.LocalGovernmentId;
+                    }
+                    else
+                    {
+                        await CreateAuditLog(
+                            "Update Warning",
+                            $"CorrelationId: {correlationId} - Market not found or not in chairman's jurisdiction",
+                            "Caretaker Management"
+                        );
+                        // We don't fail the request, just log the warning
+                    }
+                }
+
+                if (caretaker.User != null)
+                {
+                    caretaker.User = null;  // Remove the ApplicationUser from caretaker to avoid tracking conflict
+                }
+
+                _repository.CaretakerRepository.UpdateCaretaker(caretaker);
+                await _repository.SaveChangesAsync();
+
+                // Get updated caretaker with market details for response
+                var updatedCaretaker = await _repository.CaretakerRepository.GetCaretakerById(caretakerId, false);
+
+                // Get fresh user data after all updates
+                var updatedUser = await _userManager.FindByIdAsync(caretaker.UserId);
+
+                // Map response
+                var response = _mapper.Map<CaretakerResponseDto>(updatedCaretaker);
+                //response.FullName = $"{updatedUser.FirstName} {updatedUser.LastName}".Trim();
+                response.FirstName = updatedUser.FirstName;
+                response.LastName = updatedUser.LastName;
+                response.Email = updatedUser.Email;
+                response.PhoneNumber = updatedUser.PhoneNumber;
+                response.Gender = updatedUser.Gender;
+                response.ProfileImageUrl = updatedUser.ProfileImageUrl;
+
+                await CreateAuditLog(
+                    "Caretaker Updated",
+                    $"CorrelationId: {correlationId} - Caretaker updated successfully with ID: {caretaker.Id}",
+                    "Caretaker Management"
+                );
+
+                return ResponseFactory.Success(response, "Caretaker updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating caretaker");
+                await CreateAuditLog(
+                    "Update Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Caretaker Management"
+                );
+                return ResponseFactory.Fail<CaretakerResponseDto>(ex, "An unexpected error occurred");
+            }
+        }
         public async Task<BaseResponse<bool>> DeleteCaretaker(string caretakerId)
         {
             try
@@ -764,6 +946,7 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<LevyPaymentResponseDto>(ex, "An unexpected error occurred");
             }
         }
+
 
         // GoodBoy Management
         public async Task<BaseResponse<GoodBoyResponseDto>> CreateGoodBoy(string caretakerId, CreateGoodBoyDto request)

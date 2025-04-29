@@ -7,6 +7,8 @@ using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
 using SabiMarket.Infrastructure.Services;
 using SabiMarket.Application.Interfaces;
+using SabiMarket.Application.DTOs.MarketParticipants;
+using SabiMarket.Domain.Exceptions;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -26,7 +28,7 @@ public class CaretakerController : ControllerBase
     }
 
     [HttpPost("createcaretaker")]
-    [Authorize(Policy = PolicyNames.RequireMarketManagement)] 
+    [Authorize(Policy = PolicyNames.RequireMarketManagement)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status500InternalServerError)]
@@ -34,6 +36,36 @@ public class CaretakerController : ControllerBase
     {
         var response = await _caretakerService.CreateCaretaker(request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+    /// <summary>
+    /// Update an existing caretaker
+    /// </summary>
+    /// <param name="caretakerId">ID of the caretaker to update</param>
+    /// <param name="request">Updated caretaker data</param>
+    /// <returns>Updated caretaker details</returns>
+    [HttpPut("update-caretakers/{caretakerId}")]
+    [Authorize(Policy = PolicyNames.RequireMarketManagement)]
+    [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateCaretaker(string caretakerId, [FromBody] UpdateCaretakerRequestDto request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var response = await _caretakerService.UpdateCaretaker(caretakerId, request);
+
+        if (!response.IsSuccessful)
+        {
+            if (response.Error is NotFoundException)
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
+
+        return Ok(response);
     }
 
     [HttpDelete("delete-caretaker/{caretakerId}")]

@@ -16,6 +16,8 @@
 
         public string PhoneNumber { get; set; } 
 
+        public string? Gender { get; set; }  
+
         public string ProfileImageUrl { get; set; } 
 
         public string DefaultPassword { get; set; }    

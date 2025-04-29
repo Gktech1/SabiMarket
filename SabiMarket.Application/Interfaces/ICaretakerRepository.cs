@@ -17,6 +17,7 @@ namespace SabiMarket.Application.Interfaces
            string chairmanId, PaginationFilter paginationFilter, bool trackChanges);
         Task<PaginatorDto<IEnumerable<GoodBoy>>> GetGoodBoys(string caretakerId, PaginationFilter paginationFilter, bool trackChanges);
         void CreateCaretaker(Caretaker caretaker);
+        void UpdateCaretaker(Caretaker updatecaretaker);
         void DeleteCaretaker(Caretaker caretaker);
         Task<int> GetCaretakerCountAsync(DateTime? startDate = null, DateTime? endDate = null);
         Task<IEnumerable<Caretaker>> GetAllCaretakers(bool trackChanges);
