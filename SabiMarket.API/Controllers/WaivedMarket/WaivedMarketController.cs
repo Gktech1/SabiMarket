@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
 using SabiMarket.API.ServiceExtensions;
 using SabiMarket.Application.DTOs;
+using SabiMarket.Application.DTOs.PaymentsDto;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Interfaces;
+using SabiMarket.Infrastructure.Services;
 
 namespace SabiMarket.API.Controllers.WaivedMarket
 {
@@ -18,10 +20,12 @@ namespace SabiMarket.API.Controllers.WaivedMarket
     {
         private readonly IServiceManager _serviceManager;
         private readonly ICloudinaryService _cloudinaryService;
-        public WaivedMarketController(IServiceManager serviceManager, ICloudinaryService cloudinaryService)
+        private readonly IPayments _paymentService;
+        public WaivedMarketController(IServiceManager serviceManager, ICloudinaryService cloudinaryService, IPayments paymentService)
         {
             _serviceManager = serviceManager;
             _cloudinaryService = cloudinaryService;
+            _paymentService = paymentService;
         }
 
         [HttpGet("GetWaivedProductById")]
@@ -638,6 +642,42 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetNextWaiveMarketDate()
         {
             var response = await _serviceManager.IWaivedProductService.GetNextWaiveMarketDate();
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPost("MakePaymentWithPaystack")]
+        public async Task<IActionResult> MakePaymentWithPaystack(FundWalletVM fund, string userId)
+        {
+            var response = await _paymentService.Initialize(fund, userId);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPost("VerifyPaymentWithPaystack")]
+        public async Task<IActionResult> VerifyPaymentWithPaystack(string paymentRef)
+        {
+            var response = await _paymentService.Verify(paymentRef);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
