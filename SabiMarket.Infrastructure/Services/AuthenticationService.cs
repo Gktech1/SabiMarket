@@ -453,11 +453,11 @@ namespace SabiMarket.Infrastructure.Services
                     if (user.Trader != null)
                     {
                         details.Add("traderId", user.Trader.Id);
-                        details.Add("businessName", user.Trader.BusinessName);
-                        details.Add("businessName", user.Trader.TIN);
-                        details.Add("businessName", user.Trader.BusinessType);
-                        details.Add("businessName", user.Trader.MarketId);
-                        details.Add("businessName", user.Trader.CaretakerId);
+                        details.Add("traderbusinessName", user.Trader.BusinessName);
+                        details.Add("traderbusinessName", user.Trader.TIN);
+                        details.Add("businessType", user.Trader.BusinessType);
+                        details.Add("traderMarketId", user.Trader.MarketId);
+                        details.Add("traderCaretakerId", user.Trader.CaretakerId);
 
                     }
                     break;
@@ -467,11 +467,11 @@ namespace SabiMarket.Infrastructure.Services
                     {
                         details.Add("vendorId", user.Vendor.Id);
                         details.Add("businessName", user.Vendor.BusinessName);
-                        details.Add("businessType", user.Vendor.BusinessDescription);
-                        details.Add("businessType", user.Vendor.BusinessAddress);
-                        details.Add("businessType", user.AssistCenterOfficer.LocalGovernmentId);
-                        details.Add("businessType", user.AssistCenterOfficer.ChairmanId);
-                        details.Add("businessType", user.AssistCenterOfficer.MarketId);
+                        details.Add("businessDescription", user.Vendor.BusinessDescription);
+                        details.Add("businessAddress", user.Vendor.BusinessAddress);
+                        details.Add("vendorLocalGovernmentId", user.Vendor.LocalGovernmentId);
+                        details.Add("vendorIsSubscriptionActive", user.Vendor.IsSubscriptionActive);
+                        details.Add("VendorAdvertisements", user.Vendor.Advertisements);
                     }
                     break;
 
@@ -479,9 +479,9 @@ namespace SabiMarket.Infrastructure.Services
                     if (user.Customer != null)
                     {
                         details.Add("customerId", user.Customer.Id);
-                        details.Add("customerId", user.Customer.LocalGovernmentId);
-                        details.Add("customerType", user.Customer.LocalGovernment);
-                        details.Add("preferredMarket", user.Customer.FullName);
+                        details.Add("CustomerLocalGovernmentId", user.Customer.LocalGovernmentId);
+                        details.Add("LGA", user.Customer.LocalGovernment.Name);
+                        details.Add("fullname", user.Customer.FullName);
                     }
                     break;
 
@@ -489,9 +489,9 @@ namespace SabiMarket.Infrastructure.Services
                     if (user.GoodBoy != null)
                     {
                         details.Add("goodBoyId", user.GoodBoy.Id);
-                        details.Add("goodBoyId", user.GoodBoy.Status);
-                        details.Add("goodBoyId", user.GoodBoy?.CaretakerId);
-                        details.Add("goodBoyId", user.GoodBoy.MarketId);
+                        details.Add("Status", user.GoodBoy.Status);
+                        details.Add("GoodBoyCaretakerId", user.GoodBoy?.CaretakerId);
+                        details.Add("goodBoyIdMarketId", user.GoodBoy.MarketId);
 
                     }
                     break;
@@ -514,11 +514,11 @@ namespace SabiMarket.Infrastructure.Services
                     if (user.AssistCenterOfficer != null)
                     {
                         details.Add("officerId", user.AssistCenterOfficer.Id);
-                        details.Add("officerId", user.AssistCenterOfficer.ChairmanId);
-                        details.Add("officerId", user.AssistCenterOfficer.LocalGovernmentId);
-                        details.Add("officerId", user.AssistCenterOfficer?.MarketId);
-                        details.Add("officerId", user.AssistCenterOfficer.IsActive);
-                        details.Add("officerId", user.AssistCenterOfficer.IsBlocked);
+                        details.Add("assistCenterOfficerChairmanId", user.AssistCenterOfficer.ChairmanId);
+                        details.Add("assistCenterOfficerLocalGovernmentId", user.AssistCenterOfficer.LocalGovernmentId);
+                        details.Add("assistCenterOfficerMarketId", user.AssistCenterOfficer?.MarketId);
+                        details.Add("assistCenterOfficerIsActive", user.AssistCenterOfficer.IsActive);
+                        details.Add("assistCenterOfficerIsBlocked", user.AssistCenterOfficer.IsBlocked);
                     }
                     break;
 
