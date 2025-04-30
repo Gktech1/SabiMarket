@@ -22,5 +22,6 @@ namespace SabiMarket.Application.Interfaces
               string searchTerm,
               PaginationFilter paginationFilter,
               bool trackChanges);
+        void DeleteAssistOfficer(AssistCenterOfficer assistCenterOfficer);
     }
 }

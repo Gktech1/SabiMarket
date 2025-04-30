@@ -388,12 +388,11 @@ public class ChairmanController : ControllerBase
     /// </summary>
     /// <param name="request">Assistant officer creation details</param>
     /// <returns>Created assistant officer details including default password</returns>
-    [HttpPost("create-assistant-officer")]
-    [Consumes("multipart/form-data")]
+    [HttpPost("createassistant-officer")]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> CreateAssistantOfficer([FromForm] CreateAssistantOfficerRequestDto request)
+    public async Task<IActionResult> CreateAssistantOfficer([FromBody] CreateAssistantOfficerRequestDto request)
     {
         var response = await _chairmanService.CreateAssistantOfficer(request);
         return response.IsSuccessful ? Ok(response) : BadRequest(response);
@@ -406,12 +405,11 @@ public class ChairmanController : ControllerBase
     /// <param name="request">Assistant officer update details</param>
     /// <returns>Updated assistant officer details</returns>
     [HttpPut("updateassistant-officer/{officerId}")]
-    [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> UpdateAssistantOfficer(string officerId, [FromForm] UpdateAssistantOfficerRequestDto request)
+    public async Task<IActionResult> UpdateAssistantOfficer(string officerId, [FromBody] UpdateAssistantOfficerRequestDto request)
     {
         var response = await _chairmanService.UpdateAssistantOfficer(officerId, request);
         return response.IsSuccessful ? Ok(response) : BadRequest(response);
@@ -455,6 +453,21 @@ public class ChairmanController : ControllerBase
     {
         var response = await _chairmanService.BlockAssistantOfficer(officerid);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+    [HttpDelete("deleteassistofficer/{officerId}")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteAssistantOfficer(string officerId)
+    {
+        var response = await _chairmanService.DeleteAssistCenterOfficerByAdmin(officerId);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
     }
 
     [HttpGet("chairman/{id}/reports")]

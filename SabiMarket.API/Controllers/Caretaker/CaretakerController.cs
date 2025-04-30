@@ -6,6 +6,7 @@ using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
 using SabiMarket.Infrastructure.Services;
+using SabiMarket.Application.Interfaces;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -164,5 +165,20 @@ public class CaretakerController : ControllerBase
     {
         var response = await _caretakerService.BlockGoodBoy(caretakerId, goodBoyId);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+    [HttpDelete("deletegoodboy{goodBoyId}")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteGoodBoy(string goodBoyId)
+    {
+        var response = await _caretakerService.DeleteGoodBoyByCaretaker(goodBoyId);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
     }
 }

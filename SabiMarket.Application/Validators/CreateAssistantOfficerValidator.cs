@@ -30,9 +30,9 @@ namespace SabiMarket.Application.Validators
                 .When(x => x.MarketIds != null && x.MarketIds.Count > 0);
 
             // ProfileImage validation - if provided, check file size and type
-            RuleFor(x => x.ProfileImage)
+           /* RuleFor(x => x.ProfileImage)
                 .Must(BeValidImage).WithMessage("Profile image must be JPG, JPEG, or PNG and less than 2MB")
-                .When(x => x.ProfileImage != null);
+                .When(x => x.ProfileImage != null);*/
         }
 
         private bool BeValidImage(IFormFile file)
@@ -76,9 +76,9 @@ namespace SabiMarket.Application.Validators
                 .When(x => x.MarketIds != null && x.MarketIds.Count > 0);
 
             // ProfileImage validation - if provided, check file size and type
-            RuleFor(x => x.ProfileImage)
+            /*RuleFor(x => x.ProfileImage)
                 .Must(BeValidImage).WithMessage("Profile image must be JPG, JPEG, or PNG and less than 2MB")
-                .When(x => x.ProfileImage != null);
+                .When(x => x.ProfileImage != null);*/
         }
 
         private bool BeValidImage(IFormFile file)

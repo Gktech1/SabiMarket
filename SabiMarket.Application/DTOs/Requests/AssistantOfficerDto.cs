@@ -21,7 +21,7 @@ namespace SabiMarket.Application.DTOs
         public string PhoneNumber { get; set; }
         public string Gender { get; set; }
         public List<string> MarketIds { get; set; } = new List<string>();
-        public IFormFile ProfileImage { get; set; }
+        public string ProfileImage { get; set; }
     }
 
     public class UpdateAssistantOfficerRequestDto
@@ -31,7 +31,7 @@ namespace SabiMarket.Application.DTOs
         public string? PhoneNumber { get; set; }
         public string? Gender { get; set; }
         public List<string> MarketIds { get; set; } = new List<string>();
-        public IFormFile ProfileImage { get; set; }
+        public string ProfileImage { get; set; }
     }
 
 

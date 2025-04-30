@@ -134,7 +134,7 @@ namespace SabiMarket.Infrastructure.Services
                             TotalTraders = primaryMarket.TotalTraders,
                             Capacity = primaryMarket.Capacity,
                             //ContactPhone = primaryMarket.ContactPhone,
-                           // ContactEmail = primaryMarket.ContactEmail,
+                            // ContactEmail = primaryMarket.ContactEmail,
                             CreatedAt = primaryMarket.CreatedAt,
                             UpdatedAt = primaryMarket.UpdatedAt,
                             CaretakerId = primaryMarket.CaretakerId
@@ -150,28 +150,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<CaretakerResponseDto>(ex, "An unexpected error occurred");
             }
         }
-        /* public async Task<BaseResponse<CaretakerResponseDto>> GetCaretakerById(string userId)
-         {
-             try
-             {
-                 var caretaker = await _repository.CaretakerRepository.GetCaretakerById(userId, trackChanges: false);
-                 if (caretaker == null)
-                 {
-                     return ResponseFactory.Fail<CaretakerResponseDto>(
-                         new NotFoundException("Caretaker not found"),
-                         "Caretaker not found");
-                 }
-
-                 var caretakerDto = _mapper.Map<CaretakerResponseDto>(caretaker);
-                 return ResponseFactory.Success(caretakerDto, "Caretaker retrieved successfully");
-             }
-             catch (Exception ex)
-             {
-                 _logger.LogError(ex, "Error retrieving caretaker");
-                 return ResponseFactory.Fail<CaretakerResponseDto>(ex, "An unexpected error occurred");
-             }
-         }
- */
         public async Task<BaseResponse<CaretakerResponseDto>> CreateCaretaker(CaretakerForCreationRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -266,7 +244,7 @@ namespace SabiMarket.Infrastructure.Services
                     MarketId = request.MarketId,
                     ChairmanId = chairman.Id,  // Set the ChairmanId here
                     LocalGovernmentId = request.LocalGovernmentId,
-                    IsBlocked = false, 
+                    IsBlocked = false,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     User = user
@@ -376,7 +354,7 @@ namespace SabiMarket.Infrastructure.Services
                             var auditLogs = await _repository.AuditLogRepository
                                         .FindByCondition(al => al.UserId == user.Id, trackChanges: false) // Add trackChanges parameter
                                         .ToListAsync();
-                            
+
 
                             if (auditLogs.Any())
                             {
@@ -432,223 +410,9 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while deleting the caretaker");
             }
         }
-    
-
-    /*   public async Task<BaseResponse<bool>> DeleteCaretaker(string caretakerId)
-       {
-           try
-           {
-               // Verify caretaker exists
-               var caretaker = await _repository.CaretakerRepository
-                   .GetCaretakerById(caretakerId, trackChanges: false);
-
-               if (caretaker == null)
-               {
-                   return ResponseFactory.Fail<bool>(
-                       new NotFoundException("Caretaker not found"),
-                       "Caretaker not found");
-               }
-
-               // Create audit log for the operation
-               await CreateAuditLog(
-                   "Caretaker Deletion",
-                   $"Deleting caretaker with ID: {caretakerId}",
-                   "Caretaker Management"
-               );
-
-               // Start transaction to ensure all operations succeed or fail together
-               using (var transaction = await _repository.BeginTransactionAsync())
-               {
-                   try
-                   {
-                       // 1. First, get and remove all GoodBoys associated with this caretaker
-                       var goodBoys = await _repository.GoodBoyRepository
-                           .FindByCondition(g => g.CaretakerId == caretakerId, trackChanges: false)
-                           .ToListAsync();
-
-                       if (goodBoys.Any())
-                       {
-                           _logger.LogInformation($"Removing {goodBoys.Count} GoodBoys associated with caretaker {caretakerId}");
-                           foreach (var goodBoy in goodBoys)
-                           {
-                               _repository.GoodBoyRepository.DeleteGoodBoy(goodBoy);
-                           }
-
-                           // Save changes after removing GoodBoys to release foreign key constraints
-                           await _repository.SaveChangesAsync();
-                       }
-
-                       // 2. Find and remove any Traders associated with this caretaker
-                       var traders = await _repository.TraderRepository
-                           .FindByCondition(t => t.CaretakerId == caretakerId, trackChanges: false)
-                           .ToListAsync();
-
-                       if (traders.Any())
-                       {
-                           _logger.LogInformation($"Removing {traders.Count} Traders associated with caretaker {caretakerId}");
-                           foreach (var trader in traders)
-                           {
-                               _repository.TraderRepository.DeleteTrader(trader);
-                           }
-
-                           await _repository.SaveChangesAsync();
-                       }
-
-                       // 3. Remove any other dependencies if they exist
-                       // (Add similar code blocks for other entities as needed)
-
-                       // 4. Finally, delete the caretaker
-                       _repository.CaretakerRepository.DeleteCaretaker(caretaker);
-                       await _repository.SaveChangesAsync();
-
-                       // 5. Commit the transaction
-                       await transaction.CommitAsync();
-
-                       await CreateAuditLog(
-                           "Caretaker Deleted",
-                           $"Successfully deleted caretaker with ID: {caretakerId}",
-                           "Caretaker Management"
-                       );
-
-                       return ResponseFactory.Success(true, "Caretaker and related entities successfully deleted");
-                   }
-                   catch (Exception ex)
-                   {
-                       // If anything fails, roll back the transaction
-                       await transaction.RollbackAsync();
-                       _logger.LogError(ex, $"Error during transaction when deleting caretaker {caretakerId}");
-
-                       await CreateAuditLog(
-                           "Deletion Failed",
-                           $"Failed to delete caretaker with ID: {caretakerId}. Error: {ex.Message}",
-                           "Caretaker Management"
-                       );
-
-                       throw; // Re-throw to be handled by the outer catch block
-                   }
-               }
-           }
-           catch (Exception ex)
-           {
-               _logger.LogError(ex, $"Error deleting caretaker with ID: {caretakerId}");
-               return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while deleting the caretaker");
-           }
-       }
-*/
-
-    /*     public async Task<BaseResponse<bool>> DeleteCaretakerByChairman(string caretakerId)
-         {
-             var correlationId = Guid.NewGuid().ToString();
-             var chairmanId = _currentUser.GetUserId();
-             try
-             {
-                 // First verify the chairman exists and has proper permissions
-                 var chairman = await _repository.ChairmanRepository.GetChairmanByUserId(chairmanId, trackChanges: false);
-                 if (chairman == null)
-                 {
-                     await CreateAuditLog(
-                         "Caretaker Deletion Failed",
-                         $"CorrelationId: {correlationId} - Chairman not found with ID: {chairmanId}",
-                         "Caretaker Management"
-                     );
-                     return ResponseFactory.Fail<bool>(
-                         new NotFoundException("Chairman not found"),
-                         "Chairman not found");
-                 }
-
-                 // Now get the caretaker to delete
-                 var caretaker = await _repository.CaretakerRepository.GetCaretakerById(caretakerId, trackChanges: true);
-                 if (caretaker == null)
-                 {
-                     await CreateAuditLog(
-                         "Caretaker Deletion Failed",
-                         $"CorrelationId: {correlationId} - Caretaker not found with ID: {caretakerId}",
-                         "Caretaker Management"
-                     );
-                     return ResponseFactory.Fail<bool>(
-                         new NotFoundException("Caretaker not found"),
-                         "Caretaker not found");
-                 }
-
-                 // Verify the caretaker belongs to the chairman's local government
-                 if (caretaker.LocalGovernmentId != chairman.LocalGovernmentId)
-                 {
-                     await CreateAuditLog(
-                         "Caretaker Deletion Failed",
-                         $"CorrelationId: {correlationId} - Caretaker does not belong to chairman's local government",
-                         "Caretaker Management"
-                     );
-                     return ResponseFactory.Fail<bool>(
-                         new UnauthorizedException("You are not authorized to delete this caretaker"),
-                         "Unauthorized caretaker deletion");
-                 }
-
-                 // Check if there are any dependencies before deletion
-                 *//*var hasActiveDependencies = await CheckCaretakerDependencies(caretaker);
-                 if (hasActiveDependencies)
-                 {
-                     await CreateAuditLog(
-                         "Caretaker Deletion Failed",
-                         $"CorrelationId: {correlationId} - Caretaker has active dependencies",
-                         "Caretaker Management"
-                     );
-                     return ResponseFactory.Fail<bool>(
-                         new InvalidOperationException("Caretaker has active dependencies"),
-                         "Cannot delete caretaker with active dependencies");
-                 }
- *//*
-                 // Get associated user
-                 var user = await _userManager.FindByIdAsync(caretaker.UserId);
-                 if (user != null)
-                 {
-                     // Remove caretaker role from user
-                     await _userManager.RemoveFromRoleAsync(user, UserRoles.Caretaker);
-
-                     // Update user status
-                     user.IsActive = false;
-                     await _userManager.UpdateAsync(user);
-                 }
-                 // First delete any associated GoodBoy records
-                 var goodBoys = await _repository.GoodBoyRepository
-                     .FindByCondition(g => g.CaretakerId == caretakerId, trackChanges: false)
-                     .ToListAsync();
-
-                 foreach (var goodBoy in goodBoys)
-                 {
-                     _repository.GoodBoyRepository.DeleteGoodBoy(goodBoy);
-                 }
-
-                 // Then delete the caretaker
-                 _repository.CaretakerRepository.DeleteCaretaker(caretaker);
-                 await _repository.SaveChangesAsync();
-
-                 // Delete caretaker
-                 _repository.CaretakerRepository.DeleteCaretaker(caretaker);
-                 await _repository.SaveChangesAsync();
-
-                 await CreateAuditLog(
-                     "Caretaker Deleted",
-                     $"CorrelationId: {correlationId} - Chairman {chairmanId} successfully deleted caretaker with ID: {caretakerId}",
-                     "Caretaker Management"
-                 );
-
-                 return ResponseFactory.Success(true, "Caretaker deleted successfully");
-             }
-             catch (Exception ex)
-             {
-                 await CreateAuditLog(
-                     "Caretaker Deletion Failed",
-                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                     "Caretaker Management"
-                 );
-                 _logger.LogError(ex, "Error deleting caretaker: {CaretakerId} by chairman: {ChairmanId}", caretakerId, chairmanId);
-                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while deleting the caretaker");
-             }
-         }
- */
 
 
-    private async Task<bool> CheckCaretakerDependencies(Caretaker caretaker)
+        private async Task<bool> CheckCaretakerDependencies(Caretaker caretaker)
         {
             // Check for active marketsm => m.CaretakerId == caretaker.Id, false)
 
@@ -669,166 +433,6 @@ namespace SabiMarket.Infrastructure.Services
             // If any active dependencies exist, return true
             return activeMarkets > 0 || activeGoodBoys > 0 || activeTraders > 0;
         }
-
-        /* public async Task<BaseResponse<CaretakerResponseDto>> CreateCaretaker(CaretakerForCreationRequestDto request)
-         {
-             var correlationId = Guid.NewGuid().ToString();
-             var userId = _currentUser.GetUserId();
-             try
-             {
-                 await CreateAuditLog(
-                     "Caretaker Creation",
-                     $"CorrelationId: {correlationId} - Creating new caretaker: {request.FullName}",
-                     "Caretaker Management"
-                 );
-
-                 // Validate request
-                 var validationResult = await _createCaretakerValidator.ValidateAsync(request);
-                 if (!validationResult.IsValid)
-                 {
-                     await CreateAuditLog(
-                         "Creation Failed",
-                         $"CorrelationId: {correlationId} - Validation failed",
-                         "Caretaker Management"
-                     );
-                     return ResponseFactory.Fail<CaretakerResponseDto>(
-                         new ValidationException(validationResult.Errors),
-                         "Validation failed"
-                     );
-                 }
-
-                 // Check if user already exists by email
-                 var existingUser = await _userManager.FindByEmailAsync(request.EmailAddress);
-                 if (existingUser != null)
-                 {
-                     await CreateAuditLog(
-                         "Creation Failed",
-                         $"CorrelationId: {correlationId} - Email already registered",
-                         "Caretaker Management"
-                     );
-                     return ResponseFactory.Fail<CaretakerResponseDto>(
-                         new BadRequestException("Email address is already registered"),
-                         "Email already exists"
-                     );
-                 }
-
-                 // Check if the market already has a caretaker
-                 var existingCaretaker = await _repository.CaretakerRepository.CaretakerExists(userId, request.MarketId);
-                 if (existingCaretaker)
-                 {
-                     await CreateAuditLog(
-                         "Creation Failed",
-                         $"CorrelationId: {correlationId} - Market already has a caretaker",
-                         "Caretaker Management"
-                     );
-                     return ResponseFactory.Fail<CaretakerResponseDto>(
-                         new BadRequestException("Market already has an assigned caretaker"),
-                         "Caretaker already exists for this market"
-                     );
-                 }
-
-                 // Create ApplicationUser
-                 var defaultPassword = GenerateDefaultPassword(request.FullName);
-                 var user = new ApplicationUser
-                 {
-                     Id = Guid.NewGuid().ToString(),
-                     UserName = request.EmailAddress,
-                     Email = request.EmailAddress,
-                     PhoneNumber = request.PhoneNumber,
-                     FirstName = request.FullName.Split(' ')[0],
-                     LastName = request.FullName.Split(' ').Length > 1 ? string.Join(" ", request.FullName.Split(' ').Skip(1)) : "",
-                     EmailConfirmed = true,
-                     IsActive = true,
-                     CreatedAt = DateTime.UtcNow,
-                     Gender = request.Gender,
-                     ProfileImageUrl = "",
-                     LocalGovernmentId = request.LocalGovernmentId
-                 };
-
-                 var createUserResult = await _userManager.CreateAsync(user, defaultPassword);
-                 if (!createUserResult.Succeeded)
-                 {
-                     await CreateAuditLog(
-                         "Creation Failed",
-                         $"CorrelationId: {correlationId} - Failed to create user account",
-                         "Caretaker Management"
-                     );
-                     return ResponseFactory.Fail<CaretakerResponseDto>(
-                         new Exception(string.Join(", ", createUserResult.Errors.Select(e => e.Description))),
-                         "Failed to create user account"
-                     );
-                 }
-
-                 // Assign role
-                 var roleResult = await _userManager.AddToRoleAsync(user, UserRoles.Caretaker);
-                 if (!roleResult.Succeeded)
-                 {
-                     // Rollback user creation if role assignment fails
-                     await _userManager.DeleteAsync(user);
-                     await CreateAuditLog(
-                         "Creation Failed",
-                         $"CorrelationId: {correlationId} - Failed to assign caretaker role",
-                         "Caretaker Management"
-                     );
-                     return ResponseFactory.Fail<CaretakerResponseDto>(
-                         new Exception("Failed to assign caretaker role"),
-                         "Role assignment failed"
-                     );
-                 }
-
-                 // Ensure ChairmanId exists in the database
-                 var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
-                 if (chairman == null)
-                 {
-                     await CreateAuditLog(
-                         "Creation Failed",
-                         $"CorrelationId: {correlationId} - Chairman not found with Id: {userId}",
-                         "Caretaker Management"
-                     );
-                     return ResponseFactory.Fail<CaretakerResponseDto>(new NotFoundException("Chairman not found"), "Chairman does not exist");
-                 }
-
-                 // Create Caretaker entity
-                 var caretaker = new Caretaker
-                 {
-                     Id = Guid.NewGuid().ToString(),
-                     UserId = user.Id,
-                     MarketId = request.MarketId,
-                     ChairmanId = chairman.Id,  // Ensure ChairmanId exists
-                     LocalGovernmentId = request.LocalGovernmentId,
-                     IsBlocked = false,
-                     CreatedAt = DateTime.UtcNow,
-                     User = user
-                 };
-
-                 _repository.CaretakerRepository.CreateCaretaker(caretaker);
-                 await _repository.SaveChangesAsync();
-
-                 // Map response
-                 var response = _mapper.Map<CaretakerResponseDto>(caretaker);
-                 response.DefaultPassword = defaultPassword;
-
-                 await CreateAuditLog(
-                     "Caretaker Created",
-                     $"CorrelationId: {correlationId} - Caretaker created successfully with ID: {caretaker.Id}",
-                     "Caretaker Management"
-                 );
-
-                 return ResponseFactory.Success(response,
-                     "Caretaker created successfully. Please note down the default password.");
-             }
-             catch (Exception ex)
-             {
-                 _logger.LogError(ex, "Error creating caretaker");
-                 await CreateAuditLog(
-                     "Creation Failed",
-                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                     "Caretaker Management"
-                 );
-                 return ResponseFactory.Fail<CaretakerResponseDto>(ex, "An unexpected error occurred");
-             }
-         }
- */
 
         private string GenerateDefaultPassword(string fullName)
         {
@@ -915,34 +519,6 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-
-        /*  public async Task<BaseResponse<CaretakerResponseDto>> CreateCaretaker(CaretakerForCreationRequestDto caretakerDto)
-          {
-              try
-              {
-                  var userId = _currentUser.GetUserId();
-                  var exists = await _repository.CaretakerRepository.CaretakerExists(userId, caretakerDto.MarketId);
-                  if (exists)
-                  {
-                      return ResponseFactory.Fail<CaretakerResponseDto>(
-                          new BadRequestException("Caretaker already exists for this market"),
-                          "Caretaker already exists");
-                  }
-
-                  var caretaker = _mapper.Map<Caretaker>(caretakerDto);
-                  _repository.CaretakerRepository.CreateCaretaker(caretaker);
-                  await _repository.SaveChangesAsync();
-
-                  var createdCaretaker = _mapper.Map<CaretakerResponseDto>(caretaker);
-                  return ResponseFactory.Success(createdCaretaker, "Caretaker created successfully");
-              }
-              catch (Exception ex)
-              {
-                  _logger.LogError(ex, "Error creating caretaker");
-                  return ResponseFactory.Fail<CaretakerResponseDto>(ex, "An unexpected error occurred");
-              }
-          }
-  */
 
         //Recent on Caretaker 
         /*  public async Task<BaseResponse<PaginatorDto<IEnumerable<CaretakerResponseDto>>>> GetCaretakers(
@@ -1426,23 +1002,23 @@ namespace SabiMarket.Infrastructure.Services
                     userToUpdate.Gender = request.Gender;
                 }
 
-             /*   // Handle profile image update if provided
-                var profileImage = request.GetProfileImage();
-                if (profileImage != null)
-                {
-                    // If there's an existing image, delete it first
-                    if (!string.IsNullOrEmpty(userToUpdate.ProfileImageUrl))
-                    {
-                        await _cloudinaryService.DeletePhotoAsync(userToUpdate.ProfileImageUrl);
-                    }
+                /*   // Handle profile image update if provided
+                   var profileImage = request.GetProfileImage();
+                   if (profileImage != null)
+                   {
+                       // If there's an existing image, delete it first
+                       if (!string.IsNullOrEmpty(userToUpdate.ProfileImageUrl))
+                       {
+                           await _cloudinaryService.DeletePhotoAsync(userToUpdate.ProfileImageUrl);
+                       }
 
-                    var uploadResult = await _cloudinaryService.UploadImage(profileImage, "goodboys");
-                    if (uploadResult.IsSuccessful && uploadResult.Data.ContainsKey("Url"))
-                    {
-                        userToUpdate.ProfileImageUrl = uploadResult.Data["Url"];
-                    }
-                }
-*/
+                       var uploadResult = await _cloudinaryService.UploadImage(profileImage, "goodboys");
+                       if (uploadResult.IsSuccessful && uploadResult.Data.ContainsKey("Url"))
+                       {
+                           userToUpdate.ProfileImageUrl = uploadResult.Data["Url"];
+                       }
+                   }
+   */
                 // Update user 
                 userToUpdate.ProfileImageUrl = request.ProfileImage;
                 var updateUserResult = await _userManager.UpdateAsync(userToUpdate);
@@ -1883,6 +1459,103 @@ namespace SabiMarket.Infrastructure.Services
                 _logger.LogError(ex, "Error unblocking GoodBoy");
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
+        }
+
+        public async Task<BaseResponse<bool>> DeleteGoodBoyByCaretaker(string goodBoyId)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            var caretakerId = _currentUser.GetUserId();
+            try
+            {
+                // First verify the admin exists and has proper permissions
+                var caretaker = await _repository.CaretakerRepository.GetCaretakerById(caretakerId, trackChanges: false);
+                if (caretaker == null)
+                {
+                    await CreateAuditLog(
+                        "GoodBoy Deletion Failed",
+                        $"CorrelationId: {correlationId} - Admin not found with ID: {caretakerId}",
+                        "GoodBoy Management"
+                    );
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Admin not found"),
+                        "Admin not found");
+                }
+
+                // Now get the goodboy to delete
+                var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyById(goodBoyId, trackChanges: true);
+                if (goodBoy == null)
+                {
+                    await CreateAuditLog(
+                        "GoodBoy Deletion Failed",
+                        $"CorrelationId: {correlationId} - GoodBoy not found with ID: {goodBoyId}",
+                        "GoodBoy Management"
+                    );
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("GoodBoy not found"),
+                        "GoodBoy not found");
+                }
+
+                // Check if there are any dependencies before deletion
+                var hasActiveDependencies = await CheckGoodBoyDependencies(goodBoy);
+                if (hasActiveDependencies)
+                {
+                    await CreateAuditLog(
+                        "GoodBoy Deletion Failed",
+                        $"CorrelationId: {correlationId} - GoodBoy has active dependencies",
+                        "GoodBoy Management"
+                    );
+                    // Uncomment if you want to prevent deletion when dependencies exist
+                    /*return ResponseFactory.Fail<bool>(
+                        new InvalidOperationException("GoodBoy has active dependencies"),
+                        "Cannot delete GoodBoy with active dependencies");*/
+                }
+
+                // Get associated user
+                var user = await _userManager.FindByIdAsync(goodBoy.UserId);
+                if (user != null)
+                {
+                    // Remove goodboy role from user
+                    await _userManager.RemoveFromRoleAsync(user, UserRoles.Goodboy);
+
+                    // Update user status if needed
+                    // user.IsActive = false;
+                    await _userManager.UpdateAsync(user);
+                }
+
+                // Delete goodboy
+                _repository.GoodBoyRepository.DeleteGoodBoy(goodBoy);
+                await _repository.SaveChangesAsync();
+
+                await CreateAuditLog(
+                    "GoodBoy Deleted",
+                    $"CorrelationId: {correlationId} - Admin {caretakerId} successfully deleted GoodBoy with ID: {goodBoyId}",
+                    "GoodBoy Management"
+                );
+
+                return ResponseFactory.Success(true, "GoodBoy deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "GoodBoy Deletion Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "GoodBoy Management"
+                );
+                _logger.LogError(ex, "Error deleting GoodBoy: {GoodBoyId} by admin: {AdminId}", goodBoyId, caretakerId);
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while deleting the GoodBoy");
+            }
+        }
+
+        // Helper method to check for any dependencies
+        private async Task<bool> CheckGoodBoyDependencies(GoodBoy goodBoy)
+        {
+            // Check if goodboy has any active levy payments
+            var hasActivePayments = goodBoy.LevyPayments.Any(lp => !lp.IsActive);
+
+            // Add any other dependency checks as needed
+            // For example, checking if the goodboy has any pending tasks or responsibilities
+
+            return hasActivePayments;
         }
 
     }
