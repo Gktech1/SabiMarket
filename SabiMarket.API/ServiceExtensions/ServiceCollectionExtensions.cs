@@ -1,27 +1,28 @@
-﻿using FluentValidation;
+﻿using System.Text;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Text;
+using SabiMarket.API.ServiceExtensions;
+using SabiMarket.Application.DTOs;
+using SabiMarket.Application.DTOs.Advertisement;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories;
+using SabiMarket.Application.IServices;
+using SabiMarket.Application.Services;
+using SabiMarket.Application.Services.Interfaces;
 using SabiMarket.Application.Validators;
 using SabiMarket.Domain.Entities.UserManagement;
+using SabiMarket.Infrastructure.Configuration;
 using SabiMarket.Infrastructure.Data;
+using SabiMarket.Infrastructure.Helpers;
 using SabiMarket.Infrastructure.Repositories;
 using SabiMarket.Infrastructure.Services;
-using SabiMarket.Infrastructure.Helpers;
-using SabiMarket.API.ServiceExtensions;
-using SabiMarket.Application.IServices;
-using SabiMarket.Application.DTOs;
-using SabiMarket.Application.DTOs.Advertisement;
-using SabiMarket.Application.Services.Interfaces;
-using SabiMarket.Application.Services;
-using SabiMarket.Infrastructure.Configuration;
-using Microsoft.AspNetCore.Authorization;
+using SabiMarket.Infrastructure.Services.Payment;
 
 public static class ServiceCollectionExtensions
 {
@@ -32,7 +33,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-   
+
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
@@ -91,6 +92,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<UpdateMarketRequestDto>, UpdateMarketRequestValidator>();
         services.AddScoped<IValidator<CaretakerForCreationRequestDto>, CaretakerForCreationRequestDtoValidator>();
         services.AddScoped<ISettingsService, SettingsService>();
+        services.AddScoped<IPayments, Payments>();
+        services.AddScoped<IPaymentService, PayStackService>();
 
         // Register repositories
         services.AddScoped<IAdvertisementRepository, AdvertisementRepository>();
