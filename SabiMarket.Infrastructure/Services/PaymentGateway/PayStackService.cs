@@ -22,13 +22,13 @@ public class PayStackService : IPaymentService
         _context = context;
     }
 
-    public async Task<Tuple<bool, string, string>> InitializePayment(FundWalletVM model, string userId)
+    public async Task<Tuple<bool, string, string>> InitializePayment(FundWalletVM model)
     {
-        var senderEmail = await _context.Users.Where(x => x.Id == userId)
+        var senderEmail = await _context.Users.Where(x => x.Id == model.UserId)
             .Select(s => s.Email)
             .FirstOrDefaultAsync();
 
-        var transactionRef = $"SabiMart - " + Guid.NewGuid();
+        var transactionRef = $"SabiMart_" + Guid.NewGuid();
 
         var request = new TransactionInitializeRequest
         {

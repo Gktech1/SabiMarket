@@ -24,6 +24,6 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         public string Reference { get; set; }
 
         // Navigation Props
-        public ApplicationUser? Sender { get; set; }
+        public virtual ApplicationUser? Sender { get; set; }
     }
 }

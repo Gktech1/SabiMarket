@@ -17,9 +17,9 @@ namespace SabiMarket.Infrastructure.Services.Payment
             _paymentService = paymentService;
             _applicationDbContext = applicationDbContext;
         }
-        public async Task<BaseResponse<string>> Initialize(FundWalletVM model, string userId)
+        public async Task<BaseResponse<string>> Initialize(FundWalletVM model)
         {
-            var response = await _paymentService.InitializePayment(model, userId);
+            var response = await _paymentService.InitializePayment(model);
 
             if (!response.Item1) return ResponseFactory.Fail<string>(new Exception("Failure to initialize payment."), response.Item2);
 
@@ -28,7 +28,7 @@ namespace SabiMarket.Infrastructure.Services.Payment
             var transaction = new Transaction
             {
                 Amount = model.Amount,
-                SenderId = userId,
+                SenderId = model.UserId,
                 //ReceiverId = "",
                 //WalletId = walletId,
                 Reference = response.Item3,
@@ -39,8 +39,8 @@ namespace SabiMarket.Infrastructure.Services.Payment
 
             await _applicationDbContext.Transactions.AddAsync(transaction);
             _applicationDbContext.SaveChanges();
-            var url = response.Item2;
-            return ResponseFactory.Success("Success", response.Item2); ;
+            //var url = response.Item2;
+            return ResponseFactory.Success(response.Item3, response.Item2); ;
         }
 
         public async Task<BaseResponse<bool>> Verify(string reference)
