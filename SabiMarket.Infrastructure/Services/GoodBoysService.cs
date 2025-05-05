@@ -392,7 +392,9 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 var traderId = scanDto.QRCodeData.Replace("OSH/LAG/", "");
-                var trader = await _repository.GoodBoyRepository.GetGoodBoyById(traderId, trackChanges: false);
+
+                // Get the trader by ID
+                var trader = await _repository.TraderRepository.GetTraderById(traderId, trackChanges: false);
 
                 if (trader == null)
                 {
@@ -406,7 +408,7 @@ namespace SabiMarket.Infrastructure.Services
                         "Invalid trader QR code");
                 }
 
-                // Check if scanning user is authorized
+                // Check if scanning user is authorized (must be a GoodBoy)
                 var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyByUserId(scanDto.ScannedByUserId);
                 if (goodBoy == null)
                 {
@@ -415,16 +417,41 @@ namespace SabiMarket.Infrastructure.Services
                         "Unauthorized to scan trader QR codes");
                 }
 
+                // Get payment frequency and amount from most recent levy payment for this market and trader occupancy
+                var levySetups = await _repository.LevyPaymentRepository.GetByMarketAndOccupancyAsync(
+                    trader.MarketId,
+                    trader.TraderOccupancy);
+
+                string paymentFrequency = "Not configured";
+                if (levySetups != null && levySetups.Any())
+                {
+                    // Get the most recent levy payment setup for this trader occupancy
+                    var latestSetup = levySetups
+                        .OrderByDescending(lp => lp.CreatedAt)
+                        .FirstOrDefault();
+
+                    if (latestSetup != null)
+                    {
+                        // Format payment frequency string based on period and amount
+                        paymentFrequency = $"{GetPeriodDays(latestSetup.Period)} days - N{latestSetup.Amount}";
+                    }
+                }
+
+                // Get the most recent payment for this trader
+                var latestPayment = trader.LevyPayments
+                    .OrderByDescending(p => p.PaymentDate)
+                    .FirstOrDefault();
+
+                // Create response with dynamic data from the trader entity
                 var validationResponse = new TraderQRValidationResponseDto
                 {
                     TraderId = trader.Id,
                     TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
-                    TraderOccupancy = "Open Space",
+                    TraderOccupancy = trader.TraderOccupancy.ToString(),
                     TraderIdentityNumber = $"OSH/LAG/{trader.Id}",
-                    PaymentFrequency = "2 days - N500",
-                    LastPaymentDate = trader.LevyPayments
-                        .OrderByDescending(p => p.PaymentDate)
-                        .FirstOrDefault()?.PaymentDate
+                    PaymentFrequency = paymentFrequency,
+                    LastPaymentDate = latestPayment?.PaymentDate,
+                    UpdatePaymentUrl = $"/payments/updatetraderpayment/{trader.Id}"
                 };
 
                 await CreateAuditLog(
@@ -442,6 +469,85 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        // Helper method to convert PaymentPeriodEnum to number of days
+        private int GetPeriodDays(PaymentPeriodEnum period)
+        {
+            return period switch
+            {
+                PaymentPeriodEnum.Daily => 1,
+                PaymentPeriodEnum.Weekly => 7,
+                PaymentPeriodEnum.BiWeekly => 14,
+                PaymentPeriodEnum.Monthly => 30,
+                PaymentPeriodEnum.Quarterly => 90,
+                PaymentPeriodEnum.HalfYearly => 180,
+                PaymentPeriodEnum.Yearly => 365,
+                _ => 0
+            };
+        }
+
+        /* public async Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto)
+         {
+             try
+             {
+                 // Validate QR code format (OSH/LAG/23401)
+                 if (!scanDto.QRCodeData.StartsWith("OSH/LAG/"))
+                 {
+                     return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                         "Invalid trader QR code");
+                 }
+
+                 var traderId = scanDto.QRCodeData.Replace("OSH/LAG/", "");
+                 var trader = await _repository.GoodBoyRepository.GetGoodBoyById(traderId, trackChanges: false);
+
+                 if (trader == null)
+                 {
+                     await CreateAuditLog(
+                         "QR Code Validation Failed",
+                         $"Invalid trader ID from QR Code: {traderId}",
+                         "Payment Processing"
+                     );
+                     return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                         new NotFoundException("Trader not found"),
+                         "Invalid trader QR code");
+                 }
+
+                 // Check if scanning user is authorized
+                 var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyByUserId(scanDto.ScannedByUserId);
+                 if (goodBoy == null)
+                 {
+                     return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                         new UnauthorizedException("Unauthorized scan attempt"),
+                         "Unauthorized to scan trader QR codes");
+                 }
+
+                 var validationResponse = new TraderQRValidationResponseDto
+                 {
+                     TraderId = trader.Id,
+                     TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
+                     TraderOccupancy = "Open Space",
+                     TraderIdentityNumber = $"OSH/LAG/{trader.Id}",
+                     PaymentFrequency = "2 days - N500",
+                     LastPaymentDate = trader.LevyPayments
+                         .OrderByDescending(p => p.PaymentDate)
+                         .FirstOrDefault()?.PaymentDate,
+                     UpdatePaymentUrl = ""
+                 };
+
+                 await CreateAuditLog(
+                     "Trader QR Code Scanned",
+                     $"Trader QR Code scanned by GoodBoy: {goodBoy.Id} for Trader: {trader.Id}",
+                     "Payment Processing"
+                 );
+
+                 return ResponseFactory.Success(validationResponse, "Trader QR code validated successfully");
+             }
+             catch (Exception ex)
+             {
+                 _logger.LogError(ex, "Error validating trader QR code");
+                 return ResponseFactory.Fail<TraderQRValidationResponseDto>(ex, "An unexpected error occurred");
+             }
+         }
+ */
         public async Task<BaseResponse<bool>> VerifyTraderPaymentStatus(string traderId)
         {
             try

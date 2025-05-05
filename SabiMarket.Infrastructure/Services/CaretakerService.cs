@@ -202,7 +202,7 @@ namespace SabiMarket.Infrastructure.Services
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     Gender = request.Gender,
-                    ProfileImageUrl = "",
+                    ProfileImageUrl = request.PhotoUrl,
                     LocalGovernmentId = request.LocalGovernmentId
                 };
 

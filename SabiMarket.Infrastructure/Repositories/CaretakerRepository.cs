@@ -162,6 +162,119 @@ namespace SabiMarket.Infrastructure.Repositories
         }
 
         public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPayments(
+     string caretakerId, PaginationFilter paginationFilter, bool trackChanges)
+        {
+            // Get GoodBoys and Traders for this caretaker
+            var goodBoyIds = await _repositoryContext.GoodBoys
+                .Where(gb => gb.CaretakerId == caretakerId)
+                .Select(gb => gb.Id)
+                .ToListAsync();
+
+            var traderIds = await _repositoryContext.Traders
+                .Where(t => t.CaretakerId == caretakerId)
+                .Select(t => t.Id)
+                .ToListAsync();
+
+            // Get LevyPayments for these GoodBoys and Traders
+            var query = _repositoryContext.LevyPayments
+                .Include(lp => lp.GoodBoy)
+                .Include(lp => lp.Trader)
+                .Include(lp => lp.Chairman)
+                .Include(lp => lp.Market)
+                .Where(lp => goodBoyIds.Contains(lp.GoodBoyId) || traderIds.Contains(lp.TraderId))
+                .OrderByDescending(lp => lp.CreatedAt);
+
+            return await query.Paginate(paginationFilter);
+        }
+
+        /* public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPayments(
+     string caretakerId, PaginationFilter paginationFilter, bool trackChanges)
+         {
+             // Let's test step by step
+             try
+             {
+                 // 1. First check if LevyPayments exist
+                 var allLevyPayments = await _repositoryContext.LevyPayments.ToListAsync();
+                 Console.WriteLine($"Total LevyPayments: {allLevyPayments.Count}");
+
+                 // 2. Check if we can load with includes
+                 var levyPaymentsWithIncludes = await _repositoryContext.LevyPayments
+                     .Include(lp => lp.GoodBoy)
+                     .Include(lp => lp.Trader)
+                     .ToListAsync();
+                 Console.WriteLine($"LevyPayments with includes: {levyPaymentsWithIncludes.Count}");
+
+                 // 3. Check navigation properties
+                 foreach (var lp in levyPaymentsWithIncludes)
+                 {
+                     Console.WriteLine($"LevyPayment ID: {lp.Id}");
+                     Console.WriteLine($"GoodBoy: {lp.GoodBoy?.Id}, CaretakerId: {lp.GoodBoy?.CaretakerId}");
+                     Console.WriteLine($"Trader: {lp.Trader?.Id}, CaretakerId: {lp.Trader?.CaretakerId}");
+                 }
+
+                 // 4. Now try the actual query
+                 var query = _repositoryContext.LevyPayments
+                     .Include(lp => lp.GoodBoy)
+                     .Include(lp => lp.Trader)
+                     .Where(lp => (lp.GoodBoy != null && lp.GoodBoy.CaretakerId == caretakerId) ||
+                                  (lp.Trader != null && lp.Trader.CaretakerId == caretakerId))
+                     .OrderByDescending(lp => lp.CreatedAt);
+
+                 var result = await query.ToListAsync();
+                 Console.WriteLine($"Filtered result count: {result.Count}");
+
+                 return await query.Paginate(paginationFilter);
+             }
+             catch (Exception ex)
+             {
+               //  _logger.LogError(ex, "Error in GetLevyPayments");
+                 throw;
+             }
+         }
+ */
+        /*  public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPayments(
+      string caretakerId, PaginationFilter paginationFilter, bool trackChanges)
+          {
+              // First, let's check if we can get all levy payments
+              var allPayments = await _repositoryContext.LevyPayments
+                  .Include(lp => lp.GoodBoy)
+                  .Include(lp => lp.Trader)
+                  .ToListAsync();
+
+              Console.WriteLine($"Total payments: {allPayments.Count}");
+
+              // Now filter in memory to see what's happening
+              var filteredPayments = allPayments
+                  .Where(lp => (lp.GoodBoy != null && lp.GoodBoy.CaretakerId == caretakerId) ||
+                               (lp.Trader != null && lp.Trader.CaretakerId == caretakerId))
+                  .ToList();
+
+              Console.WriteLine($"Filtered payments: {filteredPayments.Count}");
+
+              // Now do the actual query
+              var query = _repositoryContext.LevyPayments
+                  .Include(lp => lp.GoodBoy)
+                  .Include(lp => lp.Trader)
+                  .Where(lp => (lp.GoodBoy != null && lp.GoodBoy.CaretakerId == caretakerId) ||
+                               (lp.Trader != null && lp.Trader.CaretakerId == caretakerId))
+                  .OrderByDescending(lp => lp.CreatedAt);
+
+              return await query.Paginate(paginationFilter);
+          }
+  */
+        /*public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPayments(
+    string caretakerId, PaginationFilter paginationFilter, bool trackChanges)
+        {
+            var query = _repositoryContext.LevyPayments
+                .Include(lp => lp.GoodBoy)
+                .Include(lp => lp.Trader)
+                .Where(lp => (lp.GoodBoy != null && lp.GoodBoy.CaretakerId == caretakerId) ||
+                             (lp.Trader != null && lp.Trader.CaretakerId == caretakerId))
+                .OrderByDescending(lp => lp.CreatedAt);
+
+            return await query.Paginate(paginationFilter);
+        }*/
+        /*public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPayments(
             string caretakerId, PaginationFilter paginationFilter, bool trackChanges)
         {
             var query = _repositoryContext.LevyPayments
@@ -172,7 +285,7 @@ namespace SabiMarket.Infrastructure.Repositories
                 .OrderByDescending(lp => lp.CreatedAt);
 
             return await query.Paginate(paginationFilter);
-        }
+        }*/
 
         public async Task<LevyPayment> GetLevyPaymentDetails(string levyId, bool trackChanges) =>
             await _repositoryContext.LevyPayments
