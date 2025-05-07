@@ -94,6 +94,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISettingsService, SettingsService>();
         services.AddScoped<IPayments, Payments>();
         services.AddScoped<IPaymentService, PayStackService>();
+        services.AddScoped<IGoodBoysService, GoodBoysService>();
+        services.AddScoped<IValidator<CreateGoodBoyRequestDto>, CreateGoodBoyRequestValidator>(); // Fix this
+        //services.AddScoped<IValidator<UpdateGoodBoyProfileDto>, UpdateGoodBoyProfileValidator>(); // Add this
 
         // Register repositories
         services.AddScoped<IAdvertisementRepository, AdvertisementRepository>();

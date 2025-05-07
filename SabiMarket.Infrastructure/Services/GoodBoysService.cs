@@ -34,7 +34,7 @@ namespace SabiMarket.Infrastructure.Services
         private readonly ICurrentUserService _currentUser;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IValidator<CreateGoodBoyRequestDto> _createGoodBoyValidator;
-        private readonly IValidator<UpdateGoodBoyProfileDto> _updateProfileValidator;
+        //private readonly IValidator<UpdateGoodBoyProfileDto> _updateProfileValidator;
 
         public GoodBoysService(
             IRepositoryManager repository,
@@ -43,8 +43,7 @@ namespace SabiMarket.Infrastructure.Services
             UserManager<ApplicationUser> userManager,
             ICurrentUserService currentUser,
             IHttpContextAccessor httpContextAccessor,
-            IValidator<CreateGoodBoyRequestDto> createGoodBoyValidator,
-            IValidator<UpdateGoodBoyProfileDto> updateProfileValidator)
+            IValidator<CreateGoodBoyRequestDto> createGoodBoyValidator)
         {
             _repository = repository;
             _logger = logger;
@@ -53,7 +52,6 @@ namespace SabiMarket.Infrastructure.Services
             _currentUser = currentUser;
             _httpContextAccessor = httpContextAccessor;
             _createGoodBoyValidator = createGoodBoyValidator;
-            _updateProfileValidator = updateProfileValidator;
         }
 
         private string GetCurrentIpAddress()
@@ -185,7 +183,7 @@ namespace SabiMarket.Infrastructure.Services
         {
             try
             {
-                var validationResult = await _updateProfileValidator.ValidateAsync(profileDto);
+               /* var validationResult = await _updateProfileValidator.ValidateAsync(profileDto);
                 if (!validationResult.IsValid)
                 {
                     await CreateAuditLog(
@@ -196,7 +194,7 @@ namespace SabiMarket.Infrastructure.Services
                     return ResponseFactory.Fail<bool>(
                         new FluentValidation.ValidationException(validationResult.Errors),
                         "Validation failed");
-                }
+                }*/
 
                 var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyById(goodBoyId, trackChanges: true);
                 if (goodBoy == null)
@@ -385,11 +383,11 @@ namespace SabiMarket.Infrastructure.Services
             try
             {
                 // Validate QR code format (OSH/LAG/23401)
-                if (!scanDto.QRCodeData.StartsWith("OSH/LAG/"))
+                /*if (!scanDto.QRCodeData.StartsWith("OSH/LAG/"))
                 {
                     return ResponseFactory.Fail<TraderQRValidationResponseDto>(
                         "Invalid trader QR code");
-                }
+                }*/
 
                 if(string.IsNullOrEmpty(scanDto?.TraderId))
                 {
@@ -397,7 +395,7 @@ namespace SabiMarket.Infrastructure.Services
                        "traderId is required");
                 }
 
-                var traderId = scanDto.QRCodeData.Replace("OSH/LAG/", "");
+                //var traderId = scanDto.QRCodeData.Replace("OSH/LAG/", "");
 
                 // Get the trader by ID
                 var trader = await _repository.TraderRepository.GetTraderById(scanDto?.TraderId, trackChanges: false);
@@ -406,7 +404,7 @@ namespace SabiMarket.Infrastructure.Services
                 {
                     await CreateAuditLog(
                         "QR Code Validation Failed",
-                        $"Invalid trader ID from QR Code: {traderId}",
+                        $"Invalid trader ID from QR Code: {scanDto?.TraderId}",
                         "Payment Processing"
                     );
                     return ResponseFactory.Fail<TraderQRValidationResponseDto>(
@@ -454,7 +452,7 @@ namespace SabiMarket.Infrastructure.Services
                     TraderId = trader.Id,
                     TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
                     TraderOccupancy = trader.TraderOccupancy.ToString(),
-                    TraderIdentityNumber = $"OSH/LAG/{trader.Id}",
+                    TraderIdentityNumber =   trader.TIN, //$"OSH/LAG/{trader.Id}",
                     PaymentFrequency = paymentFrequency,
                     LastPaymentDate = latestPayment?.PaymentDate,
                     UpdatePaymentUrl = $"/payments/updatetraderpayment/{trader.Id}"

@@ -26,6 +26,8 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<Trader> GetTraderById(string traderId, bool trackChanges) =>
             await FindByCondition(t => t.Id == traderId, trackChanges)
+                .Include(t => t.User)
+                .Include(t => t.Market)
                 .FirstOrDefaultAsync();
 
         public async Task<Trader> GetTraderDetails(string userId) =>
@@ -53,6 +55,21 @@ namespace SabiMarket.Infrastructure.Repositories
                 .OrderByDescending(t => t.CreatedAt);
 
             return await query.Paginate(paginationFilter);
+        }
+
+        public async Task<Trader> GetTraderByMarketAsync(
+     string marketId, string userId,
+     bool trackChanges = false)
+        {
+            // Using FirstOrDefaultAsync to return a single Trader or null
+            var trader = await FindByCondition(t => t.MarketId == marketId && t.UserId == userId, trackChanges)
+                .Include(t => t.User)
+                .Include(t => t.Market)
+                .Include(t => t.LevyPayments)
+                .OrderByDescending(t => t.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            return trader;
         }
 
         public async Task<IEnumerable<Trader>> GetAllTradersByMarketAsync(

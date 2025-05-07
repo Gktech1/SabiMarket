@@ -15,7 +15,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    //[Authorize]
+    [Authorize]
     public class WaivedMarketController : ControllerBase
     {
         private readonly IServiceManager _serviceManager;
@@ -351,6 +351,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
             return Ok(response);
         }
+
         [HttpPost("UpdateSubscriptionPlan")]
         public async Task<IActionResult> UpdateSubscriptionPlan(UpdateSubscriptionPlanDto dto)
         {

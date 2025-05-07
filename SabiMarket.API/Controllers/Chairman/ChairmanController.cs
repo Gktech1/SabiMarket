@@ -85,7 +85,7 @@ public class ChairmanController : ControllerBase
     /// <param name="request">Trader creation details</param>
     /// <returns>Created trader information including default password</returns>
     [HttpPost("create-trader")]
-    [Authorize(Policy = PolicyNames.RequireAssistOfficer)]
+    [Authorize(Policy = PolicyNames.RequireMarketStaff)]
     [ProducesResponseType(typeof(BaseResponse<TraderResponseDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status401Unauthorized)]
