@@ -459,26 +459,5 @@ namespace SabiMarket.Infrastructure.Repositories
                 .OrderBy(lp => lp.Period)
                 .AsQueryable();
         }
-
-        public async Task<LevyPayment> GetLevyConfigurationForMarket(
-    string marketId,
-    ParticipantType participantType,
-    bool trackChanges)
-        {
-            // Start with base query with tracking behavior
-            IQueryable<LevyPayment> query = _context.LevyPayments
-                .AsTracking(trackChanges ? QueryTrackingBehavior.TrackAll : QueryTrackingBehavior.NoTracking);
-
-            // Filter by market ID
-            query = query.Where(lc => lc.MarketId == marketId);
-
-            // Filter by participant type
-            query = query.Where(lc => lc.ParticipantType == participantType);
-
-            // Get the most recent configuration for this market and participant type
-            return await query
-                .OrderByDescending(lc => lc.CreatedAt)
-                .FirstOrDefaultAsync();
-        }
     }
 }

@@ -391,10 +391,16 @@ namespace SabiMarket.Infrastructure.Services
                         "Invalid trader QR code");
                 }
 
+                if(string.IsNullOrEmpty(scanDto?.TraderId))
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                       "traderId is required");
+                }
+
                 var traderId = scanDto.QRCodeData.Replace("OSH/LAG/", "");
 
                 // Get the trader by ID
-                var trader = await _repository.TraderRepository.GetTraderById(traderId, trackChanges: false);
+                var trader = await _repository.TraderRepository.GetTraderById(scanDto?.TraderId, trackChanges: false);
 
                 if (trader == null)
                 {

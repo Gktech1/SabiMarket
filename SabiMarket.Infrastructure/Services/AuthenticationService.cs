@@ -488,6 +488,7 @@ namespace SabiMarket.Infrastructure.Services
                 case "GOODBOY":
                     if (user.GoodBoy != null)
                     {
+                        //details.Add("goodBoyTraderId", user.Trader.Id);
                         details.Add("goodBoyId", user.GoodBoy.Id);
                         details.Add("Status", user.GoodBoy.Status);
                         details.Add("GoodBoyCaretakerId", user.GoodBoy?.CaretakerId);

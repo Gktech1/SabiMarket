@@ -66,6 +66,23 @@ namespace SabiMarket.Infrastructure.Repositories
             return await query.FirstOrDefaultAsync();
         }
 
+        public async Task<AssistCenterOfficer> GetAssistantOfficerByUserIdAsync(string userId, bool trackChanges)
+        {
+            var query = FindByCondition(a => a.UserId == userId, trackChanges);
+
+            // Include related entities one by one
+            query = query.Include(a => a.User);
+            query = query.Include(a => a.Market);
+            query = query.Include(a => a.LocalGovernment);
+
+            // Disable tracking if needed
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+
+            return await query.FirstOrDefaultAsync();
+        }
         public async Task<PaginatorDto<IEnumerable<AssistCenterOfficer>>> GetAssistOfficersAsync(
             Expression<Func<AssistCenterOfficer, bool>> expression,
             PaginationFilter paginationFilter,

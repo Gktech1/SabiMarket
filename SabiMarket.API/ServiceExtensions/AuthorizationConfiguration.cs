@@ -10,7 +10,8 @@ namespace SabiMarket.API.ServiceExtensions
         public const string RequireCaretakerOnly = "RequireCaretakerOnly";
         public const string RequireTraderOnly = "RequireTraderOnly";
         public const string RequiredTeamMember = "RequireTeamMember";
-        
+        public const string RequireAssistOfficer = "RequireAssistOfficer";
+
 
 
         // Combined policies
@@ -38,6 +39,9 @@ namespace SabiMarket.API.ServiceExtensions
 
             options.AddPolicy(PolicyNames.RequireTraderOnly,
                 policy => policy.RequireRole(UserRoles.Trader));
+
+            options.AddPolicy(PolicyNames.RequireAssistOfficer,
+              policy => policy.RequireRole( UserRoles.AssistOfficer));
 
             // Combined role policies
             options.AddPolicy(PolicyNames.RequireMarketStaff,

@@ -11,6 +11,9 @@
         public string Gender { get; set; }
         public string IdentityNumber { get; set; }
         public string BusinessName {  get; set; }
+        public string DefaultPassword { get; set; }
+        public string ProfileImageUrl { get; set; } 
+        public string TraderName { get; set; }    
         public string BusinessType { get; set; }    
         public DateTime DateAdded { get; set; }
         public string QRCode { get; set; }

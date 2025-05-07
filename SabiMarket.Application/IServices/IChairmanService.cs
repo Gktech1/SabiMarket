@@ -9,6 +9,7 @@ namespace SabiMarket.Application.IServices
     public interface IChairmanService
     {
         Task<BaseResponse<LGAResponseDto>> GetLocalGovernmentById(string id);
+        Task<BaseResponse<TraderResponseDto>> CreateTrader(CreateTraderRequestDto request);
         Task<BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>> GetLocalGovernments(
        LGAFilterRequestDto filterDto,
        PaginationFilter paginationFilter);

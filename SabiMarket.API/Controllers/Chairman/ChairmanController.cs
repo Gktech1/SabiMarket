@@ -80,6 +80,25 @@ public class ChairmanController : ControllerBase
     }
 
     /// <summary>
+    /// Create a new trader
+    /// </summary>
+    /// <param name="request">Trader creation details</param>
+    /// <returns>Created trader information including default password</returns>
+    [HttpPost("create-trader")]
+    [Authorize(Policy = PolicyNames.RequireAssistOfficer)]
+    [ProducesResponseType(typeof(BaseResponse<TraderResponseDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateTrader([FromBody] CreateTraderRequestDto request)
+    {
+        var response = await _chairmanService.CreateTrader(request);
+        return !response.IsSuccessful
+            ? BadRequest(response)
+            : StatusCode(StatusCodes.Status201Created, response);
+    }
+
+    /// <summary>
     /// Search levy payments for a chairman's market
     /// </summary>
     /// <param name="chairmanId">ID of the chairman</param>
