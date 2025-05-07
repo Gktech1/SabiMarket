@@ -15,7 +15,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize]
+    //[Authorize]
     public class WaivedMarketController : ControllerBase
     {
         private readonly IServiceManager _serviceManager;
@@ -657,9 +657,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpPost("MakePaymentWithPaystack")]
-        public async Task<IActionResult> MakePaymentWithPaystack(FundWalletVM fund, string userId)
+        public async Task<IActionResult> MakePaymentWithPaystack(FundWalletVM fund)
         {
-            var response = await _paymentService.Initialize(fund, userId);
+            var response = await _paymentService.Initialize(fund);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
