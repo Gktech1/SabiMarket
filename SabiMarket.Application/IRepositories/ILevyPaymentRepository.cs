@@ -29,4 +29,7 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     Task<IEnumerable<LevyPayment>> GetByMarketAndOccupancyAsync(string marketId, MarketTypeEnum traderOccupancy);
     Task<LevyPayment> GetMarketLevySetup(string marketId, PaymentPeriodEnum period);
     Task<IQueryable<LevyPayment>> GetMarketLevySetups(string marketId);
+    Task<IEnumerable<LevyPayment>> GetLevyPaymentsByTraderIdAsync(string traderId);
+    Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate);
+    Task<decimal> GetTotalLevyAmountByGoodBoyIdAsync(string goodBoyId, DateTime fromDate, DateTime toDate);
 }

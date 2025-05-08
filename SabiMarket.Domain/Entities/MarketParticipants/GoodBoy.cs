@@ -15,8 +15,6 @@ public class GoodBoy : BaseEntity
 
     public string? CaretakerId { get; set; }
 
-    //public string? TraderId { get; set; }
-
     [Required]
     public string MarketId { get; set; }
 
@@ -34,11 +32,6 @@ public class GoodBoy : BaseEntity
     [ForeignKey("CaretakerId")]
     [DeleteBehavior(DeleteBehavior.NoAction)]
     public virtual Caretaker Caretaker { get; set; }
-
-
-   /* [ForeignKey("TraderId")]
-    [DeleteBehavior(DeleteBehavior.NoAction)]
-    public virtual Trader Trader { get; set; }*/
 
     public virtual ICollection<LevyPayment> LevyPayments { get; set; } = new List<LevyPayment>();
 }

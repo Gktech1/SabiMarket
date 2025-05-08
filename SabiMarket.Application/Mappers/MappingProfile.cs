@@ -760,12 +760,12 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => src.CreatedAt));
 
 
-        CreateMap<LevyPayment, LevyPaymentResponseDto>();
+        CreateMap<LevyPayment, GoodBoyLevyPaymentResponseDto>();
 
         CreateMap<ApplicationRole, RoleResponseDto>();
         CreateMap<RolePermission, RolePermissionDto>();
 
-        CreateMap<LevyPayment, LevyPaymentResponseDto>();
+        CreateMap<LevyPayment, GoodBoyLevyPaymentResponseDto>();
 
         CreateMap<Market, MarketResponseDto>();
         CreateMap<GoodBoy, GoodBoyResponseDto>();

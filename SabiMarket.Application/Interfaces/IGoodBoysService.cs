@@ -1,6 +1,7 @@
 ﻿using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
+using SabiMarket.Services.Dtos.Levy;
 
 namespace SabiMarket.Application.Interfaces
 {
@@ -22,6 +23,9 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto);
         Task<BaseResponse<bool>> VerifyTraderPaymentStatus(string traderId);
         Task<BaseResponse<bool>> UpdateTraderPayment(string traderId, ProcessLevyPaymentDto paymentDto);
+        Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(string goodBoyId, DateTime? fromDate = null, DateTime? toDate = null);
+        Task<BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetTodayLeviesForGoodBoy(string goodBoyId);
+        Task<BaseResponse<GoodBoyLevyPaymentResponseDto>> CollectLevyPayment(LevyPaymentCreateDto levyPaymentDto);
     }
 
 }

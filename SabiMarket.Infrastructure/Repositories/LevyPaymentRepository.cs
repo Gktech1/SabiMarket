@@ -146,6 +146,55 @@ namespace SabiMarket.Infrastructure.Repositories
             return paginatedPayments;
         }
 
+        // Dashboard statistics for GoodBoy
+        public async Task<decimal> GetTotalLevyAmountByGoodBoyIdAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
+        {
+            return await FindByCondition(
+                lp => lp.GoodBoyId == goodBoyId &&
+                      lp.PaymentDate >= fromDate &&
+                      lp.PaymentDate <= toDate &&
+                      lp.PaymentStatus == PaymentStatusEnum.Paid,
+                trackChanges: false)
+                .SumAsync(lp => lp.Amount);
+        }
+
+        // Get today's levy payments for a GoodBoy
+        public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
+        {
+            return await FindByCondition(
+                lp => lp.GoodBoyId == goodBoyId &&
+                      lp.PaymentDate >= fromDate &&
+                      lp.PaymentDate < toDate &&
+                      lp.PaymentStatus == PaymentStatusEnum.Paid,
+                trackChanges: false)
+                .Include(lp => lp.Trader)
+                    .ThenInclude(t => t.User)
+                .Include(lp => lp.Market)
+                .OrderByDescending(lp => lp.PaymentDate)
+                .ToListAsync();
+        }
+
+        // Get levy payments by trader ID
+        public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByTraderIdAsync(string traderId)
+        {
+            return await FindByCondition(
+                lp => lp.TraderId == traderId,
+                trackChanges: false)
+                .Include(lp => lp.Trader)
+                .Include(lp => lp.Market)
+                .Include(lp => lp.GoodBoy)
+                    .ThenInclude(gb => gb.User)
+                .OrderByDescending(lp => lp.PaymentDate)
+                .ToListAsync();
+        }
+
+      /*  // Create levy payment
+        public async Task CreateLevyPaymentAsync(LevyPayment levyPayment)
+        {
+            Create(levyPayment);
+            await Task.CompletedTask;
+        }*/
+
         /*  public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetPagedPaymentWithDetails(
        PaymentPeriodEnum? period,
        string searchQuery,

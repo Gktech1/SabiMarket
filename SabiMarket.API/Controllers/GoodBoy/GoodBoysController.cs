@@ -5,6 +5,9 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.Interfaces;
+using SabiMarket.Services.Dtos.Levy;
+using System.Security.Claims;
+using SabiMarket.Infrastructure.Helpers;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -14,11 +17,13 @@ public class GoodBoysController : ControllerBase
 {
     private readonly IGoodBoysService _goodBoysService;
     private readonly ILogger<GoodBoysController> _logger;
+    private readonly ICurrentUserService _currentUser;
 
-    public GoodBoysController(IGoodBoysService goodBoysService, ILogger<GoodBoysController> logger)
+    public GoodBoysController(IGoodBoysService goodBoysService, ILogger<GoodBoysController> logger, ICurrentUserService currentUser = null)
     {
         _goodBoysService = goodBoysService;
         _logger = logger;
+        _currentUser = currentUser;
     }
 
     [HttpPost]
@@ -93,7 +98,7 @@ public class GoodBoysController : ControllerBase
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
 
-    [HttpPost("traders/{traderId}/payments")]
+    [HttpPost("updatetraderpayment/{traderId}")]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
@@ -102,5 +107,55 @@ public class GoodBoysController : ControllerBase
     {
         var response = await _goodBoysService.UpdateTraderPayment(traderId, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+    [HttpGet("dashboard/stats")]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyDashboardStatsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyDashboardStatsDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyDashboardStatsDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetDashboardStats([FromQuery] DateTime? fromDate = null, [FromQuery] DateTime? toDate = null)
+    {
+        // Get the current user's ID
+        var userId = _currentUser.GetUserId();
+
+        // Get dashboard statistics for the GoodBoy
+        var result = await _goodBoysService.GetDashboardStats(userId, fromDate, toDate);
+        return result.IsSuccessful ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("dashboard/today-levies")]
+    [ProducesResponseType(typeof(BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTodayLevies()
+    {
+        // Get the current user's ID
+        var userId = _currentUser.GetUserId();
+
+        // Get today's levies for the GoodBoy
+        var result = await _goodBoysService.GetTodayLeviesForGoodBoy(userId);
+        return result.IsSuccessful ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("dashboard/collect-levy")]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyLevyPaymentResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyLevyPaymentResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyLevyPaymentResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CollectLevy([FromBody] LevyPaymentCreateDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        // Get the current user's ID
+        var userId = _currentUser.GetUserId();
+
+        // Set the GoodBoy ID for the levy payment
+        request.GoodBoyId = userId;
+
+        // Collect the levy payment
+        var result = await _goodBoysService.CollectLevyPayment(request);
+        return result.IsSuccessful ? Ok(result) : BadRequest(result);
     }
 }

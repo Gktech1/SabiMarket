@@ -19,8 +19,8 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<PaginatorDto<IEnumerable<TraderResponseDto>>>> GetAssignedTraders(string caretakerId, PaginationFilter paginationFilter);
 
         // Levy Management
-        Task<BaseResponse<PaginatorDto<IEnumerable<LevyPaymentResponseDto>>>> GetLevyPayments(string caretakerId, PaginationFilter paginationFilter);
-        Task<BaseResponse<LevyPaymentResponseDto>> GetLevyPaymentDetails(string levyId);
+        Task<BaseResponse<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>>> GetLevyPayments(string caretakerId, PaginationFilter paginationFilter);
+        Task<BaseResponse<GoodBoyLevyPaymentResponseDto>> GetLevyPaymentDetails(string levyId);
 
         // GoodBoy Management
         //Task<BaseResponse<GoodBoyResponseDto>> AddGoodBoy(string caretakerId, CreateGoodBoyDto goodBoyDto);

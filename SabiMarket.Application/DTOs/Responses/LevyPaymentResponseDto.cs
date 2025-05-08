@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SabiMarket.Application.DTOs.Responses
 {
-    public class LevyPaymentResponseDto
+    public class GoodBoyLevyPaymentResponseDto
     {
         public string Id { get; set; }
         public decimal Amount { get; set; }

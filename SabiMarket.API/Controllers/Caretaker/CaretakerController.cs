@@ -130,8 +130,8 @@ public class CaretakerController : ControllerBase
 
     [HttpGet("{caretakerId}/levy-payments")]
     [Authorize(Policy = PolicyNames.RequireMarketStaff)]
-    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentResponseDto>>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentResponseDto>>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLevyPayments(string caretakerId, [FromQuery] PaginationFilter paginationFilter)
     {
         var response = await _caretakerService.GetLevyPayments(caretakerId, paginationFilter);
@@ -140,8 +140,8 @@ public class CaretakerController : ControllerBase
 
     [HttpGet("levy-payments/{levyId}")]
     [Authorize(Policy = PolicyNames.RequireMarketStaff)]
-    [ProducesResponseType(typeof(BaseResponse<LevyPaymentResponseDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<LevyPaymentResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyLevyPaymentResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyLevyPaymentResponseDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLevyPaymentDetails(string levyId)
     {
         var response = await _caretakerService.GetLevyPaymentDetails(levyId);

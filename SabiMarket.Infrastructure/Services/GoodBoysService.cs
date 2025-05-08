@@ -13,15 +13,11 @@ using SabiMarket.Domain.Entities;
 using SabiMarket.Domain.Enum;
 using SabiMarket.Domain.Exceptions;
 using SabiMarket.Infrastructure.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using SabiMarket.Infrastructure.Utilities;
 using System.Text.Json;
 using SabiMarket.Application.Interfaces;
 using ValidationException = FluentValidation.ValidationException;
+using SabiMarket.Services.Dtos.Levy;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -631,5 +627,161 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
+
+        public async Task<BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetTodayLeviesForGoodBoy(string goodBoyId)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Today's Levies Query",
+                    $"CorrelationId: {correlationId} - Retrieving today's levies for GoodBoy ID: {goodBoyId}",
+                    "Levy Management"
+                );
+
+                var today = DateTime.Now.Date;
+                var tomorrow = today.AddDays(1);
+
+                var todayLevies = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRangeAsync(
+                    goodBoyId,
+                    today,
+                    tomorrow
+                );
+
+                var levyPaymentDtos = _mapper.Map<IEnumerable<GoodBoyLevyPaymentResponseDto>>(todayLevies);
+
+                await CreateAuditLog(
+                    "Today's Levies Retrieved",
+                    $"CorrelationId: {correlationId} - Retrieved {levyPaymentDtos.Count()} levies for GoodBoy ID: {goodBoyId}",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(levyPaymentDtos, "Today's levies retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Today's Levies Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Levy Management"
+                );
+                return ResponseFactory.Fail<IEnumerable<GoodBoyLevyPaymentResponseDto>>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(string goodBoyId, DateTime? fromDate = null, DateTime? toDate = null)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Dashboard Stats Query",
+                    $"CorrelationId: {correlationId} - Retrieving dashboard stats for GoodBoy ID: {goodBoyId}",
+                    "Levy Management"
+                );
+
+                // Set default date range if not provided (current month)
+                if (!fromDate.HasValue || !toDate.HasValue)
+                {
+                    fromDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                    toDate = fromDate.Value.AddMonths(1).AddDays(-1);
+                }
+
+                // Get trader count managed by the good boy
+                var traderCount = await _repository.TraderRepository.GetTraderCountByGoodBoyIdAsync(goodBoyId);
+
+                // Get total levy amount collected by the good boy in the date range
+                var totalLevies = await _repository.LevyPaymentRepository.GetTotalLevyAmountByGoodBoyIdAsync(
+                    goodBoyId,
+                    fromDate.Value,
+                    toDate.Value
+                );
+
+                var result = new GoodBoyDashboardStatsDto
+                {
+                    TraderCount = traderCount,
+                    TotalLevies = totalLevies
+                };
+
+                await CreateAuditLog(
+                    "Dashboard Stats Retrieved",
+                    $"CorrelationId: {correlationId} - Dashboard stats retrieved for GoodBoy ID: {goodBoyId}",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(result, "Dashboard statistics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Dashboard Stats Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Levy Management"
+                );
+                return ResponseFactory.Fail<GoodBoyDashboardStatsDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<GoodBoyLevyPaymentResponseDto>> CollectLevyPayment(LevyPaymentCreateDto levyPaymentDto)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Levy Payment Collection",
+                    $"CorrelationId: {correlationId} - Collecting levy payment from Trader ID: {levyPaymentDto.TraderId}",
+                    "Levy Management"
+                );
+
+                // Validate trader exists
+                var trader = await _repository.TraderRepository.GetTraderById(levyPaymentDto.TraderId, false);
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<GoodBoyLevyPaymentResponseDto>("Trader not found");
+                }
+
+                // Create the levy payment entity
+                var levyPayment = new LevyPayment
+                {
+                    TraderId = levyPaymentDto.TraderId,
+                    GoodBoyId = levyPaymentDto.GoodBoyId,
+                    MarketId = trader.MarketId,
+                    Amount = levyPaymentDto.Amount,
+                    Period = levyPaymentDto.Period,
+                    PaymentMethod = levyPaymentDto.PaymentMethod,
+                    PaymentStatus = PaymentStatusEnum.Paid,
+                    TransactionReference = Guid.NewGuid().ToString(),
+                    HasIncentive = levyPaymentDto.HasIncentive,
+                    IncentiveAmount = levyPaymentDto.IncentiveAmount,
+                    PaymentDate = DateTime.Now,
+                    CollectionDate = DateTime.Now,
+                    Notes = levyPaymentDto.Notes,
+                    QRCodeScanned = levyPaymentDto.QRCodeScanned
+                };
+
+                 _repository.LevyPaymentRepository.AddPayment(levyPayment);
+                await _repository.SaveChangesAsync();
+
+                var levyPaymentResponse = _mapper.Map<GoodBoyLevyPaymentResponseDto>(levyPayment);
+
+                await CreateAuditLog(
+                    "Levy Payment Collected",
+                    $"CorrelationId: {correlationId} - Levy payment collected from Trader ID: {levyPaymentDto.TraderId}",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(levyPaymentResponse, "Levy payment collected successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Levy Payment Collection Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Levy Management"
+                );
+                return ResponseFactory.Fail<GoodBoyLevyPaymentResponseDto>(ex, "An unexpected error occurred");
+            }
+        }
     }
 }
+

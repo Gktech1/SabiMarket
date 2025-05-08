@@ -36,6 +36,44 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Include(t => t.Market)
                 .FirstOrDefaultAsync();
 
+        // Get trader count by GoodBoy ID for dashboard
+        public async Task<int> GetTraderCountByGoodBoyIdAsync(string goodBoyId)
+        {
+            // Get the market ID that the GoodBoy is assigned to
+            var goodBoy = await _context.GoodBoys
+                .AsNoTracking()
+                .FirstOrDefaultAsync(gb => gb.Id == goodBoyId);
+
+            if (goodBoy == null)
+                return 0;
+
+            // Count traders in that market
+            return await _context.Traders
+                .Where(t => t.MarketId == goodBoy.MarketId)
+                .CountAsync();
+        }
+
+        // Search traders by QR code
+        public async Task<IEnumerable<Trader>> SearchTradersByQRCodeAsync(string qrCode, string goodBoyId)
+        {
+            // First get the goodboy to find their market
+            var goodBoy = await _context.GoodBoys
+                .AsNoTracking()
+                .FirstOrDefaultAsync(gb => gb.Id == goodBoyId);
+
+            if (goodBoy == null)
+                return new List<Trader>();
+
+            // Get traders with the QR code in the same market as the goodboy
+            return await FindByCondition(
+                    t => t.QRCode == qrCode && t.MarketId == goodBoy.MarketId,
+                    trackChanges: false)
+                .Include(t => t.User)
+                .Include(t => t.Market)
+                .ToListAsync();
+        }
+
+
         public async Task<int> GetTraderCountAsync(DateTime startDate, DateTime endDate) =>
             await FindByCondition(t =>
                 t.CreatedAt >= startDate &&
@@ -57,7 +95,7 @@ namespace SabiMarket.Infrastructure.Repositories
             return await query.Paginate(paginationFilter);
         }
 
-        public async Task<Trader> GetTraderByMarketAsync(
+        /*public async Task<Trader> GetTraderByMarketAsync(
      string marketId, string userId,
      bool trackChanges = false)
         {
@@ -70,7 +108,7 @@ namespace SabiMarket.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
 
             return trader;
-        }
+        }*/
 
         public async Task<IEnumerable<Trader>> GetAllTradersByMarketAsync(
             string marketId,

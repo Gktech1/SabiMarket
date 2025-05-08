@@ -12,5 +12,7 @@ public interface ITraderRepository : IGeneralRepository<Trader>
     Task<PaginatorDto<IEnumerable<Trader>>> GetTradersByMarketAsync(string marketId, PaginationFilter paginationFilter, bool trackChanges = false);
     Task<IEnumerable<Trader>> GetAllTradersByMarketAsync(string marketId, bool trackChanges = false);
     IQueryable<Trader> GetTradersByCaretakerId(string caretakerId, bool trackChanges = false);
+    Task<IEnumerable<Trader>> SearchTradersByQRCodeAsync(string qrCode, string goodBoyId);
+    Task<int> GetTraderCountByGoodBoyIdAsync(string goodBoyId);
     void DeleteTrader(Trader trader);
 }
