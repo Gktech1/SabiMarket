@@ -113,13 +113,17 @@ public class GoodBoysController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<GoodBoyDashboardStatsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyDashboardStatsDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyDashboardStatsDto>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetDashboardStats([FromQuery] DateTime? fromDate = null, [FromQuery] DateTime? toDate = null)
+    public async Task<IActionResult> GetDashboardStats([FromQuery] string goodboyId, [FromQuery] DateTime? fromDate = null,
+    [FromQuery] DateTime? toDate = null,
+    [FromQuery] string searchQuery = null,
+    [FromQuery] PaginationFilter paginationFilter = null)
     {
+   
         // Get the current user's ID
-        var userId = _currentUser.GetUserId();
+        //var userId = _currentUser.GetUserId();
 
         // Get dashboard statistics for the GoodBoy
-        var result = await _goodBoysService.GetDashboardStats(userId, fromDate, toDate);
+        var result = await _goodBoysService.GetDashboardStats(goodboyId, fromDate, toDate, searchQuery, paginationFilter);
         return result.IsSuccessful ? Ok(result) : BadRequest(result);
     }
 

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using SabiMarket.Application.DTOs;
 using SabiMarket.Domain.Enum;
 
 namespace SabiMarket.Services.Dtos.Levy
@@ -20,6 +21,14 @@ namespace SabiMarket.Services.Dtos.Levy
     {
         public int TraderCount { get; set; }
         public decimal TotalLevies { get; set; }
+        public PaginatorDto<IEnumerable<LevyPaymentDto>> Payments { get; set; }
+    }
+
+    public class LevyPaymentDto
+    {
+        public string PayerName { get; set; }  // This will match "Iya Rokeeb" in the UI
+        public DateTime PaymentTime { get; set; }  // This will be formatted as "2:00 pm" in the UI
+        public decimal Amount { get; set; }  // This will be formatted as "₦5,000" in the UI
     }
 
     // DTOs for Levy Payment

@@ -24,6 +24,12 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<bool>> VerifyTraderPaymentStatus(string traderId);
         Task<BaseResponse<bool>> UpdateTraderPayment(string traderId, ProcessLevyPaymentDto paymentDto);
         Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(string goodBoyId, DateTime? fromDate = null, DateTime? toDate = null);
+        Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(
+    string goodBoyId,
+    DateTime? fromDate = null,
+    DateTime? toDate = null,
+    string searchQuery = null,
+    PaginationFilter paginationFilter = null);
         Task<BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetTodayLeviesForGoodBoy(string goodBoyId);
         Task<BaseResponse<GoodBoyLevyPaymentResponseDto>> CollectLevyPayment(LevyPaymentCreateDto levyPaymentDto);
     }

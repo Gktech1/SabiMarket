@@ -164,6 +164,35 @@ namespace SabiMarket.Infrastructure.Repositories
             return await FindByCondition(
                 lp => lp.GoodBoyId == goodBoyId &&
                       lp.PaymentDate >= fromDate &&
+                      lp.PaymentDate <= toDate &&
+                      lp.PaymentStatus == PaymentStatusEnum.Paid,
+                trackChanges: false)
+                .Include(lp => lp.Trader) // Include Trader
+                    .ThenInclude(t => t.User) // Then Include User from Trader
+                .Include(lp => lp.Market)
+                .OrderByDescending(lp => lp.PaymentDate)
+                .AsNoTracking() // This can help with performance
+                .ToListAsync();
+        }
+        /* public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
+         {
+             return await FindByCondition(
+                 lp => lp.GoodBoyId == goodBoyId &&
+                       lp.PaymentDate >= fromDate &&
+                       lp.PaymentDate <= toDate &&  // Changed < to <= to include payments made exactly at toDate
+                       lp.PaymentStatus == PaymentStatusEnum.Paid,
+                 trackChanges: false)
+                 .Include(lp => lp.Trader)
+                     .ThenInclude(t => t.User)
+                 .Include(lp => lp.Market)
+                 .OrderByDescending(lp => lp.PaymentDate)
+                 .ToListAsync();
+         }*/
+        /*public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
+        {
+            return await FindByCondition(
+                lp => lp.GoodBoyId == goodBoyId &&
+                      lp.PaymentDate >= fromDate &&
                       lp.PaymentDate < toDate &&
                       lp.PaymentStatus == PaymentStatusEnum.Paid,
                 trackChanges: false)
@@ -172,7 +201,7 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Include(lp => lp.Market)
                 .OrderByDescending(lp => lp.PaymentDate)
                 .ToListAsync();
-        }
+        }*/
 
         // Get levy payments by trader ID
         public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByTraderIdAsync(string traderId)
