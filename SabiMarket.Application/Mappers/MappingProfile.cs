@@ -759,6 +759,9 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.TransactionReference, opt => opt.MapFrom(src => src.AccountNumber))
             .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => src.CreatedAt));
 
+        CreateMap<LevyPayment, GoodBoyLevyPaymentResponseDto>()
+    .ForMember(dest => dest.TraderName, opt => opt.MapFrom(src => src.Trader.User.FirstName + " " + src.Trader.User.LastName))
+    .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.PaymentStatus.ToString()));
 
         CreateMap<LevyPayment, GoodBoyLevyPaymentResponseDto>();
 

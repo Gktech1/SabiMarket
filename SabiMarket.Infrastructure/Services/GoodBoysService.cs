@@ -631,6 +631,7 @@ namespace SabiMarket.Infrastructure.Services
         public async Task<BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetTodayLeviesForGoodBoy(string goodBoyId)
         {
             var correlationId = Guid.NewGuid().ToString();
+            var userId = _currentUser.GetUserId();
             try
             {
                 await CreateAuditLog(
@@ -642,11 +643,8 @@ namespace SabiMarket.Infrastructure.Services
                 var today = DateTime.Now.Date;
                 var tomorrow = today.AddDays(1);
 
-                var todayLevies = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRangeAsync(
-                    goodBoyId,
-                    today,
-                    tomorrow
-                );
+                var todayLevies = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRange(
+                    goodBoyId);
 
                 var levyPaymentDtos = _mapper.Map<IEnumerable<GoodBoyLevyPaymentResponseDto>>(todayLevies);
 
