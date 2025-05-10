@@ -18,6 +18,7 @@ using System.Text.Json;
 using SabiMarket.Application.Interfaces;
 using ValidationException = FluentValidation.ValidationException;
 using SabiMarket.Services.Dtos.Levy;
+using System.Linq.Expressions;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -628,33 +629,101 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetTodayLeviesForGoodBoy(string goodBoyId)
+        /*    public async Task<BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetTodayLeviesForGoodBoy(string goodBoyId)
+            {
+                var correlationId = Guid.NewGuid().ToString();
+                var userId = _currentUser.GetUserId();
+                try
+                {
+                    await CreateAuditLog(
+                        "Today's Levies Query",
+                        $"CorrelationId: {correlationId} - Retrieving today's levies for GoodBoy ID: {goodBoyId}",
+                        "Levy Management"
+                    );
+
+                    var today = DateTime.Now.Date;
+                    var tomorrow = today.AddDays(1);
+
+                    var todayLevies = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRange(
+                        goodBoyId);
+
+                    var levyPaymentDtos = _mapper.Map<IEnumerable<GoodBoyLevyPaymentResponseDto>>(todayLevies);
+
+                    await CreateAuditLog(
+                        "Today's Levies Retrieved",
+                        $"CorrelationId: {correlationId} - Retrieved {levyPaymentDtos.Count()} levies for GoodBoy ID: {goodBoyId}",
+                        "Levy Management"
+                    );
+
+                    return ResponseFactory.Success(levyPaymentDtos, "Today's levies retrieved successfully");
+                }
+                catch (Exception ex)
+                {
+                    await CreateAuditLog(
+                        "Today's Levies Query Failed",
+                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                        "Levy Management"
+                    );
+                    return ResponseFactory.Fail<IEnumerable<GoodBoyLevyPaymentResponseDto>>(ex, "An unexpected error occurred");
+                }
+            }
+    */
+
+        public async Task<BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>> GetTodayLeviesForGoodBoy(
+     string goodBoyId,
+     PaginationFilter pagination)
         {
             var correlationId = Guid.NewGuid().ToString();
-            var userId = _currentUser.GetUserId();
             try
             {
                 await CreateAuditLog(
                     "Today's Levies Query",
-                    $"CorrelationId: {correlationId} - Retrieving today's levies for GoodBoy ID: {goodBoyId}",
+                    $"CorrelationId: {correlationId} - Retrieving today's levies for GoodBoy ID: {goodBoyId}, Page {pagination.PageNumber}, Size {pagination.PageSize}",
                     "Levy Management"
                 );
 
-                var today = DateTime.Now.Date;
-                var tomorrow = today.AddDays(1);
+                // Get paginated levy payments from repository
+                var leviesPaginated = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRange(
+                    goodBoyId,
+                    pagination,
+                    trackChanges: false
+                );
 
-                var todayLevies = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRange(
-                    goodBoyId);
+                // Map entities to DTOs
+                var levyPaymentDtos = _mapper.Map<List<GoodBoyLevyPaymentResponseDto>>(leviesPaginated.PageItems);
 
-                var levyPaymentDtos = _mapper.Map<IEnumerable<GoodBoyLevyPaymentResponseDto>>(todayLevies);
+                // Manually fix the trader names after mapping
+                int index = 0;
+                foreach (var levy in leviesPaginated.PageItems)
+                {
+                    if (levy.Trader?.User != null)
+                    {
+                        levyPaymentDtos[index].TraderName = $"{levy.Trader.User.FirstName} {levy.Trader.User.LastName}".Trim();
+                    }
+                    else
+                    {
+                        levyPaymentDtos[index].TraderName = "Unknown Trader";
+                    }
+                    levyPaymentDtos[index].Status = levy.PaymentStatus.ToString();
+                    index++;
+                }
+
+                // Create final paginated result with DTOs
+                var paginatedResult = new PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>
+                {
+                    PageItems = levyPaymentDtos,
+                    CurrentPage = leviesPaginated.CurrentPage,
+                    PageSize = leviesPaginated.PageSize,
+                    NumberOfPages = leviesPaginated.NumberOfPages
+                };
 
                 await CreateAuditLog(
                     "Today's Levies Retrieved",
-                    $"CorrelationId: {correlationId} - Retrieved {levyPaymentDtos.Count()} levies for GoodBoy ID: {goodBoyId}",
+                    $"CorrelationId: {correlationId} - Retrieved {levyPaymentDtos.Count} levies for GoodBoy ID: {goodBoyId} on page {pagination.PageNumber}",
                     "Levy Management"
                 );
 
-                return ResponseFactory.Success(levyPaymentDtos, "Today's levies retrieved successfully");
+                return ResponseFactory.Success(paginatedResult, "Today's levies retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -663,10 +732,9 @@ namespace SabiMarket.Infrastructure.Services
                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
                     "Levy Management"
                 );
-                return ResponseFactory.Fail<IEnumerable<GoodBoyLevyPaymentResponseDto>>(ex, "An unexpected error occurred");
+                return ResponseFactory.Fail<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>(ex, "An unexpected error occurred");
             }
         }
-
         public async Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(string goodBoyId, DateTime? fromDate = null, DateTime? toDate = null)
         {
             var correlationId = Guid.NewGuid().ToString();

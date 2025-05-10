@@ -128,17 +128,28 @@ public class GoodBoysController : ControllerBase
     }
 
     [HttpGet("dashboard/today-levies")]
-    [ProducesResponseType(typeof(BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetTodayLevies()
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTodayLeviesForGoodBoy(
+    [FromQuery] int pageNumber = 1,
+    [FromQuery] int pageSize = 10)
     {
-        // Get the current user's ID
         var userId = _currentUser.GetUserId();
+        var pagination = new PaginationFilter
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
 
-        // Get today's levies for the GoodBoy
-        var result = await _goodBoysService.GetTodayLeviesForGoodBoy(userId);
-        return result.IsSuccessful ? Ok(result) : BadRequest(result);
+        var result = await _goodBoysService.GetTodayLeviesForGoodBoy(userId, pagination);
+
+        if (result.IsSuccessful)
+        {
+            return Ok(result);
+        }
+
+        return BadRequest(result);
     }
 
     [HttpPost("dashboard/collect-levy")]

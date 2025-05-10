@@ -30,7 +30,10 @@ namespace SabiMarket.Application.Interfaces
     DateTime? toDate = null,
     string searchQuery = null,
     PaginationFilter paginationFilter = null);
-        Task<BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetTodayLeviesForGoodBoy(string goodBoyId);
+        // Task<BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetTodayLeviesForGoodBoy(string goodBoyId);
+        Task<BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>> GetTodayLeviesForGoodBoy(
+    string goodBoyId,
+    PaginationFilter pagination);
         Task<BaseResponse<GoodBoyLevyPaymentResponseDto>> CollectLevyPayment(LevyPaymentCreateDto levyPaymentDto);
     }
 

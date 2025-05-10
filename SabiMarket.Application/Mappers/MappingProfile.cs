@@ -768,7 +768,7 @@ public class MappingProfile : Profile
         CreateMap<ApplicationRole, RoleResponseDto>();
         CreateMap<RolePermission, RolePermissionDto>();
 
-        CreateMap<LevyPayment, GoodBoyLevyPaymentResponseDto>();
+        //CreateMap<LevyPayment, GoodBoyLevyPaymentResponseDto>();
 
         CreateMap<Market, MarketResponseDto>();
         CreateMap<GoodBoy, GoodBoyResponseDto>();
