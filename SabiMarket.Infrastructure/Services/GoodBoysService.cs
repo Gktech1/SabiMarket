@@ -669,9 +669,76 @@ namespace SabiMarket.Infrastructure.Services
             }
     */
 
+        /*   public async Task<BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>> GetTodayLeviesForGoodBoy(
+        string goodBoyId,
+        PaginationFilter pagination)
+           {
+               var correlationId = Guid.NewGuid().ToString();
+               try
+               {
+                   await CreateAuditLog(
+                       "Today's Levies Query",
+                       $"CorrelationId: {correlationId} - Retrieving today's levies for GoodBoy ID: {goodBoyId}, Page {pagination.PageNumber}, Size {pagination.PageSize}",
+                       "Levy Management"
+                   );
+
+                   // Get paginated levy payments from repository
+                   var leviesPaginated = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRange(
+                       goodBoyId,
+                       pagination,
+                       trackChanges: false
+                   );
+
+                   // Map entities to DTOs
+                   var levyPaymentDtos = _mapper.Map<List<GoodBoyLevyPaymentResponseDto>>(leviesPaginated.PageItems);
+
+                   // Manually fix the trader names after mapping
+                   int index = 0;
+                   foreach (var levy in leviesPaginated.PageItems)
+                   {
+                       if (levy.Trader?.User != null)
+                       {
+                           levyPaymentDtos[index].TraderName = $"{levy.Trader.User.FirstName} {levy.Trader.User.LastName}".Trim();
+                       }
+                       else
+                       {
+                           levyPaymentDtos[index].TraderName = "Unknown Trader";
+                       }
+                       levyPaymentDtos[index].Status = levy.PaymentStatus.ToString();
+                       index++;
+                   }
+
+                   // Create final paginated result with DTOs
+                   var paginatedResult = new PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>
+                   {
+                       PageItems = levyPaymentDtos,
+                       CurrentPage = leviesPaginated.CurrentPage,
+                       PageSize = leviesPaginated.PageSize,
+                       NumberOfPages = leviesPaginated.NumberOfPages
+                   };
+
+                   await CreateAuditLog(
+                       "Today's Levies Retrieved",
+                       $"CorrelationId: {correlationId} - Retrieved {levyPaymentDtos.Count} levies for GoodBoy ID: {goodBoyId} on page {pagination.PageNumber}",
+                       "Levy Management"
+                   );
+
+                   return ResponseFactory.Success(paginatedResult, "Today's levies retrieved successfully");
+               }
+               catch (Exception ex)
+               {
+                   await CreateAuditLog(
+                       "Today's Levies Query Failed",
+                       $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                       "Levy Management"
+                   );
+                   return ResponseFactory.Fail<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>(ex, "An unexpected error occurred");
+               }
+           }*/
+
         public async Task<BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>> GetTodayLeviesForGoodBoy(
-     string goodBoyId,
-     PaginationFilter pagination)
+    string goodBoyId,
+    PaginationFilter pagination)
         {
             var correlationId = Guid.NewGuid().ToString();
             try
@@ -682,36 +749,20 @@ namespace SabiMarket.Infrastructure.Services
                     "Levy Management"
                 );
 
-                // Get paginated levy payments from repository
+                // Use the repository method that returns DTOs
                 var leviesPaginated = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRange(
                     goodBoyId,
                     pagination,
                     trackChanges: false
                 );
 
-                // Map entities to DTOs
-                var levyPaymentDtos = _mapper.Map<List<GoodBoyLevyPaymentResponseDto>>(leviesPaginated.PageItems);
+                // Convert from IEnumerable to List
+                var levyPaymentsList = leviesPaginated.PageItems.ToList();
 
-                // Manually fix the trader names after mapping
-                int index = 0;
-                foreach (var levy in leviesPaginated.PageItems)
-                {
-                    if (levy.Trader?.User != null)
-                    {
-                        levyPaymentDtos[index].TraderName = $"{levy.Trader.User.FirstName} {levy.Trader.User.LastName}".Trim();
-                    }
-                    else
-                    {
-                        levyPaymentDtos[index].TraderName = "Unknown Trader";
-                    }
-                    levyPaymentDtos[index].Status = levy.PaymentStatus.ToString();
-                    index++;
-                }
-
-                // Create final paginated result with DTOs
+                // Create final paginated result
                 var paginatedResult = new PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>
                 {
-                    PageItems = levyPaymentDtos,
+                    PageItems = levyPaymentsList,
                     CurrentPage = leviesPaginated.CurrentPage,
                     PageSize = leviesPaginated.PageSize,
                     NumberOfPages = leviesPaginated.NumberOfPages
@@ -719,7 +770,7 @@ namespace SabiMarket.Infrastructure.Services
 
                 await CreateAuditLog(
                     "Today's Levies Retrieved",
-                    $"CorrelationId: {correlationId} - Retrieved {levyPaymentDtos.Count} levies for GoodBoy ID: {goodBoyId} on page {pagination.PageNumber}",
+                    $"CorrelationId: {correlationId} - Retrieved {levyPaymentsList.Count} levies for GoodBoy ID: {goodBoyId} on page {pagination.PageNumber}",
                     "Levy Management"
                 );
 

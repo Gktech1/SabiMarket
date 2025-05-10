@@ -1,4 +1,5 @@
 ﻿using SabiMarket.Application.DTOs;
+using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Enum;
@@ -36,7 +37,11 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
             string goodBoyId,
             PaginationFilter paginationFilter,
             bool trackChanges = false);
-    Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPaymentsByDateRange(
+    /*Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPaymentsByDateRange(
+    string goodBoyId,
+    PaginationFilter paginationFilter,
+    bool trackChanges = false);*/
+    Task<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetLevyPaymentsByDateRange(
     string goodBoyId,
     PaginationFilter paginationFilter,
     bool trackChanges = false);
