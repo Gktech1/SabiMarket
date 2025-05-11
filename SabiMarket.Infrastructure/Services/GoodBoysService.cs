@@ -786,65 +786,12 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>(ex, "An unexpected error occurred");
             }
         }
-        public async Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(string goodBoyId, DateTime? fromDate = null, DateTime? toDate = null)
-        {
-            var correlationId = Guid.NewGuid().ToString();
-            try
-            {
-                await CreateAuditLog(
-                    "Dashboard Stats Query",
-                    $"CorrelationId: {correlationId} - Retrieving dashboard stats for GoodBoy ID: {goodBoyId}",
-                    "Levy Management"
-                );
-
-                // Set default date range if not provided (current month)
-                if (!fromDate.HasValue || !toDate.HasValue)
-                {
-                    fromDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-                    toDate = fromDate.Value.AddMonths(1).AddDays(-1);
-                }
-
-                // Get trader count managed by the good boy
-                var traderCount = await _repository.TraderRepository.GetTraderCountByGoodBoyIdAsync(goodBoyId);
-
-                // Get total levy amount collected by the good boy in the date range
-                var totalLevies = await _repository.LevyPaymentRepository.GetTotalLevyAmountByGoodBoyIdAsync(
-                    goodBoyId,
-                    fromDate.Value,
-                    toDate.Value
-                );
-
-                var result = new GoodBoyDashboardStatsDto
-                {
-                    TraderCount = traderCount,
-                    TotalLevies = totalLevies
-                };
-
-                await CreateAuditLog(
-                    "Dashboard Stats Retrieved",
-                    $"CorrelationId: {correlationId} - Dashboard stats retrieved for GoodBoy ID: {goodBoyId}",
-                    "Levy Management"
-                );
-
-                return ResponseFactory.Success(result, "Dashboard statistics retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                await CreateAuditLog(
-                    "Dashboard Stats Query Failed",
-                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                    "Levy Management"
-                );
-                return ResponseFactory.Fail<GoodBoyDashboardStatsDto>(ex, "An unexpected error occurred");
-            }
-        }
-
         public async Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(
-    string goodBoyId,
-    DateTime? fromDate = null,
-    DateTime? toDate = null,
-    string searchQuery = null,
-    PaginationFilter paginationFilter = null)
+      string goodBoyId,
+      DateTime? fromDate = null,
+      DateTime? toDate = null,
+      string searchQuery = null,
+      PaginationFilter paginationFilter = null)
         {
             var correlationId = Guid.NewGuid().ToString();
             var userId = _currentUser.GetUserId();
@@ -876,60 +823,70 @@ namespace SabiMarket.Infrastructure.Services
                     toDate.Value
                 );
 
-                // Get levy payments for the good boy using the existing GetLevyPaymentsByDateRangeAsync method
-                var payments = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRangeAsync(
+                // Get all levy payments for the good boy in the date range
+                var allLevyPayments = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRangeAsync(
                     userId,
                     fromDate.Value,
                     toDate.Value
                 );
 
-                // Filter payments by search query if provided
+                // Apply search filter if provided
+                var filteredPayments = allLevyPayments;
                 if (!string.IsNullOrWhiteSpace(searchQuery))
                 {
                     searchQuery = searchQuery.Trim().ToLower();
-                    payments = payments.Where(p =>
-                        (p.Trader?.User?.FirstName != null && p.Trader.User.FirstName.ToLower().Contains(searchQuery)) ||
-                        (p.Trader?.User?.LastName != null && p.Trader.User.LastName.ToLower().Contains(searchQuery)) ||
-                        (p.TransactionReference != null && p.TransactionReference.ToLower().Contains(searchQuery))
-                    ).ToList();
+                    filteredPayments = allLevyPayments.Where(p =>
+                        (p.TraderName != null && p.TraderName.ToLower().Contains(searchQuery))
+                    // Add other search fields as needed, like transaction reference if available
+                    );
                 }
 
-                // Apply pagination manually since we already have the full list from the repository
-                var totalCount = payments.Count();
+                // Apply pagination manually to filtered results
+                var totalCount = filteredPayments.Count();
                 var totalPages = (int)Math.Ceiling((double)totalCount / paginationFilter.PageSize);
 
-                var paginatedPayments = payments
-                    .OrderByDescending(p => p.PaymentDate)
+                var paginatedPayments = filteredPayments
                     .Skip((paginationFilter.PageNumber - 1) * paginationFilter.PageSize)
                     .Take(paginationFilter.PageSize)
                     .ToList();
 
-                // Map payment entities to DTOs
+                // Map DTOs to the required format
                 var paymentDtos = paginatedPayments.Select(p => new LevyPaymentDto
                 {
-                    PayerName = p.Trader?.User != null
-                        ? $"{p.Trader.User.FirstName} {p.Trader.User.LastName}"
-                        : "Unknown Trader",
+                    PayerName = p.TraderName ?? "Unknown Trader",
                     PaymentTime = p.PaymentDate,
                     Amount = p.Amount
-                });
+                }).ToList();
+
+                // Create final paginated result for payments
+                var paginatedPaymentsResult = new PaginatorDto<List<LevyPaymentDto>>
+                {
+                    PageItems = paymentDtos,
+                    CurrentPage = paginationFilter.PageNumber,
+                    PageSize = paginationFilter.PageSize,
+                    NumberOfPages = totalPages
+                };
+
+                // Convert PaginatorDto<List<T>> to PaginatorDto<IEnumerable<T>> for GoodBoyDashboardStatsDto
+                var paginatedPaymentsForDto = new PaginatorDto<IEnumerable<LevyPaymentDto>>
+                {
+                    PageItems = paymentDtos,
+                    CurrentPage = paginatedPaymentsResult.CurrentPage,
+                    PageSize = paginatedPaymentsResult.PageSize,
+                    NumberOfPages = paginatedPaymentsResult.NumberOfPages
+                };
 
                 var result = new GoodBoyDashboardStatsDto
                 {
                     TraderCount = traderCount,
                     TotalLevies = totalLevies,
-                    Payments = new PaginatorDto<IEnumerable<LevyPaymentDto>>
-                    {
-                        PageItems = paymentDtos,
-                        CurrentPage = paginationFilter.PageNumber,
-                        PageSize = paginationFilter.PageSize,
-                        NumberOfPages = totalPages
-                    }
+                    Payments = paginatedPaymentsForDto
                 };
 
                 await CreateAuditLog(
                     "Dashboard Stats Retrieved",
-                    $"CorrelationId: {correlationId} - Dashboard stats retrieved for GoodBoy ID: {goodBoyId}",
+                    $"CorrelationId: {correlationId} - Dashboard stats retrieved for GoodBoy ID: {goodBoyId}, " +
+                    $"Page {paginationFilter.PageNumber}, Size {paginationFilter.PageSize}",
                     "Levy Management"
                 );
 
@@ -942,10 +899,117 @@ namespace SabiMarket.Infrastructure.Services
                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
                     "Levy Management"
                 );
-                _logger.LogError(ex, "Error retrieving dashboard stats: {ErrorMessage}", ex.Message);
                 return ResponseFactory.Fail<GoodBoyDashboardStatsDto>(ex, "An unexpected error occurred");
             }
         }
+
+        /* public async Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(
+     string goodBoyId,
+     DateTime? fromDate = null,
+     DateTime? toDate = null,
+     string searchQuery = null,
+     PaginationFilter paginationFilter = null)
+         {
+             var correlationId = Guid.NewGuid().ToString();
+             var userId = _currentUser.GetUserId();
+             try
+             {
+                 await CreateAuditLog(
+                     "Dashboard Stats Query",
+                     $"CorrelationId: {correlationId} - Retrieving dashboard stats for GoodBoy ID: {goodBoyId}",
+                     "Levy Management"
+                 );
+
+                 // Set default date range if not provided (current month)
+                 if (!fromDate.HasValue || !toDate.HasValue)
+                 {
+                     fromDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                     toDate = fromDate.Value.AddMonths(1).AddDays(-1);
+                 }
+
+                 // Set default pagination if not provided
+                 paginationFilter ??= new PaginationFilter();
+
+                 // Get trader count managed by the good boy
+                 var traderCount = await _repository.TraderRepository.GetTraderCountByGoodBoyIdAsync(goodBoyId);
+
+                 // Get total levy amount collected by the good boy in the date range
+                 var totalLevies = await _repository.LevyPaymentRepository.GetTotalLevyAmountByGoodBoyIdAsync(
+                     userId,
+                     fromDate.Value,
+                     toDate.Value
+                 );
+
+                 // Get levy payments for the good boy using the existing GetLevyPaymentsByDateRangeAsync method
+                 var payments = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRangeAsync(
+                     userId,
+                     fromDate.Value,
+                     toDate.Value
+                 );
+
+                 // Filter payments by search query if provided
+                 if (!string.IsNullOrWhiteSpace(searchQuery))
+                 {
+                     searchQuery = searchQuery.Trim().ToLower();
+                     payments = payments.Where(p =>
+                         (p.Trader?.User?.FirstName != null && p.Trader.User.FirstName.ToLower().Contains(searchQuery)) ||
+                         (p.Trader?.User?.LastName != null && p.Trader.User.LastName.ToLower().Contains(searchQuery)) ||
+                         (p.TransactionReference != null && p.TransactionReference.ToLower().Contains(searchQuery))
+                     ).ToList();
+                 }
+
+                 // Apply pagination manually since we already have the full list from the repository
+                 var totalCount = payments.Count();
+                 var totalPages = (int)Math.Ceiling((double)totalCount / paginationFilter.PageSize);
+
+                 var paginatedPayments = payments
+                     .OrderByDescending(p => p.PaymentDate)
+                     .Skip((paginationFilter.PageNumber - 1) * paginationFilter.PageSize)
+                     .Take(paginationFilter.PageSize)
+                     .ToList();
+
+                 // Map payment entities to DTOs
+                 var paymentDtos = paginatedPayments.Select(p => new LevyPaymentDto
+                 {
+                     PayerName = p.Trader?.User != null
+                         ? $"{p.Trader.User.FirstName} {p.Trader.User.LastName}"
+                         : "Unknown Trader",
+                     PaymentTime = p.PaymentDate,
+                     Amount = p.Amount
+                 });
+
+                 var result = new GoodBoyDashboardStatsDto
+                 {
+                     TraderCount = traderCount,
+                     TotalLevies = totalLevies,
+                     Payments = new PaginatorDto<IEnumerable<LevyPaymentDto>>
+                     {
+                         PageItems = paymentDtos,
+                         CurrentPage = paginationFilter.PageNumber,
+                         PageSize = paginationFilter.PageSize,
+                         NumberOfPages = totalPages
+                     }
+                 };
+
+                 await CreateAuditLog(
+                     "Dashboard Stats Retrieved",
+                     $"CorrelationId: {correlationId} - Dashboard stats retrieved for GoodBoy ID: {goodBoyId}",
+                     "Levy Management"
+                 );
+
+                 return ResponseFactory.Success(result, "Dashboard statistics retrieved successfully");
+             }
+             catch (Exception ex)
+             {
+                 await CreateAuditLog(
+                     "Dashboard Stats Query Failed",
+                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                     "Levy Management"
+                 );
+                 _logger.LogError(ex, "Error retrieving dashboard stats: {ErrorMessage}", ex.Message);
+                 return ResponseFactory.Fail<GoodBoyDashboardStatsDto>(ex, "An unexpected error occurred");
+             }
+         }*/
 
         public async Task<BaseResponse<GoodBoyLevyPaymentResponseDto>> CollectLevyPayment(LevyPaymentCreateDto levyPaymentDto)
         {

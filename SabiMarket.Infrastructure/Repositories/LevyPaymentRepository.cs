@@ -191,7 +191,7 @@ namespace SabiMarket.Infrastructure.Repositories
             return await query.Paginate(paginationFilter);
         }
 
-        public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
+        public async Task<IEnumerable<GoodBoyLevyPaymentResponseDto>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
         {
             try
             {
@@ -210,37 +210,50 @@ namespace SabiMarket.Infrastructure.Repositories
                     Console.WriteLine($"LevyId: {levy.Id}, TraderId: {levy.TraderId}, GoodBoyId: {levy.GoodBoyId}");
                 }
 
-                // Second debug: Check trader IDs
-                var traderIds = levyPaymentsBasic.Select(l => l.TraderId).Distinct().ToList();
+                // Second debug: Check trader IDs - Fixed to use TraderId instead of GoodBoyId
+                var traderIds = levyPaymentsBasic.Select(l => l.GoodBoyId).Distinct().ToList();
                 var tradersExist = await _context.Traders
                     .Where(t => traderIds.Contains(t.UserId)) // Using UserId based on your earlier finding
                     .ToListAsync();
 
                 Console.WriteLine($"Found {tradersExist.Count} traders for these TraderId values");
-                foreach (var trader in tradersExist.Take(5))
+                foreach (var traderDetail in tradersExist.Take(5))
                 {
-                    Console.WriteLine($"Trader - Id: {trader.Id}, UserId: {trader.UserId}, TraderName: {trader.TraderName}");
+                    Console.WriteLine($"Trader - Id: {traderDetail.Id}, UserId: {traderDetail.UserId}, TraderName: {traderDetail.TraderName}");
                 }
 
-                // Now try the full query with includes
-                var result = await FindByCondition(
-                    lp => lp.GoodBoyId == goodBoyId &&
-                          lp.PaymentDate >= fromDate &&
-                          lp.PaymentDate <= toDate &&
-                          lp.PaymentStatus == PaymentStatusEnum.Paid,
-                    trackChanges: false)
-                    .Include(lp => lp.Trader)
-                        .ThenInclude(t => t.User)
-                    .Include(lp => lp.Market)
-                    .OrderByDescending(lp => lp.PaymentDate)
-                    .AsNoTracking()
-                    .ToListAsync();
+                var traders = tradersExist.FirstOrDefault();
+                // Use join instead of Include for better performance
+                var query = _context.LevyPayments
+                    .Where(levy => levy.GoodBoyId == goodBoyId &&
+                                   levy.PaymentDate >= fromDate &&
+                                   levy.PaymentDate <= toDate &&
+                                   levy.PaymentStatus == PaymentStatusEnum.Paid)
+                    .GroupJoin(_context.Traders,
+                              levy => levy.TraderId,
+                              trader => trader.UserId, // Based on your earlier finding
+                              (levy, traders) => new { levy, traders })
+                    .SelectMany(x => x.traders.DefaultIfEmpty(),
+                               (x, trader) => new GoodBoyLevyPaymentResponseDto
+                               {
+                                   Id = x.levy.Id,
+                                   Amount = x.levy.Amount,
+                                   PaymentDate = x.levy.PaymentDate,
+                                   CreatedAt = x.levy.CreatedAt,
+                                   Status = x.levy.PaymentStatus.ToString(),
+                                   TraderName = traders != null ? traders.TraderName ?? "No Trader Name" : "No Trader Found"
+                               })
+                    .OrderByDescending(dto => dto.PaymentDate)
+                    .ThenByDescending(dto => dto.CreatedAt);
+
+                // Execute the query
+                var result = await query.ToListAsync();
 
                 // Debug the result
                 Console.WriteLine($"Final result count: {result.Count}");
-                foreach (var levy in result.Take(5))
+                foreach (var item in result.Take(5))
                 {
-                    Console.WriteLine($"LevyId: {levy.Id}, Trader: {(levy.Trader != null ? "Loaded" : "NULL")}, TraderName: {levy.Trader?.TraderName ?? "N/A"}");
+                    Console.WriteLine($"LevyId: {item.Id}, TraderName: {item.TraderName}");
                 }
 
                 return result;
@@ -252,6 +265,89 @@ namespace SabiMarket.Infrastructure.Repositories
                 throw;
             }
         }
+
+        /*  public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
+          {
+              try
+              {
+                  // First debug: Check levy payments without includes
+                  var levyPaymentsBasic = await FindByCondition(
+                      lp => lp.GoodBoyId == goodBoyId &&
+                            lp.PaymentDate >= fromDate &&
+                            lp.PaymentDate <= toDate &&
+                            lp.PaymentStatus == PaymentStatusEnum.Paid,
+                      trackChanges: false)
+                      .ToListAsync();
+
+                  Console.WriteLine($"Found {levyPaymentsBasic.Count} levy payments");
+                  foreach (var levy in levyPaymentsBasic.Take(5))
+                  {
+                      Console.WriteLine($"LevyId: {levy.Id}, TraderId: {levy.TraderId}, GoodBoyId: {levy.GoodBoyId}");
+                  }
+
+                  // Second debug: Check trader IDs
+                  var traderIds = levyPaymentsBasic.Select(l => l.GoodBoyId).Distinct().ToList();
+                  var tradersExist = await _context.Traders
+                      .Where(t => traderIds.Contains(t.UserId)) // Using UserId based on your earlier finding
+                      .ToListAsync();
+
+                  Console.WriteLine($"Found {tradersExist.Count} traders for these TraderId values");
+                  foreach (var trader in tradersExist.Take(5))
+                  {
+                      Console.WriteLine($"Trader - Id: {trader.Id}, UserId: {trader.UserId}, TraderName: {trader.TraderName}");
+                  }
+
+                  // Now try the full query with includes
+                  *//*  var result = await FindByCondition(
+                        lp => lp.GoodBoyId == goodBoyId &&
+                              lp.PaymentDate >= fromDate &&
+                              lp.PaymentDate <= toDate &&
+                              lp.PaymentStatus == PaymentStatusEnum.Paid,
+                        trackChanges: false)
+                        .Include(lp => lp.Trader)
+                            .ThenInclude(t => t.User)
+                        .Include(lp => lp.Market)
+                        .OrderByDescending(lp => lp.PaymentDate)
+                        .AsNoTracking()
+                        .ToListAsync();*//*
+
+                  var query = _context.LevyPayments
+                  .Include(levy => levy.Trader) // Include navigation property
+                  .Where(levy => levy.GoodBoyId == goodBoyId &&
+                                 levy.PaymentDate >= fromDate &&
+                                 levy.PaymentDate <= toDate &&
+                                 levy.PaymentStatus == PaymentStatusEnum.Paid)
+                  .Select(levy => new GoodBoyLevyPaymentResponseDto
+                  {
+                      Id = levy.Id,
+                      Amount = levy.Amount,
+                      PaymentDate = levy.PaymentDate,
+                      CreatedAt = levy.CreatedAt,
+                      Status = levy.PaymentStatus.ToString(),
+                      TraderName = levy.Trader != null ? levy.Trader.TraderName ?? "No Trader Name" : "No Trader Found"
+                  })
+                  .OrderByDescending(dto => dto.PaymentDate)
+                  .ThenByDescending(dto => dto.CreatedAt);
+
+                  // Execute the query
+                  var result = await query.ToListAsync();
+
+                  // Debug the result
+                  Console.WriteLine($"Final result count: {result.Count}");
+                  foreach (var item in result.Take(5))
+                  {
+                      Console.WriteLine($"LevyId: {item.Id}, TraderName: {item.TraderName}");
+                  }
+
+                  return result;
+              }
+              catch (Exception ex)
+              {
+                  Console.WriteLine($"Exception in GetLevyPaymentsByDateRangeAsync: {ex.Message}");
+                  Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                  throw;
+              }
+          }*/
 
         /* public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
          {
@@ -331,193 +427,6 @@ namespace SabiMarket.Infrastructure.Repositories
             }
         }
 
-        //current
-        /* public async Task<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetLevyPaymentsByDateRange(
-     string goodBoyId,
-     PaginationFilter paginationFilter,
-     bool trackChanges = false)
-         {
-             try
-             {
-                 var query = _context.LevyPayments
-                     .Where(levy => levy.GoodBoyId == goodBoyId &&
-                                   levy.PaymentStatus == PaymentStatusEnum.Paid &&
-                                   levy.Period == PaymentPeriodEnum.Daily)
-                     .GroupJoin(_context.Traders,
-                               levy => levy.TraderId,
-                               trader => trader.UserId,
-                               (levy, traders) => new { levy, traders })
-                     .SelectMany(x => x.traders.DefaultIfEmpty(),
-                                (x, trader) => new { x.levy, trader })
-                     .Select(x => new GoodBoyLevyPaymentResponseDto
-                     {
-                         Id = x.levy.Id,
-                         Amount = x.levy.Amount,
-                         PaymentDate = x.levy.PaymentDate,
-                         CreatedAt = x.levy.CreatedAt,
-                         Status = x.levy.PaymentStatus.ToString(),
-                         TraderName = x.trader != null ? x.trader.TraderName : null
-                     })
-                     .OrderByDescending(dto => dto.PaymentDate)
-                     .ThenByDescending(dto => dto.CreatedAt);
-
-                 return await query.Paginate(paginationFilter);
-             }
-             catch (Exception ex)
-             {
-                 Console.WriteLine($"Exception in GetLevyPaymentsByDateRange: {ex.Message}");
-                 throw;
-             }
-         }*/
-        /* public async Task<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetLevyPaymentsByDateRange(
-     string goodBoyId,
-     PaginationFilter paginationFilter,
-     bool trackChanges = false)
-         {
-             try
-             {
-                 // Build query using joins and project to DTO
-                 var query = from levy in _context.LevyPayments
-                             where levy.GoodBoyId == goodBoyId &&
-                                   levy.PaymentStatus == PaymentStatusEnum.Paid &&
-                                   levy.Period == PaymentPeriodEnum.Daily
-                             join trader in _context.Traders on levy.TraderId equals trader.Id into traderGroup
-                             from trader in traderGroup.DefaultIfEmpty()
-                             join user in _context.Users on trader.UserId equals user.Id into userGroup
-                             from user in userGroup.DefaultIfEmpty()
-                             select new GoodBoyLevyPaymentResponseDto
-                             {
-                                 Id = levy.Id,
-                                 Amount = levy.Amount,
-                                 PaymentDate = levy.PaymentDate,
-                                 CreatedAt = levy.CreatedAt,
-                                 Status = levy.PaymentStatus.ToString(),
-                                 TraderName = trader!.TraderName
-                             };
-
-                 // Apply ordering before pagination
-                 query = query
-                     .OrderByDescending(dto => dto.PaymentDate)
-                     .ThenByDescending(dto => dto.CreatedAt);
-
-                 // Use your existing Paginate extension
-                 return await query.Paginate(paginationFilter);
-             }
-             catch (Exception ex)
-             {
-                 Console.WriteLine($"Exception in GetLevyPaymentsByDateRange: {ex.Message}");
-                 throw;
-             }
-         }*/
-
-        /*public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPaymentsByDateRange(
-    string goodBoyId,
-    PaginationFilter paginationFilter,
-    bool trackChanges = false)
-        {
-            try
-            {
-                // Filter by GoodBoyId, PaymentStatus, and Period=Daily (value 1)
-                var query = FindByCondition(
-                    lp => lp.GoodBoyId == goodBoyId &&
-                          lp.PaymentStatus == PaymentStatusEnum.Paid &&
-                          lp.Period == PaymentPeriodEnum.Daily,
-                    trackChanges: trackChanges);
-
-                // Include related entities
-                query = query
-                    .Include(lp => lp.Trader)
-                        .ThenInclude(t => t.User)
-                    .Include(lp => lp.Market)
-                    .OrderByDescending(lp => lp.PaymentDate);
-
-                // Apply pagination using your existing extension method
-                return await query.Paginate(paginationFilter);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception in GetLevyPaymentsByDateRange: {ex.Message}");
-                throw;
-            }
-        }*/
-
-        /* public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
-         {
-             return await FindByCondition(
-                 lp => lp.GoodBoyId == goodBoyId &&
-                       lp.PaymentDate >= fromDate &&
-                       lp.PaymentDate <= toDate &&  // Changed < to <= to include payments made exactly at toDate
-                       lp.PaymentStatus == PaymentStatusEnum.Paid,
-                 trackChanges: false)
-                 .Include(lp => lp.Trader)
-                     .ThenInclude(t => t.User)
-                 .Include(lp => lp.Market)
-                 .OrderByDescending(lp => lp.PaymentDate)
-                 .ToListAsync();
-         }*/
-        /* public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRange(string goodBoyId, DateTime fromDate, DateTime toDate)
-         {
-             return await FindByCondition(
-                 lp => lp.GoodBoyId == goodBoyId &&
-                       lp.PaymentDate >= fromDate &&
-                       lp.PaymentDate < toDate &&
-                       lp.PaymentStatus == PaymentStatusEnum.Paid,
-                 trackChanges: false)
-                 .Include(lp => lp.Trader)
-                     .ThenInclude(t => t.User)
-                 .Include(lp => lp.Market)
-                 .OrderByDescending(lp => lp.PaymentDate)
-                 .ToListAsync();
-         }*/
-
-        /*public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRange(string goodBoyId)
-        {
-            // Get the current month in YYYYMM format
-            string currentMonth = DateTime.Now.ToString("yyyyMM");
-
-            // Debug info
-            Console.WriteLine($"Searching for goodBoyId: {goodBoyId}, month: {currentMonth}");
-
-            return await FindByCondition(
-                lp => lp.GoodBoyId == goodBoyId &&
-                      // Try using string comparison for the period if stored as YYYYMM
-                      lp.Period.ToString() == currentMonth &&
-                      // If PaymentStatus of 2 means "Paid" in your system
-                      (int)lp.PaymentStatus == 2,
-                trackChanges: false)
-                .Include(lp => lp.Trader)
-                    .ThenInclude(t => t.User)
-                .Include(lp => lp.Market)
-                .OrderByDescending(lp => lp.PaymentDate) // or other sort column
-                .ToListAsync();
-        }*/
-
-        /* public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRange(string goodBoyId)
-         {
-             try
-             {
-                 // Filter by GoodBoyId, PaymentStatus, and Period=Daily (value 1)
-                 var query = FindByCondition(
-                     lp => lp.GoodBoyId == goodBoyId &&
-                           lp.PaymentStatus == PaymentStatusEnum.Paid &&
-                           lp.Period == PaymentPeriodEnum.Daily,
-                     trackChanges: false);
-
-                 // Include related entities
-                 query = query
-                     .Include(lp => lp.Trader)
-                         .ThenInclude(t => t.User)
-                     .Include(lp => lp.Market)
-                     .OrderByDescending(lp => lp.PaymentDate);
-
-                 return await query.ToListAsync();
-             }
-             catch (Exception ex)
-             {
-                 Console.WriteLine($"Exception in GetLevyPaymentsByDateRange: {ex.Message}");
-                 throw;
-             }
-         }*/
 
         // Get levy payments by trader ID
         public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByTraderIdAsync(string traderId)
@@ -855,3 +764,191 @@ namespace SabiMarket.Infrastructure.Repositories
         }
     }
 }
+
+//current
+/* public async Task<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetLevyPaymentsByDateRange(
+string goodBoyId,
+PaginationFilter paginationFilter,
+bool trackChanges = false)
+ {
+     try
+     {
+         var query = _context.LevyPayments
+             .Where(levy => levy.GoodBoyId == goodBoyId &&
+                           levy.PaymentStatus == PaymentStatusEnum.Paid &&
+                           levy.Period == PaymentPeriodEnum.Daily)
+             .GroupJoin(_context.Traders,
+                       levy => levy.TraderId,
+                       trader => trader.UserId,
+                       (levy, traders) => new { levy, traders })
+             .SelectMany(x => x.traders.DefaultIfEmpty(),
+                        (x, trader) => new { x.levy, trader })
+             .Select(x => new GoodBoyLevyPaymentResponseDto
+             {
+                 Id = x.levy.Id,
+                 Amount = x.levy.Amount,
+                 PaymentDate = x.levy.PaymentDate,
+                 CreatedAt = x.levy.CreatedAt,
+                 Status = x.levy.PaymentStatus.ToString(),
+                 TraderName = x.trader != null ? x.trader.TraderName : null
+             })
+             .OrderByDescending(dto => dto.PaymentDate)
+             .ThenByDescending(dto => dto.CreatedAt);
+
+         return await query.Paginate(paginationFilter);
+     }
+     catch (Exception ex)
+     {
+         Console.WriteLine($"Exception in GetLevyPaymentsByDateRange: {ex.Message}");
+         throw;
+     }
+ }*/
+/* public async Task<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetLevyPaymentsByDateRange(
+string goodBoyId,
+PaginationFilter paginationFilter,
+bool trackChanges = false)
+ {
+     try
+     {
+         // Build query using joins and project to DTO
+         var query = from levy in _context.LevyPayments
+                     where levy.GoodBoyId == goodBoyId &&
+                           levy.PaymentStatus == PaymentStatusEnum.Paid &&
+                           levy.Period == PaymentPeriodEnum.Daily
+                     join trader in _context.Traders on levy.TraderId equals trader.Id into traderGroup
+                     from trader in traderGroup.DefaultIfEmpty()
+                     join user in _context.Users on trader.UserId equals user.Id into userGroup
+                     from user in userGroup.DefaultIfEmpty()
+                     select new GoodBoyLevyPaymentResponseDto
+                     {
+                         Id = levy.Id,
+                         Amount = levy.Amount,
+                         PaymentDate = levy.PaymentDate,
+                         CreatedAt = levy.CreatedAt,
+                         Status = levy.PaymentStatus.ToString(),
+                         TraderName = trader!.TraderName
+                     };
+
+         // Apply ordering before pagination
+         query = query
+             .OrderByDescending(dto => dto.PaymentDate)
+             .ThenByDescending(dto => dto.CreatedAt);
+
+         // Use your existing Paginate extension
+         return await query.Paginate(paginationFilter);
+     }
+     catch (Exception ex)
+     {
+         Console.WriteLine($"Exception in GetLevyPaymentsByDateRange: {ex.Message}");
+         throw;
+     }
+ }*/
+
+/*public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPaymentsByDateRange(
+string goodBoyId,
+PaginationFilter paginationFilter,
+bool trackChanges = false)
+{
+    try
+    {
+        // Filter by GoodBoyId, PaymentStatus, and Period=Daily (value 1)
+        var query = FindByCondition(
+            lp => lp.GoodBoyId == goodBoyId &&
+                  lp.PaymentStatus == PaymentStatusEnum.Paid &&
+                  lp.Period == PaymentPeriodEnum.Daily,
+            trackChanges: trackChanges);
+
+        // Include related entities
+        query = query
+            .Include(lp => lp.Trader)
+                .ThenInclude(t => t.User)
+            .Include(lp => lp.Market)
+            .OrderByDescending(lp => lp.PaymentDate);
+
+        // Apply pagination using your existing extension method
+        return await query.Paginate(paginationFilter);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Exception in GetLevyPaymentsByDateRange: {ex.Message}");
+        throw;
+    }
+}*/
+
+/* public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
+ {
+     return await FindByCondition(
+         lp => lp.GoodBoyId == goodBoyId &&
+               lp.PaymentDate >= fromDate &&
+               lp.PaymentDate <= toDate &&  // Changed < to <= to include payments made exactly at toDate
+               lp.PaymentStatus == PaymentStatusEnum.Paid,
+         trackChanges: false)
+         .Include(lp => lp.Trader)
+             .ThenInclude(t => t.User)
+         .Include(lp => lp.Market)
+         .OrderByDescending(lp => lp.PaymentDate)
+         .ToListAsync();
+ }*/
+/* public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRange(string goodBoyId, DateTime fromDate, DateTime toDate)
+ {
+     return await FindByCondition(
+         lp => lp.GoodBoyId == goodBoyId &&
+               lp.PaymentDate >= fromDate &&
+               lp.PaymentDate < toDate &&
+               lp.PaymentStatus == PaymentStatusEnum.Paid,
+         trackChanges: false)
+         .Include(lp => lp.Trader)
+             .ThenInclude(t => t.User)
+         .Include(lp => lp.Market)
+         .OrderByDescending(lp => lp.PaymentDate)
+         .ToListAsync();
+ }*/
+
+/*public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRange(string goodBoyId)
+{
+    // Get the current month in YYYYMM format
+    string currentMonth = DateTime.Now.ToString("yyyyMM");
+
+    // Debug info
+    Console.WriteLine($"Searching for goodBoyId: {goodBoyId}, month: {currentMonth}");
+
+    return await FindByCondition(
+        lp => lp.GoodBoyId == goodBoyId &&
+              // Try using string comparison for the period if stored as YYYYMM
+              lp.Period.ToString() == currentMonth &&
+              // If PaymentStatus of 2 means "Paid" in your system
+              (int)lp.PaymentStatus == 2,
+        trackChanges: false)
+        .Include(lp => lp.Trader)
+            .ThenInclude(t => t.User)
+        .Include(lp => lp.Market)
+        .OrderByDescending(lp => lp.PaymentDate) // or other sort column
+        .ToListAsync();
+}*/
+
+/* public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRange(string goodBoyId)
+ {
+     try
+     {
+         // Filter by GoodBoyId, PaymentStatus, and Period=Daily (value 1)
+         var query = FindByCondition(
+             lp => lp.GoodBoyId == goodBoyId &&
+                   lp.PaymentStatus == PaymentStatusEnum.Paid &&
+                   lp.Period == PaymentPeriodEnum.Daily,
+             trackChanges: false);
+
+         // Include related entities
+         query = query
+             .Include(lp => lp.Trader)
+                 .ThenInclude(t => t.User)
+             .Include(lp => lp.Market)
+             .OrderByDescending(lp => lp.PaymentDate);
+
+         return await query.ToListAsync();
+     }
+     catch (Exception ex)
+     {
+         Console.WriteLine($"Exception in GetLevyPaymentsByDateRange: {ex.Message}");
+         throw;
+     }
+ }*/

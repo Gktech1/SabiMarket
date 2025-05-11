@@ -31,7 +31,9 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     Task<LevyPayment> GetMarketLevySetup(string marketId, PaymentPeriodEnum period);
     Task<IQueryable<LevyPayment>> GetMarketLevySetups(string marketId);
     Task<IEnumerable<LevyPayment>> GetLevyPaymentsByTraderIdAsync(string traderId);
-    Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate);
+    //Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate);
+
+    Task<IEnumerable<GoodBoyLevyPaymentResponseDto>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate);
     Task<decimal> GetTotalLevyAmountByGoodBoyIdAsync(string goodBoyId, DateTime fromDate, DateTime toDate);
     Task<PaginatorDto<IEnumerable<LevyPayment>>> GetTodayLeviesForGoodBoyAsync(
             string goodBoyId,
