@@ -63,7 +63,8 @@ namespace SabiMarket.API.ServiceExtensions
                 policy => policy.RequireRole(
                     UserRoles.Admin,
                     UserRoles.Chairman,
-                    UserRoles.Caretaker
+                    UserRoles.Caretaker,
+                    UserRoles.AssistOfficer
                 ));
         }
     }

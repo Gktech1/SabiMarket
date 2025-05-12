@@ -2292,7 +2292,7 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Generate TIN if not provided
-                var tin = !string.IsNullOrEmpty(request.TIN) ? request.TIN : GenerateTIN(market.Id);
+                var tin =  GenerateTIN(market.Id);
 
                 // Generate QR Code
                 var qrCode = QRCodeHelper.GenerateQRCode(tin);
@@ -2308,6 +2308,7 @@ namespace SabiMarket.Infrastructure.Services
                     TIN = tin,
                     BusinessName = request.BusinessName,
                     BusinessType = request.BusinessType,
+                    TraderName = request.TraderName,
                     QRCode = qrCode,
                     TraderOccupancy = request.TraderOccupancy,
                     IsActive = true,
