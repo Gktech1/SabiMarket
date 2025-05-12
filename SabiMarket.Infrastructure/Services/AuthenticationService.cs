@@ -454,7 +454,7 @@ namespace SabiMarket.Infrastructure.Services
                     {
                         details.Add("traderId", user.Trader.Id);
                         details.Add("traderbusinessName", user.Trader.BusinessName);
-                        details.Add("traderbusinessName", user.Trader.TIN);
+                        details.Add("traderbusinessType", user.Trader.TIN);
                         details.Add("businessType", user.Trader.BusinessType);
                         details.Add("traderMarketId", user.Trader.MarketId);
                         details.Add("traderCaretakerId", user.Trader.CaretakerId);
