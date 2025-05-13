@@ -64,7 +64,8 @@ namespace SabiMarket.API.ServiceExtensions
                     UserRoles.Admin,
                     UserRoles.Chairman,
                     UserRoles.Caretaker,
-                    UserRoles.AssistOfficer
+                    UserRoles.AssistOfficer,
+                    UserRoles.Trader
                 ));
         }
     }

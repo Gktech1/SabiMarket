@@ -34,6 +34,11 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     //Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate);
 
     Task<IEnumerable<GoodBoyLevyPaymentResponseDto>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate);
+
+    Task<IEnumerable<LevyPayment>> GetLevyPaymentsByTraderIdAndDateRangeAsync(
+           string traderId,
+           DateTime fromDate,
+           DateTime toDate);
     Task<decimal> GetTotalLevyAmountByGoodBoyIdAsync(string goodBoyId, DateTime fromDate, DateTime toDate);
     Task<PaginatorDto<IEnumerable<LevyPayment>>> GetTodayLeviesForGoodBoyAsync(
             string goodBoyId,
@@ -47,4 +52,11 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     string goodBoyId,
     PaginationFilter paginationFilter,
     bool trackChanges = false);
+    Task<IEnumerable<LevyPayment>> GetRecentLevyPaymentsByTraderIdAsync(
+            string traderId,
+            int limit = 10);
+    Task<LevyPayment> GetLatestLevyPaymentByTraderIdAsync(string traderId);
+    Task<decimal> GetTotalLevyAmountByTraderIdAsync(string traderId);
+    Task<LevyPayment> GetLatestActiveLevyForTrader(string traderId);
+    Task<List<LevyPayment>> GetRecentPaymentsForTrader(string traderId, int count);
 }

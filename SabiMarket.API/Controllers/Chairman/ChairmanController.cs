@@ -302,6 +302,144 @@ public class ChairmanController : ControllerBase
             StatusCode(StatusCodes.Status500InternalServerError, response) :
             Ok(response);
     }
+    /// <summary>
+    /// Get dashboard information for a trader including next payment date, total levies paid, and recent payments
+    /// </summary>
+    /// <param name="traderId">The ID of the trader</param>
+    /// <returns>Trader dashboard information</returns>
+    [HttpGet("dashboard/{traderId}")]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTraderDashboard(string traderId)
+    {
+        try
+        {
+
+            _logger.LogInformation($"Getting dashboard for trader {traderId}");
+            var response = await _chairmanService.GetTraderDashboard(traderId);
+
+            if (!response.IsSuccessful)
+            {
+                _logger.LogWarning($"Failed to get dashboard for trader {traderId}: {response.Message}");
+                return NotFound(response);
+            }
+
+            _logger.LogInformation($"Successfully retrieved dashboard for trader {traderId}");
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting dashboard for trader {traderId}");
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                ResponseFactory.Fail<TraderDashboardResponseDto>("An unexpected error occurred"));
+        }
+    }
+
+    /// <summary>
+    /// Get all levy payments for a trader with pagination and filtering
+    /// </summary>
+    /// <param name="traderId">The ID of the trader</param>
+    /// <param name="fromDate">Optional start date for filtering</param>
+    /// <param name="toDate">Optional end date for filtering</param>
+    /// <param name="searchQuery">Optional search query</param>
+    /// <param name="pageNumber">Page number for pagination (default: 1)</param>
+    /// <param name="pageSize">Number of items per page (default: 10)</param>
+    /// <returns>Paginated list of levy payments</returns>
+    [HttpGet("levies/{traderId}")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAllLevyPaymentsForTrader(
+        string traderId,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        [FromQuery] string? searchQuery,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+
+        _logger.LogInformation($"Getting levy payments for trader {traderId}, " +
+            $"Date Range: {fromDate?.ToString("yyyy-MM-dd") ?? "All"} to {toDate?.ToString("yyyy-MM-dd") ?? "All"}, " +
+            $"Search: {searchQuery ?? "None"}, Page {pageNumber}, Size {pageSize}");
+
+        var pagination = new PaginationFilter
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var response = await _chairmanService.GetAllLevyPaymentsForTrader(
+            traderId,
+            fromDate,
+            toDate,
+            searchQuery,
+            pagination);
+
+        if (!response.IsSuccessful)
+        {
+            _logger.LogWarning($"Failed to get levy payments for trader {traderId}: {response.Message}");
+            return BadRequest(response);
+        }
+
+        _logger.LogInformation($"Successfully retrieved {response.Data?.PageItems?.Count ?? 0} levy payments for trader {traderId}");
+        return Ok(response);
+
+    }
+
+    /// <summary>
+    /// Get detailed levy payments for a trader with enhanced filtering
+    /// </summary>
+    /// <param name="traderId">The ID of the trader</param>
+    /// <param name="fromDate">Optional start date for filtering</param>
+    /// <param name="toDate">Optional end date for filtering</param>
+    /// <param name="searchQuery">Optional search query</param>
+    /// <param name="pageNumber">Page number for pagination (default: 1)</param>
+    /// <param name="pageSize">Number of items per page (default: 10)</param>
+    /// <returns>Paginated list of levy payments with enhanced filtering</returns>
+    [HttpGet("payments/{traderId}")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetLevyPaymentsForTrader(
+        string traderId,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        [FromQuery] string searchQuery,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+
+        _logger.LogInformation($"Getting detailed levy payments for trader {traderId}, " +
+            $"Date Range: {fromDate?.ToString("yyyy-MM-dd") ?? "All"} to {toDate?.ToString("yyyy-MM-dd") ?? "All"}, " +
+            $"Search: {searchQuery ?? "None"}, Page {pageNumber}, Size {pageSize}");
+
+        var pagination = new PaginationFilter
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var response = await _chairmanService.GetLevyPaymentsForTrader(
+            traderId,
+            fromDate,
+            toDate,
+            searchQuery,
+            pagination);
+
+        if (!response.IsSuccessful)
+        {
+            _logger.LogWarning($"Failed to get detailed levy payments for trader {traderId}: {response.Message}");
+            return BadRequest(response);
+        }
+
+        _logger.LogInformation($"Successfully retrieved {response.Data?.PageItems?.Count ?? 0} detailed levy payments for trader {traderId}");
+        return Ok(response);
+
+    }
 
     [HttpGet("traders/{traderId}/details")]
     [ProducesResponseType(typeof(BaseResponse<TraderDetailsDto>), StatusCodes.Status200OK)]

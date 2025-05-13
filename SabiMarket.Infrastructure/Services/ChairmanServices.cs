@@ -25,7 +25,9 @@ using SabiMarket.Infrastructure.Data;
 using SabiMarket.Domain.DTOs;
 using System.Linq.Expressions;
 using SabiMarket.Application.Interfaces;
-using CloudinaryDotNet.Actions;
+using LevySetupResponseDto = SabiMarket.Application.DTOs.Requests.LevySetupResponseDto;
+using Mailjet.Client.Resources.SMS;
+using System.Collections.Generic;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -116,7 +118,7 @@ namespace SabiMarket.Infrastructure.Services
             {
                 // First find the user
                 //var user = await _userManager.FindByIdAsync(userId);
-                var user =  await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
                 if (user == null)
                 {
                     await CreateAuditLog(
@@ -172,9 +174,9 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-            public async Task<BaseResponse<PaginatorDto<IEnumerable<LGResponseDto>>>> GetLocalGovernmentAreas(
-       string searchTerm,
-       PaginationFilter paginationFilter)
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<LGResponseDto>>>> GetLocalGovernmentAreas(
+   string searchTerm,
+   PaginationFilter paginationFilter)
         {
             var correlationId = Guid.NewGuid().ToString();
             try
@@ -1550,51 +1552,51 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<IEnumerable<MarketResponseDto>>(ex, "An unexpected error occurred");
             }
         }
-/*
-        public async Task<BaseResponse<bool>> UnblockAssistantOfficer(string officerId)
-        {
-            var correlationId = Guid.NewGuid().ToString();
-            try
-            {
-                await CreateAuditLog(
-                    "Officer Unblock Attempt",
-                    $"CorrelationId: {correlationId} - Unblocking officer: {officerId}",
-                    "Officer Management"
-                );
-
-                var officer = await _repository.AssistCenterOfficerRepository.GetByIdAsync(officerId, true);
-                if (officer == null)
+        /*
+                public async Task<BaseResponse<bool>> UnblockAssistantOfficer(string officerId)
                 {
-                    await CreateAuditLog(
-                        "Officer Unblock Failed",
-                        $"CorrelationId: {correlationId} - Officer not found",
-                        "Officer Management"
-                    );
-                    return ResponseFactory.Fail<bool>(new NotFoundException("Assistant Officer not found"), "Not found");
+                    var correlationId = Guid.NewGuid().ToString();
+                    try
+                    {
+                        await CreateAuditLog(
+                            "Officer Unblock Attempt",
+                            $"CorrelationId: {correlationId} - Unblocking officer: {officerId}",
+                            "Officer Management"
+                        );
+
+                        var officer = await _repository.AssistCenterOfficerRepository.GetByIdAsync(officerId, true);
+                        if (officer == null)
+                        {
+                            await CreateAuditLog(
+                                "Officer Unblock Failed",
+                                $"CorrelationId: {correlationId} - Officer not found",
+                                "Officer Management"
+                            );
+                            return ResponseFactory.Fail<bool>(new NotFoundException("Assistant Officer not found"), "Not found");
+                        }
+
+                        officer.IsBlocked = false;
+                        await _repository.SaveChangesAsync();
+
+                        await CreateAuditLog(
+                            "Officer Unblocked",
+                            $"CorrelationId: {correlationId} - Officer successfully unblocked",
+                            "Officer Management"
+                        );
+
+                        return ResponseFactory.Success(true, "Assistant Officer unblocked successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        await CreateAuditLog(
+                            "Officer Unblock Failed",
+                            $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                            "Officer Management"
+                        );
+                        return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+                    }
                 }
-
-                officer.IsBlocked = false;
-                await _repository.SaveChangesAsync();
-
-                await CreateAuditLog(
-                    "Officer Unblocked",
-                    $"CorrelationId: {correlationId} - Officer successfully unblocked",
-                    "Officer Management"
-                );
-
-                return ResponseFactory.Success(true, "Assistant Officer unblocked successfully");
-            }
-            catch (Exception ex)
-            {
-                await CreateAuditLog(
-                    "Officer Unblock Failed",
-                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                    "Officer Management"
-                );
-                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-            }
-        }
-*/
+        */
         public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>>> GetLevyPayments(
     PaymentPeriodEnum? period,
     string searchQuery,
@@ -1838,91 +1840,51 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<IEnumerable<MarketResponseDto>>(ex, "An unexpected error occurred");
             }
         }
-        /*     public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets(string localgovermentId = null)
+
+        //Old Trader Details
+        /* public async Task<BaseResponse<TraderDetailsDto>> GetTraderDetails(string traderId)
+         {
+             var correlationId = Guid.NewGuid().ToString();
+             try
              {
-                 var correlationId = Guid.NewGuid().ToString();
-                 try
+                 await CreateAuditLog(
+                     "Trader Details Query",
+                     $"CorrelationId: {correlationId} - Fetching trader: {traderId}",
+                     "Trader Management"
+                 );
+
+                 var trader = await _repository.TraderRepository.GetTraderById(traderId, false);
+                 if (trader == null)
                  {
                      await CreateAuditLog(
-                         "Markets List Query",
-                         $"CorrelationId: {correlationId} - Retrieving markets" +
-                         (string.IsNullOrEmpty(localgovermentId) ? "" : $" for LocalGovernment: {localgovermentId}"),
-                         "Market Management"
+                         "Trader Details Query Failed",
+                         $"CorrelationId: {correlationId} - Trader not found",
+                         "Trader Management"
                      );
-
-                     var markets = await _repository.MarketRepository.GetAllMarketForExport(false);
-
-                     // Filter by LocalGovernment ID if provided
-                     if (!string.IsNullOrEmpty(localgovermentId))
-                     {
-                         markets = markets.Where(m => m.LocalGovernmentId == localgovermentId).ToList();
-                     }
-
-                     var marketDtos = _mapper.Map<IEnumerable<MarketResponseDto>>(markets);
-
-                     await CreateAuditLog(
-                         "Markets Retrieved",
-                         $"CorrelationId: {correlationId} - Retrieved {marketDtos.Count()} markets" +
-                         (string.IsNullOrEmpty(localgovermentId) ? "" : $" for LocalGovernment: {localgovermentId}"),
-                         "Market Management"
-                     );
-
-                     return ResponseFactory.Success(marketDtos, "Markets retrieved successfully");
+                     return ResponseFactory.Fail<TraderDetailsDto>(new NotFoundException("Trader not found"), "Not found");
                  }
-                 catch (Exception ex)
-                 {
-                     await CreateAuditLog(
-                         "Markets List Query Failed",
-                         $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                         "Market Management"
-                     );
-                     return ResponseFactory.Fail<IEnumerable<MarketResponseDto>>(ex, "An unexpected error occurred");
-                 }
+
+                 var traderDto = _mapper.Map<TraderDetailsDto>(trader);
+
+                 await CreateAuditLog(
+                     "Trader Details Retrieved",
+                     $"CorrelationId: {correlationId} - Trader details retrieved successfully",
+                     "Trader Management"
+                 );
+
+                 return ResponseFactory.Success(traderDto, "Trader details retrieved successfully");
              }
-     */
-        public async Task<BaseResponse<TraderDetailsDto>> GetTraderDetails(string traderId)
-        {
-            var correlationId = Guid.NewGuid().ToString();
-            try
-            {
-                await CreateAuditLog(
-                    "Trader Details Query",
-                    $"CorrelationId: {correlationId} - Fetching trader: {traderId}",
-                    "Trader Management"
-                );
-
-                var trader = await _repository.TraderRepository.GetTraderById(traderId, false);
-                if (trader == null)
-                {
-                    await CreateAuditLog(
-                        "Trader Details Query Failed",
-                        $"CorrelationId: {correlationId} - Trader not found",
-                        "Trader Management"
-                    );
-                    return ResponseFactory.Fail<TraderDetailsDto>(new NotFoundException("Trader not found"), "Not found");
-                }
-
-                var traderDto = _mapper.Map<TraderDetailsDto>(trader);
-
-                await CreateAuditLog(
-                    "Trader Details Retrieved",
-                    $"CorrelationId: {correlationId} - Trader details retrieved successfully",
-                    "Trader Management"
-                );
-
-                return ResponseFactory.Success(traderDto, "Trader details retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                await CreateAuditLog(
-                    "Trader Details Query Failed",
-                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                    "Trader Management"
-                );
-                return ResponseFactory.Fail<TraderDetailsDto>(ex, "An unexpected error occurred");
-            }
-        }
-
+             catch (Exception ex)
+             {
+                 await CreateAuditLog(
+                     "Trader Details Query Failed",
+                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                     "Trader Management"
+                 );
+                 return ResponseFactory.Fail<TraderDetailsDto>(ex, "An unexpected error occurred");
+             }
+         }
+ */
         public async Task<BaseResponse<MarketRevenueDto>> GetMarketRevenue(string marketId, DateRangeDto dateRange)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1991,41 +1953,6 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<ReportMetricsDto>(ex, "An unexpected error occurred");
             }
         }
-
-        /*    public async Task<BaseResponse<bool>> DeleteMarket(string marketId)
-            {
-                var correlationId = Guid.NewGuid().ToString();
-                try
-                {
-                    await CreateAuditLog(
-                        "Market Deletion",
-                        $"CorrelationId: {correlationId} - Attempting to delete market: {marketId}",
-                        "Market Management"
-                    );
-
-                    var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, true);
-                    _repository.MarketRepository.DeleteMarket(market);
-                    await _repository.SaveChangesAsync();
-
-                    await CreateAuditLog(
-                        "Market Deleted",
-                        $"CorrelationId: {correlationId} - Market deleted successfully",
-                        "Market Management"
-                    );
-
-                    return ResponseFactory.Success(true, "Market deleted successfully");
-                }
-                catch (Exception ex)
-                {
-                    await CreateAuditLog(
-                        "Market Deletion Failed",
-                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                        "Market Management"
-                    );
-                    return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
-                }
-            }
-    */
         public async Task<BaseResponse<bool>> DeleteMarket(string marketId)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -2224,21 +2151,21 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Check if section exists if provided
-             /*   if (!string.IsNullOrEmpty(request.SectionId))
-                {
-                    var section = await _repository.MarketSectionRepository.GetMarketSectionByIdAsync(request.SectionId, false);
-                    if (section == null)
-                    {
-                        await CreateAuditLog(
-                            "Creation Failed",
-                            $"CorrelationId: {correlationId} - Market section not found",
-                            "Trader Management"
-                        );
-                        return ResponseFactory.Fail<TraderResponseDto>(
-                            new BadRequestException("Market section not found"),
-                            "Market section not found");
-                    }
-                }*/
+                /*   if (!string.IsNullOrEmpty(request.SectionId))
+                   {
+                       var section = await _repository.MarketSectionRepository.GetMarketSectionByIdAsync(request.SectionId, false);
+                       if (section == null)
+                       {
+                           await CreateAuditLog(
+                               "Creation Failed",
+                               $"CorrelationId: {correlationId} - Market section not found",
+                               "Trader Management"
+                           );
+                           return ResponseFactory.Fail<TraderResponseDto>(
+                               new BadRequestException("Market section not found"),
+                               "Market section not found");
+                       }
+                   }*/
 
                 // Create ApplicationUser
                 var nameParts = request.TraderName.Split(' ');
@@ -2292,7 +2219,7 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Generate TIN if not provided
-                var tin =  GenerateTIN(market.Id);
+                var tin = GenerateTIN(market.Id);
 
                 // Generate QR Code
                 var qrCode = QRCodeHelper.GenerateQRCode(tin);
@@ -2368,11 +2295,11 @@ namespace SabiMarket.Infrastructure.Services
             }
 
             // Get state code
-          /*  var state = _repository.StateRepository.GetStateByIdAsync(localGovernment.StateId, false).Result;
-            if (state == null)
-            {
-                return null;
-            }*/
+            /*  var state = _repository.StateRepository.GetStateByIdAsync(localGovernment.StateId, false).Result;
+              if (state == null)
+              {
+                  return null;
+              }*/
 
             // Generate a sequential number
             // This could be implemented in different ways:
@@ -2676,21 +2603,21 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Get the user information first with AsNoTracking() (this part is fine)
-               /* var userToUpdate = await _userManager.Users
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.Id == officer.UserId);
+                /* var userToUpdate = await _userManager.Users
+                     .AsNoTracking()
+                     .FirstOrDefaultAsync(u => u.Id == officer.UserId);
 
-                if (userToUpdate == null)
-                {
-                    await CreateAuditLog(
-                        "Update Failed",
-                        $"CorrelationId: {correlationId} - Associated user not found",
-                        "Officer Management"
-                    );
-                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                        new NotFoundException("Associated user account not found"),
-                        "User not found");
-                }*/
+                 if (userToUpdate == null)
+                 {
+                     await CreateAuditLog(
+                         "Update Failed",
+                         $"CorrelationId: {correlationId} - Associated user not found",
+                         "Officer Management"
+                     );
+                     return ResponseFactory.Fail<AssistantOfficerResponseDto>(
+                         new NotFoundException("Associated user account not found"),
+                         "User not found");
+                 }*/
 
                 // Get the actual user that EF is tracking (instead of updating the detached one)
                 var actualUser = await _userManager.FindByIdAsync(officer.UserId);
@@ -2754,13 +2681,13 @@ namespace SabiMarket.Infrastructure.Services
                 // For backward compatibility, update the MarketId field if markets changed
                 if (request?.MarketIds != null && request.MarketIds.Any(id => !string.IsNullOrWhiteSpace(id)))
                     if (request?.MarketIds != null && request.MarketIds.Count > 0 && request.MarketIds.Any(id => !string.IsNullOrWhiteSpace(id)))
-                {
-                    officer.MarketId = request.MarketIds[0]; // First market
-                }
-                else
-                {
-                    officer.MarketId = null;
-                }
+                    {
+                        officer.MarketId = request.MarketIds[0]; // First market
+                    }
+                    else
+                    {
+                        officer.MarketId = null;
+                    }
 
                 // Handle market assignments
                 if (request?.MarketIds != null)
@@ -2847,246 +2774,6 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        /*    public async Task<BaseResponse<AssistantOfficerResponseDto>> UpdateAssistantOfficer(string officerId, UpdateAssistantOfficerRequestDto request)
-            {
-                var correlationId = Guid.NewGuid().ToString();
-                var userId = _currentUser.GetUserId();
-
-                try
-                {
-                    await CreateAuditLog(
-                        "Assistant Officer Update",
-                        $"CorrelationId: {correlationId} - Updating assistant officer with ID: {officerId}",
-                        "Officer Management"
-                    );
-
-                    // Validate request
-                  *//*  var validationResult = await _updateAssistOfficerValidator.ValidateAsync(request);
-                    if (!validationResult.IsValid)
-                    {
-                        await CreateAuditLog(
-                            "Update Failed",
-                            $"CorrelationId: {correlationId} - Validation failed",
-                            "Officer Management"
-                        );
-                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                            new ValidationException(validationResult.Errors),
-                            "Validation failed");
-                    }*//*
-
-                    // Get Chairman details (to verify authority)
-                    var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
-                    if (chairman == null)
-                    {
-                        await CreateAuditLog(
-                            "Update Failed",
-                            $"CorrelationId: {correlationId} - Chairman not found",
-                            "Officer Management"
-                        );
-                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                            new BadRequestException("Chairman not found"),
-                            "Chairman not found");
-                    }
-
-                    // Get existing officer with market assignments
-                    var officer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(officerId, false);
-                    if (officer == null)
-                    {
-                        await CreateAuditLog(
-                            "Update Failed",
-                            $"CorrelationId: {correlationId} - Assistant officer not found",
-                            "Officer Management"
-                        );
-                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                            new NotFoundException($"Assistant officer with ID {officerId} not found"),
-                            "Assistant officer not found");
-                    }
-
-                    // Verify this chairman has authority over this officer
-                    if (officer.ChairmanId != chairman.Id)
-                    {
-                        await CreateAuditLog(
-                            "Update Failed",
-                            $"CorrelationId: {correlationId} - Unauthorized access",
-                            "Officer Management"
-                        );
-                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                            new UnauthorizedAccessException("You are not authorized to update this assistant officer"),
-                            "Unauthorized access");
-                    }
-
-                    // Get the user associated with the officer
-                    var user = await _userManager.FindByIdAsync(officer.UserId);
-                    if (user == null)
-                    {
-                        await CreateAuditLog(
-                            "Update Failed",
-                            $"CorrelationId: {correlationId} - Associated user not found",
-                            "Officer Management"
-                        );
-                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                            new NotFoundException("Associated user account not found"),
-                            "User not found");
-                    }
-
-                    // Check if email changed and if it's already in use
-                    *//* if (request.Email != user.Email)
-                     {
-                         var existingUser = await _userManager.FindByEmailAsync(request.Email);
-                         if (existingUser != null && existingUser.Id != user.Id)
-                         {
-                             await CreateAuditLog(
-                                 "Update Failed",
-                                 $"CorrelationId: {correlationId} - Email already registered",
-                                 "Officer Management"
-                             );
-                             return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                                 new BadRequestException("Email address is already registered"),
-                                 "Email already exists");
-                         }*//*
-                    // }
-                    string[] nameParts = Array.Empty<string>();
-
-                    // Check if FullName is NOT null or empty before splitting
-                    if (!string.IsNullOrEmpty(request?.FullName))
-                    {
-                        nameParts = request.FullName.Split(' ');
-                        user.FirstName = nameParts.Length > 0 ? nameParts[0] : user.FirstName;
-                        user.LastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : user.LastName; // Keep original LastName if no new value
-                    }
-                    if (!string.IsNullOrEmpty(request?.Email))
-                    {
-                        user.Email = request?.Email;
-                    }
-                    if (!string.IsNullOrEmpty(request?.PhoneNumber))
-                    {
-                        user.PhoneNumber = request?.PhoneNumber;
-                    }
-                    if (!string.IsNullOrEmpty(request?.Gender))
-                    {
-                        user.Gender = request?.Gender;
-                    }
-
-                    // Handle profile image update if provided
-                    if (request.ProfileImage != null)
-                    {
-                        // If there's an existing image, you might want to delete it first
-                        if (!string.IsNullOrEmpty(user.ProfileImageUrl))
-                        {
-                            await _cloudinaryService.DeletePhotoAsync(user.ProfileImageUrl);
-                        }
-
-                        var uploadResult = await _cloudinaryService.UploadImage(request.ProfileImage, "assistant-officers");
-                        if (uploadResult.IsSuccessful && uploadResult.Data.ContainsKey("Url"))
-                        {
-                            user.ProfileImageUrl = uploadResult.Data["Url"];
-                        }
-                    }
-
-                    var updateUserResult = await _userManager.UpdateAsync(user);
-                    if (!updateUserResult.Succeeded)
-                    {
-                        await CreateAuditLog(
-                            "Update Failed",
-                            $"CorrelationId: {correlationId} - Failed to update user account",
-                            "Officer Management"
-                        );
-                        return ResponseFactory.Fail<AssistantOfficerResponseDto>(
-                            new Exception(string.Join(", ", updateUserResult.Errors.Select(e => e.Description))),
-                            "Failed to update user account");
-                    }
-
-                    // Update Officer details
-                    officer.UpdatedAt = DateTime.UtcNow;
-
-                    // For backward compatibility, update the MarketId field if markets changed
-                    if (request.MarketIds != null && request.MarketIds.Count > 0)
-                    {
-                        officer.MarketId = request.MarketIds[0]; // First market
-                    }
-                    else
-                    {
-                        officer.MarketId = null;
-                    }
-
-                    // Handle market assignments
-                    if (request.MarketIds != null)
-                    {
-                        // Get current assignments
-                        var existingAssignments = officer.MarketAssignments.ToList();
-
-                        // Markets to remove (in existing but not in request)
-                        var marketsToRemove = existingAssignments
-                            .Where(a => !request.MarketIds.Contains(a.MarketId))
-                            .ToList();
-
-                        // Markets to add (in request but not in existing)
-                        var existingMarketIds = existingAssignments.Select(a => a.MarketId).ToList();
-                        var marketsToAdd = request.MarketIds
-                            .Where(id => !existingMarketIds.Contains(id))
-                            .Distinct()
-                            .ToList();
-
-                        // Remove markets no longer assigned
-                        foreach (var assignment in marketsToRemove)
-                        {
-                            _repository.OfficerMarketAssignmentRepository.RemoveAssignment(assignment);
-                        }
-
-                        // Add new market assignments
-                        foreach (var marketId in marketsToAdd)
-                        {
-                            // Validate that market exists and belongs to chairman's LG
-                            var market = await _repository.MarketRepository.GetMarketByIdAsync(marketId, false  );
-                            if (market != null && market.LocalGovernmentId == chairman.LocalGovernmentId)
-                            {
-                                var assignment = new OfficerMarketAssignment
-                                {
-                                    Id = Guid.NewGuid().ToString(),
-                                    AssistCenterOfficerId = officer.Id,
-                                    MarketId = marketId,
-                                    CreatedAt = DateTime.UtcNow
-                                };
-
-                                _repository.OfficerMarketAssignmentRepository.AddAssignment(assignment);
-                            }
-                        }
-                    }
-
-                    _repository.AssistCenterOfficerRepository.UpdateAssistCenterOfficer(officer);
-                    await _repository.SaveChangesAsync();
-
-                    // Get updated officer with market details for response
-                    var updatedOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(officerId, false);
-
-                    // Map response
-                    var response = _mapper.Map<AssistantOfficerResponseDto>(updatedOfficer);
-                    response.FullName = request.FullName;
-                    response.Email = user.Email;
-                    response.PhoneNumber = user.PhoneNumber;
-                    response.Gender = user.Gender;
-                    response.ProfileImageUrl = user.ProfileImageUrl;
-
-                    await CreateAuditLog(
-                        "Assistant Officer Updated",
-                        $"CorrelationId: {correlationId} - Officer updated successfully with ID: {officer.Id}",
-                        "Officer Management"
-                    );
-
-                    return ResponseFactory.Success(response, "Assistant Officer updated successfully");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error updating assistant officer");
-                    await CreateAuditLog(
-                        "Update Failed",
-                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
-                        "Officer Management"
-                    );
-                    return ResponseFactory.Fail<AssistantOfficerResponseDto>(ex, "An unexpected error occurred");
-                }
-            }
-    */
         public async Task<BaseResponse<AssistantOfficerResponseDto>> GetAssistantOfficerById(string officerId)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -4624,18 +4311,18 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Check if admin has role management permissions
-           /*     if (!chairman.HasRoleManagementAccess)
-                {
-                    await CreateAuditLog(
-                        "Assistant Officer Deletion Failed",
-                        $"CorrelationId: {correlationId} - Admin does not have permission to manage roles: {chairmanId}",
-                        "Assistant Officer Management"
-                    );
-                    return ResponseFactory.Fail<bool>(
-                        new UnauthorizedException("Admin does not have permission to manage roles"),
-                        "Admin does not have permission to manage roles");
-                }
-*/
+                /*     if (!chairman.HasRoleManagementAccess)
+                     {
+                         await CreateAuditLog(
+                             "Assistant Officer Deletion Failed",
+                             $"CorrelationId: {correlationId} - Admin does not have permission to manage roles: {chairmanId}",
+                             "Assistant Officer Management"
+                         );
+                         return ResponseFactory.Fail<bool>(
+                             new UnauthorizedException("Admin does not have permission to manage roles"),
+                             "Admin does not have permission to manage roles");
+                     }
+     */
                 // Now get the assistant officer to delete
                 var assistOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(officerId, trackChanges: true);
                 if (assistOfficer == null)
@@ -4700,6 +4387,491 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while deleting the Assistant Officer");
             }
         }
+
+
+        //Trader side
+        public async Task<BaseResponse<TraderDashboardResponseDto>> GetTraderDashboard(string traderId)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            var userId = _currentUser.GetUserId();
+
+            try
+            {
+                await CreateAuditLog(
+                    "Trader Dashboard Query",
+                    $"CorrelationId: {correlationId} - Retrieving dashboard for Trader ID: {traderId}",
+                    "Trader Management"
+                );
+
+                // Get trader details
+                var trader = await _repository.TraderRepository.GetTraderById(traderId, false);
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<TraderDashboardResponseDto>("Trader not found");
+                }
+
+                // Get next payment date (assuming it's calculated based on the latest payment)
+                var latestPayment = await _repository.LevyPaymentRepository.GetLatestLevyPaymentByTraderIdAsync(traderId);
+                var nextPaymentDate = latestPayment != null
+                    ? CalculateNextPaymentDate(latestPayment)
+                    : DateTime.Now.AddDays(7); // Default to 7 days from now if no payments
+
+                // Get total levies paid
+                var totalLeviesPaid = await _repository.LevyPaymentRepository.GetTotalLevyAmountByTraderIdAsync(traderId);
+
+                // Get recent levy history (limited to 7 items for overview)
+                var recentLevyPayments = await _repository.LevyPaymentRepository.GetRecentLevyPaymentsByTraderIdAsync(
+                    traderId,
+                    limit: 10
+                );
+
+                // Map to DTOs
+                var recentLevyPaymentDtos = recentLevyPayments.Select(p => new TraderLevyPaymentDto
+                {
+                    Id = p.Id,
+                    Type = GetLevyTypeDisplay(p.Period),
+                    Amount = p.Amount,
+                    PaymentDate = p.PaymentDate,
+                    Status = p.PaymentStatus.ToString(),
+                    CreatedAt = p.CreatedAt
+                }).ToList();
+
+                var result = new TraderDashboardResponseDto
+                {
+                    TraderName = trader.TraderName ?? trader.BusinessName,
+                    NextPaymentDate = nextPaymentDate,
+                    TotalLeviesPaid = totalLeviesPaid,
+                    RecentLevyPayments = recentLevyPaymentDtos
+                };
+
+                await CreateAuditLog(
+                    "Trader Dashboard Retrieved",
+                    $"CorrelationId: {correlationId} - Dashboard retrieved for Trader ID: {traderId}",
+                    "Trader Management"
+                );
+
+                return ResponseFactory.Success(result, "Trader dashboard retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Trader Dashboard Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Trader Management"
+                );
+                return ResponseFactory.Fail<TraderDashboardResponseDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>> GetAllLevyPaymentsForTrader(
+            string traderId,
+            DateTime? fromDate,
+            DateTime? toDate,
+            string? searchQuery,
+            PaginationFilter pagination)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+
+            try
+            {
+                await CreateAuditLog(
+                    "Trader Levy Payments Query",
+                    $"CorrelationId: {correlationId} - Retrieving all levy payments for Trader ID: {traderId}, " +
+                    $"Page {pagination.PageNumber}, Size {pagination.PageSize}",
+                    "Trader Management"
+                );
+
+                // Set default date range if not provided (last 3 months)
+                if (!fromDate.HasValue || !toDate.HasValue)
+                {
+                    toDate = DateTime.Now;
+                    fromDate = toDate.Value.AddMonths(-3);
+                }
+
+                // Get levy payments within date range
+                var levyPayments = await _repository.LevyPaymentRepository.GetLevyPaymentsByTraderIdAndDateRangeAsync(
+                    traderId,
+                    fromDate.Value,
+                    toDate.Value
+                );
+
+                // Apply search filter if provided
+                var filteredPayments = levyPayments;
+                if (!string.IsNullOrWhiteSpace(searchQuery))
+                {
+                    searchQuery = searchQuery.Trim().ToLower();
+                    filteredPayments = levyPayments.Where(p =>
+                        (p.Notes != null && p.Notes.ToLower().Contains(searchQuery)) ||
+                        (p.Period.ToString().ToLower().Contains(searchQuery))
+                    ).ToList();
+                }
+
+                // Apply pagination
+                var totalCount = filteredPayments.Count();
+                var totalPages = (int)Math.Ceiling((double)totalCount / pagination.PageSize);
+
+                var paginatedPayments = filteredPayments
+                    .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                    .Take(pagination.PageSize)
+                    .ToList();
+
+                // Group by date for display
+                var groupedPayments = paginatedPayments
+                    .GroupBy(p => p.PaymentDate.Date)
+                    .OrderByDescending(g => g.Key)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // Map to DTOs
+                var paymentDtos = paginatedPayments.Select(p => new TraderLevyPaymentDto
+                {
+                    Id = p.Id,
+                    Type = GetLevyTypeDisplay(p.Period),
+                    Amount = p.Amount,
+                    PaymentDate = p.PaymentDate,
+                    Status = p.PaymentStatus.ToString(),
+                    CreatedAt = p.CreatedAt
+                }).ToList();
+
+                // Create paginated result
+                var paginatedResult = new PaginatorDto<List<TraderLevyPaymentDto>>
+                {
+                    PageItems = paymentDtos,
+                    CurrentPage = pagination.PageNumber,
+                    PageSize = pagination.PageSize,
+                    NumberOfPages = totalPages
+                };
+
+                await CreateAuditLog(
+                    "Trader Levy Payments Retrieved",
+                    $"CorrelationId: {correlationId} - Retrieved {paymentDtos.Count} levy payments for Trader ID: {traderId} on page {pagination.PageNumber}",
+                    "Trader Management"
+                );
+
+                return ResponseFactory.Success(paginatedResult, "Levy payments retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Trader Levy Payments Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Trader Management"
+                );
+                return ResponseFactory.Fail<PaginatorDto<List<TraderLevyPaymentDto>>>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>> GetLevyPaymentsForTrader(
+          string traderId,
+          DateTime? fromDate,
+          DateTime? toDate,
+          string searchQuery,
+          PaginationFilter pagination)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+
+            try
+            {
+                await CreateAuditLog(
+                    "Trader Levy Payments Query",
+                    $"CorrelationId: {correlationId} - Retrieving levy payments for Trader ID: {traderId}, " +
+                    $"Date Range: {fromDate?.ToString("yyyy-MM-dd") ?? "All"} to {toDate?.ToString("yyyy-MM-dd") ?? "All"}, " +
+                    $"Search: {searchQuery ?? "None"}, Page {pagination.PageNumber}, Size {pagination.PageSize}",
+                    "Trader Management"
+                );
+
+                // Verify trader exists
+                var trader = await _repository.TraderRepository.GetTraderById(traderId, false);
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<PaginatorDto<List<TraderLevyPaymentDto>>>("Trader not found");
+                }
+
+                // Set default date range if not provided (last 3 months)
+                if (!fromDate.HasValue || !toDate.HasValue)
+                {
+                    toDate = DateTime.Now;
+                    fromDate = toDate.Value.AddMonths(-3);
+                }
+
+                // Fetch levy payments within date range
+                var levyPayments = await _repository.LevyPaymentRepository.GetLevyPaymentsByTraderIdAndDateRangeAsync(
+                    traderId,
+                    fromDate.Value,
+                    toDate.Value
+                );
+
+                // Apply search filter if provided
+                var filteredPayments = levyPayments;
+                if (!string.IsNullOrWhiteSpace(searchQuery))
+                {
+                    searchQuery = searchQuery.Trim().ToLower();
+                    filteredPayments = levyPayments.Where(p =>
+                        (p.Notes != null && p.Notes.ToLower().Contains(searchQuery)) ||
+                        (p.Period.ToString().ToLower().Contains(searchQuery)) ||
+                        (p.Market?.MarketName != null && p.Market.MarketName.ToLower().Contains(searchQuery)) ||
+                        (p.TransactionReference != null && p.TransactionReference.ToLower().Contains(searchQuery)) ||
+                        p.Amount.ToString().Contains(searchQuery)
+                    ).ToList();
+                }
+
+                // Apply manual pagination
+                var totalCount = filteredPayments.Count();
+                var totalPages = (int)Math.Ceiling((double)totalCount / pagination.PageSize);
+
+                var paginatedPayments = filteredPayments
+                    .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                    .Take(pagination.PageSize)
+                    .ToList();
+
+                // Map to response DTOs
+                var paymentDtos = paginatedPayments.Select(p => new TraderLevyPaymentDto
+                {
+                    Id = p.Id,
+                    Type = GetLevyTypeDisplay(p.Period),
+                    Amount = p.Amount,
+                    PaymentDate = p.PaymentDate,
+                    Status = p.PaymentStatus.ToString(),
+                    CreatedAt = p.CreatedAt
+                }).ToList();
+
+                // Create paginated result
+                var paginatedResult = new PaginatorDto<List<TraderLevyPaymentDto>>
+                {
+                    PageItems = paymentDtos,
+                    CurrentPage = pagination.PageNumber,
+                    PageSize = pagination.PageSize,
+                    NumberOfPages = totalPages
+                };
+
+                await CreateAuditLog(
+                    "Trader Levy Payments Retrieved",
+                    $"CorrelationId: {correlationId} - Retrieved {paymentDtos.Count} levy payments for Trader ID: {traderId} " +
+                    $"on page {pagination.PageNumber}",
+                    "Trader Management"
+                );
+
+                return ResponseFactory.Success(paginatedResult, "Levy payments retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Trader Levy Payments Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Trader Management"
+                );
+                return ResponseFactory.Fail<PaginatorDto<List<TraderLevyPaymentDto>>>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<TraderDetailsDto>> GetTraderDetails(string traderId)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Trader Details Query",
+                    $"CorrelationId: {correlationId} - Fetching trader: {traderId}",
+                    "Trader Management"
+                );
+
+                var trader = await _repository.TraderRepository.GetTraderById(traderId, false);
+                if (trader == null)
+                {
+                    await CreateAuditLog(
+                        "Trader Details Query Failed",
+                        $"CorrelationId: {correlationId} - Trader not found",
+                        "Trader Management"
+                    );
+                    return ResponseFactory.Fail<TraderDetailsDto>(new NotFoundException("Trader not found"), "Not found");
+                }
+
+                var traderDto = _mapper.Map<TraderDetailsDto>(trader);
+
+                // Get current levy information for payment frequency display
+                var currentLevy = await _repository.LevyPaymentRepository
+                    .GetLatestActiveLevyForTrader(traderId);
+
+                if (currentLevy != null)
+                {
+                    // Calculate payment frequency for profile screen
+                    traderDto.CurrentLevyAmount = currentLevy.Amount;
+                    var paymentDays = GetPaymentIntervalInDays(currentLevy.Period);
+                    traderDto.PaymentFrequencyDisplay = $"{paymentDays} days - ₦{currentLevy.Amount:N0}";
+                }
+
+                // Get recent payments
+                var recentPayments = await _repository.LevyPaymentRepository
+                    .GetRecentPaymentsForTrader(traderId, 5);
+                traderDto.RecentPayments = _mapper.Map<ICollection<LevyResponseDto>>(recentPayments);
+
+                // Format date for details screen
+                traderDto.DateAddedFormatted = trader.CreatedAt.ToString("MMM dd, yyyy, hh:mm tt");
+
+                // Set display ID (from TIN or custom format)
+                traderDto.TraderIdentityNumber = trader.TIN ?? trader.TIN;
+                traderDto.TraderIdentityNumber = trader.TIN ?? trader.TIN;
+
+                // Copy phone number for details screen
+                traderDto.TraderPhoneNumber = trader?.User?.PhoneNumber;
+
+                // QR Code handling
+                traderDto.HasQRCode = !string.IsNullOrEmpty(trader.QRCode);
+                traderDto.QRCodeImageUrl = trader.QRCode; // Assuming QRCode contains the image data or URL
+
+                // Default settings
+                traderDto.PushNotificationsEnabled = true; // Default or get from user preferences
+
+                await CreateAuditLog(
+                    "Trader Details Retrieved",
+                    $"CorrelationId: {correlationId} - Trader details retrieved successfully",
+                    "Trader Management"
+                );
+
+                return ResponseFactory.Success(traderDto, "Trader details retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Trader Details Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Trader Management"
+                );
+                return ResponseFactory.Fail<TraderDetailsDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        // Helper method to convert enum values to days
+        private int GetPaymentIntervalInDays(PaymentPeriodEnum period)
+        {
+            return period switch
+            {
+                PaymentPeriodEnum.Daily => 1,
+                PaymentPeriodEnum.Weekly => 7,
+                PaymentPeriodEnum.BiWeekly => 14,
+                PaymentPeriodEnum.Monthly => 30,
+                PaymentPeriodEnum.Quarterly => 90,
+                PaymentPeriodEnum.HalfYearly => 180,
+                PaymentPeriodEnum.Yearly => 365,
+                _ => 1
+            };
+        }
+
+        /*   public async Task<BaseResponse<TraderLevyPaymentDto>> RecordLevyPayment(LevyPaymentCreateDto paymentDto)
+           {
+               var correlationId = Guid.NewGuid().ToString();
+               var userId = _currentUser.GetUserId();
+
+               try
+               {
+                   await CreateAuditLog(
+                       "Levy Payment Recording",
+                       $"CorrelationId: {correlationId} - Recording levy payment for Trader ID: {paymentDto.TraderId}",
+                       "Trader Management"
+                   );
+
+                   // Validate trader exists
+                   var trader = await _repository.TraderRepository.GetTraderByIdAsync(paymentDto.TraderId);
+                   if (trader == null)
+                   {
+                       return ResponseFactory.Fail<TraderLevyPaymentDto>("Trader not found");
+                   }
+
+                   // Validate GoodBoy exists and has permission to collect from this trader
+                   var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyByIdAsync(paymentDto.GoodBoyId);
+                   if (goodBoy == null)
+                   {
+                       return ResponseFactory.Fail<TraderLevyPaymentDto>("GoodBoy not found");
+                   }
+
+                   // Validate Trader is in GoodBoy's market/jurisdiction
+                   if (trader.CaretakerId != goodBoy.Id)
+                   {
+                       return ResponseFactory.Fail<TraderLevyPaymentDto>("GoodBoy does not have permission to collect from this trader");
+                   }
+
+                   // Create levy payment entity
+                   var levyPayment = new LevyPayment
+                   {
+                       Id = Guid.NewGuid().ToString(),
+                       TraderId = paymentDto.TraderId,
+                       GoodBoyId = paymentDto.GoodBoyId,
+                       Amount = paymentDto.Amount,
+                       Period = paymentDto.Period,
+                       PaymentMethod = (PaymentMethodEnum)paymentDto.PaymentMethod,
+                       PaymentDate = DateTime.Now,
+                       HasIncentive = paymentDto.HasIncentive,
+                       IncentiveAmount = paymentDto.IncentiveAmount,
+                       Notes = paymentDto.Notes,
+                       QRCodeScanned = paymentDto.QRCodeScanned,
+                       Status = PaymentStatusEnum.Successful,
+                       CreatedAt = DateTime.Now,
+                       CreatedBy = userId
+                   };
+
+                   // Save to database
+                   await _repository.LevyPaymentRepository.CreateLevyPaymentAsync(levyPayment);
+                   await _repository.SaveAsync();
+
+                   // Map to DTO
+                   var resultDto = new TraderLevyPaymentDto
+                   {
+                       Id = levyPayment.Id,
+                       Type = GetLevyTypeDisplay(levyPayment.Period),
+                       Amount = levyPayment.Amount,
+                       PaymentDate = levyPayment.PaymentDate,
+                       Status = levyPayment.Status.ToString(),
+                       CreatedAt = levyPayment.CreatedAt
+                   };
+
+                   await CreateAuditLog(
+                       "Levy Payment Recorded",
+                       $"CorrelationId: {correlationId} - Recorded levy payment of {levyPayment.Amount} for Trader ID: {paymentDto.TraderId}",
+                       "Trader Management"
+                   );
+
+                   return ResponseFactory.Success(resultDto, "Levy payment recorded successfully");
+               }
+               catch (Exception ex)
+               {
+                   await CreateAuditLog(
+                       "Levy Payment Recording Failed",
+                       $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                       "Trader Management"
+                   );
+                   return ResponseFactory.Fail<TraderLevyPaymentDto>(ex, "An unexpected error occurred");
+               }
+           }
+   */
+        // Helper method to calculate next payment date based on the period of the latest payment
+        private DateTime CalculateNextPaymentDate(LevyPayment latestPayment)
+        {
+            return latestPayment.Period switch
+            {
+                PaymentPeriodEnum.Daily => latestPayment.PaymentDate.AddDays(1),
+                //PaymentPeriodEnum.TwoDays => latestPayment.PaymentDate.AddDays(2),
+                PaymentPeriodEnum.Weekly => latestPayment.PaymentDate.AddDays(7),
+                PaymentPeriodEnum.Monthly => latestPayment.PaymentDate.AddMonths(1),
+                PaymentPeriodEnum.Quarterly => latestPayment.PaymentDate.AddMonths(3),
+                //PaymentPeriodEnum.Annually => latestPayment.PaymentDate.AddYears(1),
+                _ => latestPayment.PaymentDate.AddDays(7) // Default to weekly
+            };
+        }
+
+        // Helper method to get user-friendly display text for levy types
+        private string GetLevyTypeDisplay(PaymentPeriodEnum period)
+        {
+            return period switch
+            {
+                PaymentPeriodEnum.Daily => "Daily Levy",
+                //PaymentPeriodEnum.TwoDays => "2 days Levy",
+                PaymentPeriodEnum.Weekly => "1 week Levy",
+                PaymentPeriodEnum.Monthly => "Monthly Levy",
+                PaymentPeriodEnum.Quarterly => "Quarterly Levy",
+                //PaymentPeriodEnum.Annually => "Annual Levy",
+                _ => period.ToString()
+            };
+        }
+
 
         // Helper method to check for any dependencies
         private async Task<bool> CheckAssistOfficerDependencies(AssistCenterOfficer assistOfficer)
@@ -4817,6 +4989,11 @@ namespace SabiMarket.Infrastructure.Services
                 .AnyAsync(l => l.ChairmanId == chairman.Id && l.PaymentStatus == PaymentStatusEnum.Pending);
 
             return hasPendingLevies;
+        }
+
+        public Task<BaseResponse<TraderLevyPaymentDto>> RecordLevyPayment(SabiMarket.Services.Dtos.Levy.LevyPaymentCreateDto paymentDto)
+        {
+            throw new NotImplementedException();
         }
     }
 }

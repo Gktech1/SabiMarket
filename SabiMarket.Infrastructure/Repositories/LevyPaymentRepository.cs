@@ -365,6 +365,30 @@ namespace SabiMarket.Infrastructure.Repositories
                  .ToListAsync();
          }*/
 
+        public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByTraderIdAndDateRangeAsync(
+           string traderId,
+           DateTime fromDate,
+           DateTime toDate)
+        {
+            // Normalize date range to include the entire day
+            var normalizedFromDate = fromDate.Date;
+            var normalizedToDate = toDate.Date.AddDays(1).AddTicks(-1); // End of the toDate
+
+            return await FindByCondition(
+                lp => lp.TraderId == traderId &&
+                      lp.PaymentDate >= normalizedFromDate &&
+                      lp.PaymentDate <= normalizedToDate &&
+                      lp.PaymentStatus == PaymentStatusEnum.Paid,
+                trackChanges: false)
+                .Include(lp => lp.Trader)
+                    .ThenInclude(t => t.User)
+                .Include(lp => lp.Market)
+                .Include(lp => lp.GoodBoy)
+                    .ThenInclude(gb => gb.User)
+                .OrderByDescending(lp => lp.PaymentDate)
+                .ThenByDescending(lp => lp.CreatedAt)
+                .ToListAsync();
+        }
 
         public async Task<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetLevyPaymentsByDateRange(
     string goodBoyId,
@@ -761,6 +785,62 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
                 .OrderBy(lp => lp.Period)
                 .AsQueryable();
+        }
+
+        // Gets the latest levy payment for a trader
+        public async Task<LevyPayment> GetLatestLevyPaymentByTraderIdAsync(string traderId)
+        {
+            return await FindByCondition(
+                lp => lp.TraderId == traderId &&
+                      lp.PaymentStatus == PaymentStatusEnum.Paid,
+                trackChanges: false)
+                .OrderByDescending(lp => lp.PaymentDate)
+                .ThenByDescending(lp => lp.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        // Gets the total amount of levies paid by a trader
+        public async Task<decimal> GetTotalLevyAmountByTraderIdAsync(string traderId)
+        {
+            return await FindByCondition(
+                lp => lp.TraderId == traderId &&
+                      lp.PaymentStatus == PaymentStatusEnum.Paid,
+                trackChanges: false)
+                .SumAsync(lp => lp.Amount);
+        }
+
+        // Gets the most recent levy payments for a trader
+        public async Task<IEnumerable<LevyPayment>> GetRecentLevyPaymentsByTraderIdAsync(
+            string traderId,
+            int limit = 10)
+        {
+            return await FindByCondition(
+                lp => lp.TraderId == traderId &&
+                      lp.PaymentStatus == PaymentStatusEnum.Paid,
+                trackChanges: false)
+                .OrderByDescending(lp => lp.PaymentDate)
+                .ThenByDescending(lp => lp.CreatedAt)
+                .Take(limit)
+                .Include(lp => lp.Trader)
+                .Include(lp => lp.Market)
+                .ToListAsync();
+        }
+
+        public async Task<LevyPayment> GetLatestActiveLevyForTrader(string traderId)
+        {
+            return await _context.LevyPayments
+                .Where(l => l.TraderId == traderId && l.IsActive)
+                .OrderByDescending(l => l.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<List<LevyPayment>> GetRecentPaymentsForTrader(string traderId, int count)
+        {
+            return await _context.LevyPayments
+                .Where(l => l.TraderId == traderId)
+                .OrderByDescending(l => l.PaymentDate)
+                .Take(count)
+                .ToListAsync();
         }
     }
 }
