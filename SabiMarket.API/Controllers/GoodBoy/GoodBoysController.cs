@@ -105,7 +105,7 @@ public class GoodBoysController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ProcessPayment(string traderId, [FromBody] ProcessLevyPaymentDto request)
     {
-        var response = await _goodBoysService.UpdateTraderPayment(traderId, request);
+        var response = await _goodBoysService.ProcessTraderLevyPayment(traderId, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 

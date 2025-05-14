@@ -5,6 +5,7 @@ using SabiMarket.Application.Interfaces;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
+using System.Linq.Expressions;
 
 namespace SabiMarket.Infrastructure.Repositories
 {
@@ -21,8 +22,23 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public void UpdateTrader(Trader trader) => Update(trader);
 
-       /* public async Task<IEnumerable<Trader>> GetAllAssistCenterOfficer(bool trackChanges) =>
-            await FindAll(trackChanges).ToListAsync();*/
+        /* public async Task<IEnumerable<Trader>> GetAllAssistCenterOfficer(bool trackChanges) =>
+             await FindAll(trackChanges).ToListAsync();*/
+
+        // New method to get trader by ID with custom includes
+        public async Task<Trader> GetByIdWithInclude(string traderId,
+            params Expression<Func<Trader, object>>[] includes)
+        {
+            var query = FindByCondition(t => t.Id == traderId, trackChanges: false);
+
+            // Apply each include expression
+            foreach (var include in includes)
+            {
+                query = query.Include(include);
+            }
+
+            return await query.FirstOrDefaultAsync();
+        }
 
         public async Task<Trader> GetTraderById(string traderId, bool trackChanges) =>
             await FindByCondition(t => t.Id == traderId, trackChanges)

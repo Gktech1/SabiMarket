@@ -19,6 +19,7 @@ using SabiMarket.Application.Interfaces;
 using ValidationException = FluentValidation.ValidationException;
 using SabiMarket.Services.Dtos.Levy;
 using System.Linq.Expressions;
+using Microsoft.Extensions.Configuration;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -31,6 +32,7 @@ namespace SabiMarket.Infrastructure.Services
         private readonly ICurrentUserService _currentUser;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IValidator<CreateGoodBoyRequestDto> _createGoodBoyValidator;
+        private readonly IConfiguration _configuration;
         //private readonly IValidator<UpdateGoodBoyProfileDto> _updateProfileValidator;
 
         public GoodBoysService(
@@ -40,7 +42,7 @@ namespace SabiMarket.Infrastructure.Services
             UserManager<ApplicationUser> userManager,
             ICurrentUserService currentUser,
             IHttpContextAccessor httpContextAccessor,
-            IValidator<CreateGoodBoyRequestDto> createGoodBoyValidator)
+            IValidator<CreateGoodBoyRequestDto> createGoodBoyValidator, IConfiguration configuration)
         {
             _repository = repository;
             _logger = logger;
@@ -49,6 +51,7 @@ namespace SabiMarket.Infrastructure.Services
             _currentUser = currentUser;
             _httpContextAccessor = httpContextAccessor;
             _createGoodBoyValidator = createGoodBoyValidator;
+            _configuration = configuration;
         }
 
         private string GetCurrentIpAddress()
@@ -443,6 +446,9 @@ namespace SabiMarket.Infrastructure.Services
                     .OrderByDescending(p => p.PaymentDate)
                     .FirstOrDefault();
 
+                var updatepaymenturl = _configuration.GetSection("ProcesspaymentUrl").Value;
+               //https://localhost:7111/api/GoodBoys/updatetraderpayment/8FFF4B79-DA26-4628-A3F2-4CFFBC07DAC9
+
                 // Create response with dynamic data from the trader entity
                 var validationResponse = new TraderQRValidationResponseDto
                 {
@@ -452,7 +458,7 @@ namespace SabiMarket.Infrastructure.Services
                     TraderIdentityNumber =   trader.TIN, //$"OSH/LAG/{trader.Id}",
                     PaymentFrequency = paymentFrequency,
                     LastPaymentDate = latestPayment?.PaymentDate,
-                    UpdatePaymentUrl = $"/payments/updatetraderpayment/{trader.Id}"
+                    UpdatePaymentUrl = $"{updatepaymenturl}/api/GoodBoys/updatetraderpayment/{scanDto?.TraderId}"
                 };
 
                 await CreateAuditLog(
@@ -584,7 +590,149 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<bool>> UpdateTraderPayment(string traderId, ProcessLevyPaymentDto paymentDto)
+        public async Task<BaseResponse<bool>> ProcessTraderLevyPayment(string traderId, ProcessLevyPaymentDto paymentDto)
+        {
+            try
+            {
+                // 1. Get the trader
+                var trader = await _repository.TraderRepository.GetByIdWithInclude(
+                    traderId,
+                    t => t.LevyPayments);
+
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Trader not found"),
+                        "Trader not found");
+                }
+
+                // 2. Get the goodboy
+                var goodboy = await _repository.GoodBoyRepository.GetGoodBoyByUserId(paymentDto.GoodBoyId);
+                if (goodboy == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Goodboy not found"),
+                        "Goodboy not found");
+                }
+
+                // 3. Validate if goodboy can collect from this trader (same market and caretaker)
+                if (trader.MarketId != goodboy.MarketId)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new ValidationException("Goodboy is not authorized to collect payment from this trader"),
+                        "Not authorized to collect payment from this trader (different market)");
+                }
+
+                // 4. Check if trader is under the goodboy's caretaker (if applicable)
+                if (!string.IsNullOrEmpty(trader.CaretakerId) && trader.CaretakerId != goodboy.CaretakerId)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new ValidationException("Goodboy is not authorized to collect payment from this trader"),
+                        "Not authorized to collect payment from this trader (different caretaker)");
+                }
+
+                // 5. Get the last payment and check if payment is due based on frequency
+                var lastPayment = trader.LevyPayments
+                    .Where(p => p.PaymentStatus == PaymentStatusEnum.Paid)
+                    .OrderByDescending(p => p.PaymentDate)
+                    .FirstOrDefault();
+
+                if (lastPayment != null)
+                {
+                    var paymentDue = IsPaymentDue(lastPayment, paymentDto.Period);
+                    if (!paymentDue.isDue)
+                    {
+                        return ResponseFactory.Fail<bool>(
+                            new ValidationException($"Payment not due yet. Next payment due on {paymentDue.nextPaymentDate}"),
+                            $"Payment not due yet. Next payment due on {paymentDue.nextPaymentDate:dd/MM/yyyy}");
+                    }
+                }
+
+                // 6. Create the levy payment
+                var currentDate = DateTime.UtcNow;
+                var levyPayment = new LevyPayment
+                {
+                    TraderId = traderId,
+                    GoodBoyId = paymentDto.GoodBoyId,
+                    MarketId = trader.MarketId,
+                    ChairmanId = trader.Market?.ChairmanId, // Get from market if needed
+                    Amount = paymentDto.Amount,
+                    Period = paymentDto.Period,
+                    PaymentMethod = paymentDto.PaymentMethod,
+                    PaymentStatus = PaymentStatusEnum.Paid,
+                    TransactionReference = paymentDto.TransactionReference ?? GenerateTransactionReference(),
+                    HasIncentive = paymentDto.HasIncentive,
+                    IncentiveAmount = paymentDto.IncentiveAmount,
+                    PaymentDate = currentDate,
+                    CollectionDate = currentDate,
+                    Notes = paymentDto.Notes,
+                    QRCodeScanned = paymentDto.QRCodeScanned
+                };
+
+                _repository.LevyPaymentRepository.Create(levyPayment);
+
+                await CreateAuditLog(
+                    "Levy Payment Processed",
+                    $"Payment processed by GoodBoy {goodboy.User.FirstName} {goodboy.User.LastName} for Trader: {trader.TraderName}, Amount: ₦{paymentDto.Amount}",
+                    "Payment Processing"
+                );
+
+                await _repository.SaveChangesAsync();
+
+                return ResponseFactory.Success(true, "Payment processed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing trader levy payment for traderId: {TraderId}", traderId);
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while processing payment");
+            }
+        }
+
+        // Helper method to check if payment is due based on period
+        private (bool isDue, DateTime nextPaymentDate) IsPaymentDue(LevyPayment lastPayment, PaymentPeriodEnum currentPeriod)
+        {
+            var lastPaymentDate = lastPayment.PaymentDate.Date;
+            var currentDate = DateTime.UtcNow.Date;
+
+            switch (lastPayment.Period)
+            {
+                case PaymentPeriodEnum.Daily:
+                    var nextDailyPayment = lastPaymentDate.AddDays(1);
+                    return (currentDate >= nextDailyPayment, nextDailyPayment);
+
+                case PaymentPeriodEnum.Weekly:
+                    var nextWeeklyPayment = lastPaymentDate.AddDays(7);
+                    return (currentDate >= nextWeeklyPayment, nextWeeklyPayment);
+
+                case PaymentPeriodEnum.BiWeekly:
+                    var nextBiWeeklyPayment = lastPaymentDate.AddDays(14);
+                    return (currentDate >= nextBiWeeklyPayment, nextBiWeeklyPayment);
+
+                case PaymentPeriodEnum.Monthly:
+                    var nextMonthlyPayment = lastPaymentDate.AddMonths(1);
+                    return (currentDate >= nextMonthlyPayment, nextMonthlyPayment);
+
+                case PaymentPeriodEnum.Quarterly:
+                    var nextQuarterlyPayment = lastPaymentDate.AddMonths(3);
+                    return (currentDate >= nextQuarterlyPayment, nextQuarterlyPayment);
+
+                case PaymentPeriodEnum.Yearly:
+                    var nextYearlyPayment = lastPaymentDate.AddYears(1);
+                    return (currentDate >= nextYearlyPayment, nextYearlyPayment);
+
+                default:
+                    // If no specific period, allow payment (e.g., one-time payments)
+                    return (true, currentDate);
+            }
+        }
+
+        // Helper method to generate transaction reference
+        private string GenerateTransactionReference()
+        {
+            return $"TXN-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..8].ToUpper()}";
+        }
+
+        /*public async Task<BaseResponse<bool>> UpdateTraderPayment(string traderId, ProcessLevyPaymentDto paymentDto)
         {
             try
             {
@@ -627,7 +775,7 @@ namespace SabiMarket.Infrastructure.Services
                 _logger.LogError(ex, "Error updating trader payment");
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
-        }
+        }*/
 
         /*    public async Task<BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetTodayLeviesForGoodBoy(string goodBoyId)
             {
