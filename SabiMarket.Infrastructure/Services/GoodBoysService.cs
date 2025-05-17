@@ -427,10 +427,11 @@ namespace SabiMarket.Infrastructure.Services
                     trader.TraderOccupancy);
 
                 string paymentFrequency = "Not configured";
+                LevyPayment latestSetup = null;
                 if (levySetups != null && levySetups.Any())
                 {
                     // Get the most recent levy payment setup for this trader occupancy
-                    var latestSetup = levySetups
+                        latestSetup = levySetups
                         .OrderByDescending(lp => lp.CreatedAt)
                         .FirstOrDefault();
 
@@ -440,7 +441,7 @@ namespace SabiMarket.Infrastructure.Services
                         paymentFrequency = $"{GetPeriodDays(latestSetup.Period)} days - N{latestSetup.Amount}";
                     }
                 }
-
+             
                 // Get the most recent payment for this trader
                 var latestPayment = trader.LevyPayments
                     .OrderByDescending(p => p.PaymentDate)
@@ -457,6 +458,7 @@ namespace SabiMarket.Infrastructure.Services
                     TraderOccupancy = trader.TraderOccupancy.ToString(),
                     TraderIdentityNumber =   trader.TIN, //$"OSH/LAG/{trader.Id}",
                     PaymentFrequency = paymentFrequency,
+                    Amount = latestSetup.Amount,
                     LastPaymentDate = latestPayment?.PaymentDate,
                     UpdatePaymentUrl = $"{updatepaymenturl}/api/GoodBoys/updatetraderpayment/{scanDto?.TraderId}"
                 };
