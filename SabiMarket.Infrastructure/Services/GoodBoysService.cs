@@ -459,6 +459,7 @@ namespace SabiMarket.Infrastructure.Services
                     TraderIdentityNumber =   trader.TIN, //$"OSH/LAG/{trader.Id}",
                     PaymentFrequency = paymentFrequency,
                     Amount = latestSetup.Amount,
+                    PayementPeriod = latestSetup.Period,
                     LastPaymentDate = latestPayment?.PaymentDate,
                     UpdatePaymentUrl = $"{updatepaymenturl}/api/GoodBoys/updatetraderpayment/{scanDto?.TraderId}"
                 };
@@ -660,14 +661,14 @@ namespace SabiMarket.Infrastructure.Services
                     ChairmanId = trader.Market?.ChairmanId, // Get from market if needed
                     Amount = paymentDto.Amount,
                     Period = paymentDto.Period,
-                    PaymentMethod = paymentDto.PaymentMethod,
+                    PaymentMethod = paymentDto.PaymentMethod ?? PaymenPeriodEnum.Cash,
                     PaymentStatus = PaymentStatusEnum.Paid,
                     TransactionReference = paymentDto.TransactionReference ?? GenerateTransactionReference(),
                     HasIncentive = paymentDto.HasIncentive,
-                    IncentiveAmount = paymentDto.IncentiveAmount,
+                    IncentiveAmount = paymentDto.IncentiveAmount ?? 0,
                     PaymentDate = currentDate,
                     CollectionDate = currentDate,
-                    Notes = paymentDto.Notes,
+                    Notes = paymentDto.Notes ?? "",
                     QRCodeScanned = paymentDto.QRCodeScanned
                 };
 
