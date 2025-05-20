@@ -479,8 +479,6 @@ namespace SabiMarket.Infrastructure.Services
                     if (user.Customer != null)
                     {
                         details.Add("customerId", user.Customer.Id);
-                        details.Add("CustomerLocalGovernmentId", user.Customer.LocalGovernmentId);
-                        details.Add("LGA", user.Customer.LocalGovernment.Name);
                         details.Add("fullname", user.Customer.FullName);
                     }
                     break;
