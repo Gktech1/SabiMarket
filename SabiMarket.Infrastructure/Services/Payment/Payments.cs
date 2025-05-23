@@ -29,18 +29,25 @@ namespace SabiMarket.Infrastructure.Services.Payment
             {
                 Amount = model.Amount,
                 SenderId = model.UserId,
-                //ReceiverId = "",
-                //WalletId = walletId,
                 Reference = response.Item3,
                 Status = false,
-                Description = "",
+                Description = model.Description,
                 TransactionType = TransactionTypes.Funding.ToString(),
+                IsActive = true,
             };
 
             await _applicationDbContext.Transactions.AddAsync(transaction);
             _applicationDbContext.SaveChanges();
             //var url = response.Item2;
             return ResponseFactory.Success(response.Item3, response.Item2); ;
+        }
+        public async Task<BaseResponse<IEnumerable<Bank>>> GetAllBanks()
+        {
+            var response = await _paymentService.GetListOfBanks();
+
+            //if (response is null || response.Count() < 1) return ResponseFactory.Fail<Bank>(new Exception("Unable to get bank list. Try again later."), null);
+
+            return ResponseFactory.Success(response);
         }
 
         public async Task<BaseResponse<bool>> Verify(string reference)
@@ -54,7 +61,6 @@ namespace SabiMarket.Infrastructure.Services.Payment
 
             transaction.Status = true;
             _applicationDbContext.Transactions.Update(transaction);
-
 
             return ResponseFactory.Success<bool>(true); ;
         }
