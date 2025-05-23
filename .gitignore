@@ -363,3 +363,4 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /SabiMarket.API/appsettings.json
+/SabiMarket.API/appsettings.Development.json

@@ -1,22 +1,28 @@
-﻿using FluentValidation;
+﻿using System.Text;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Text;
+using SabiMarket.API.ServiceExtensions;
+using SabiMarket.Application.DTOs;
+using SabiMarket.Application.DTOs.Advertisement;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories;
+using SabiMarket.Application.IServices;
+using SabiMarket.Application.Services;
+using SabiMarket.Application.Services.Interfaces;
 using SabiMarket.Application.Validators;
 using SabiMarket.Domain.Entities.UserManagement;
+using SabiMarket.Infrastructure.Configuration;
 using SabiMarket.Infrastructure.Data;
+using SabiMarket.Infrastructure.Helpers;
 using SabiMarket.Infrastructure.Repositories;
 using SabiMarket.Infrastructure.Services;
-using SabiMarket.Infrastructure.Helpers;
-using SabiMarket.API.ServiceExtensions;
-using SabiMarket.Application.IServices;
-using SabiMarket.Application.DTOs;
+using SabiMarket.Infrastructure.Services.Payment;
 
 public static class ServiceCollectionExtensions
 {
@@ -26,6 +32,8 @@ public static class ServiceCollectionExtensions
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
         return services;
     }
+
+
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
@@ -55,6 +63,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IValidator<RegistrationRequestDto>, RegistrationRequestValidator>();
         services.AddScoped<IValidator<LoginRequestDto>, LoginRequestValidator>();
+        // services.AddTransient<IEmailService, FreeEmailService>();
+        services.AddSingleton<IEmailService, MailjetEmailService>();
         services.AddScoped<IRepositoryManager, RepositoryManager>();
         services.AddScoped<IServiceManager, ServiceManager>();
         services.AddScoped<ICloudinaryService, CloudinaryService>();
@@ -67,6 +77,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<CreateRoleRequestDto>, CreateRoleRequestValidator>();
         services.AddScoped<IValidator<UpdateRoleRequestDto>, UpdateRoleRequestValidator>();  // Add this line
         services.AddScoped<IChairmanService, ChairmanService>();
+        services.AddScoped<ICaretakerService, CaretakerService>();
         services.AddScoped<IAdminService, AdminService>();
         services.AddValidatorsFromAssemblyContaining<CreateChairmanRequestDtoValidator>();
         services.AddScoped<IValidator<UpdateLevyRequestDto>, UpdateLevyRequestDtoValidator>();
@@ -76,9 +87,39 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<UpdateAdminProfileDto>, UpdateAdminProfileValidator>();
         services.AddScoped<IValidator<CreateRoleRequestDto>, CreateRoleValidator>();
         services.AddScoped<IValidator<UpdateRoleRequestDto>, UpdateRoleValidator>();
+        services.AddScoped<IValidator<CreateMarketRequestDto>, CreateMarketRequestValidator>();
+        services.AddScoped<IValidator<CaretakerForCreationRequestDto>, CreateCaretakerValidator>();
+        services.AddScoped<IValidator<UpdateMarketRequestDto>, UpdateMarketRequestValidator>();
+        services.AddScoped<IValidator<CaretakerForCreationRequestDto>, CaretakerForCreationRequestDtoValidator>();
+        services.AddScoped<ISettingsService, SettingsService>();
+        services.AddScoped<IPayments, Payments>();
+        services.AddScoped<IPaymentService, PayStackService>();
+        services.AddScoped<IGoodBoysService, GoodBoysService>();
+        services.AddScoped<IValidator<CreateGoodBoyRequestDto>, CreateGoodBoyRequestValidator>(); // Fix this
+        //services.AddScoped<IValidator<UpdateGoodBoyProfileDto>, UpdateGoodBoyProfileValidator>(); // Add this
+
+        // Register repositories
+        services.AddScoped<IAdvertisementRepository, AdvertisementRepository>();
+        services.AddScoped<IBankSettingsService, BankSettingsService>();
+
+        // Register validators
+        services.AddScoped<IValidator<CreateAdvertisementRequestDto>, CreateAdvertisementValidator>();
+        services.AddScoped<IValidator<UpdateAdvertisementRequestDto>, UpdateAdvertisementValidator>();
+        services.AddScoped<IValidator<UploadPaymentProofRequestDto>, UploadPaymentProofValidator>();
+        // In your ServiceRegistration.cs
+        services.AddScoped<IValidator<CreateAssistantOfficerRequestDto>, CreateAssistantOfficerValidator>();
+        services.AddScoped<IValidator<UpdateAssistantOfficerRequestDto>, UpdateAssistantOfficerValidator>();
+
+        // Register services
+        services.AddScoped<IAdvertisementService, AdvertisementService>();
 
         // Add other services
         services.AddScoped<IAdminService, AdminService>();
+        services.AddSingleton<ISmsService, AfricasTalkingSmsService>();
+        services.AddScoped<IRepositoryManager, RepositoryManager>();
+        services.AddScoped<ICaretakerRepository, CaretakerRepository>();  // Add this line
+        services.AddScoped<IMarketRepository, MarketRepository>();        // Add this if needed
+        services.AddScoped<IChairmanRepository, ChairmanRepository>();    // Add this if needed
         services.AddScoped<IRepositoryManager, RepositoryManager>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddHttpContextAccessor();
@@ -89,6 +130,12 @@ public static class ServiceCollectionExtensions
         services.AddAutoMapper(typeof(Program).Assembly);
         // Current approach - easily replaceable
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddHttpClient<ISmsService, AfricasTalkingSmsService>();
+
+        services.Configure<DataProtectionTokenProviderOptions>(options =>
+        {
+            options.TokenLifespan = TimeSpan.FromMinutes(10);
+        });
 
         return services;
     }
@@ -142,6 +189,8 @@ public static class ServiceCollectionExtensions
                 }
             };
         });
+
+        services.AddSingleton<IAuthorizationHandler, CaseInsensitiveRoleHandler>();
 
         return services;
     }

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Mailjet.Client.Resources;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
@@ -23,72 +24,120 @@ namespace SabiMarket.Infrastructure.Services
             _repositoryManager = repositoryManager;
             _applicationDbContext = applicationDbContext;
         }
+
         public async Task<BaseResponse<string>> CreateSubscription(CreateSubscriptionDto dto)
         {
-            var loggedInUser = Helper.GetUserDetails(_contextAccessor);
-            if (loggedInUser.Role.ToLower() != "officeattendant")
+            try
             {
-                return ResponseFactory.Fail<string>(new UnauthorizedException("UnIdentified User"), "Active User is Not Authorized.");
+                var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+                var checkActiveSubscription = await _applicationDbContext.Subscriptions.Where(x => x.SubscriberId == dto.SubscriberId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
+                if (checkActiveSubscription is not null && checkActiveSubscription.SubscriptionEndDate > DateTime.UtcNow.AddHours(1))
+                {
+                    return ResponseFactory.Fail<string>(new ForbidException("User already an active subscription."), "User already an active subscription.");
+
+                }
+                if (checkActiveSubscription is not null && !checkActiveSubscription.IsActive && !checkActiveSubscription.IsAdminConfirmPayment)
+                {
+                    return ResponseFactory.Fail<string>(new ForbidException("User already an active subscription."), "User already an active subscription.");
+
+                }
+                var subscription = new Subscription
+                {
+                    Amount = dto.Amount,
+                    ProofOfPayment = dto.ProofOfPayment ?? "",
+                    SubscriberType = dto.SubscriberType,
+                    SubscriberId = dto.SubscriberId ?? loggedInUser.Id, // FIXED: Use an existing user ID
+                    IsSubscriberConfirmPayment = !string.IsNullOrEmpty(dto.ProofOfPayment) ? true : false,
+                };
+
+                _repositoryManager.SubscriptionRepository.AddSubscription(subscription);
+                await _repositoryManager.SaveChangesAsync();
+
+                return ResponseFactory.Success<string>("Success", "Subscription request sent succesfully.");
+
             }
-            var subscription = new Subscription
+            catch (Exception ex)
             {
-                SGId = dto.SGId,
-                Amount = dto.Amount,
-                SubscriptionActivatorId = loggedInUser.Id,
-                //PaymentMethod = dto.PaymentMethod,
-                ProofOfPayment = dto.ProofOfPayment,
-                SubscriptionStartDate = DateTime.UtcNow,
-                SubscriptionEndDate = DateTime.UtcNow.AddMonths(1),
-                SubscriberId = dto.SubscriberId,
-                //SubscriptionType = dto.SubscriptionType
-            };
-            _repositoryManager.SubscriptionRepository.AddSubscription(subscription);
-            await _repositoryManager.SaveChangesAsync();
-
-            return ResponseFactory.Success<string>("Success");
+                return ResponseFactory.Fail<string>($"Error: {ex.Message}");
+            }
         }
-
         public async Task<BaseResponse<bool>> CheckActiveVendorSubscription(string userId)
         {
-            var getUser = await _applicationDbContext.Vendors.Where(x => x.UserId == userId).FirstOrDefaultAsync();
+            var getUser = await _applicationDbContext.Vendors.Where(x => x.UserId == userId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
+            var getSubscription = await _applicationDbContext.Subscriptions.Where(s => s.SubscriberId == userId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
+            if (getSubscription == null)
+            {
+                return ResponseFactory.Fail<bool>(new NotFoundException("No subscription found for this Customer."), "No subscription found for this Customer.");
+            }
             if (getUser == null)
             {
-                return ResponseFactory.Fail<bool>(new NotFoundException("User is not a Vendor."), "Vendor not found.");
+                return ResponseFactory.Fail<bool>(new NotFoundException("User is not a Customer."), "Customer not found.");
+            }
+            if (getSubscription.IsSubscriberConfirmPayment && !string.IsNullOrEmpty(getSubscription.ProofOfPayment))
+            {
+                return ResponseFactory.Success<bool>(true, "Your subscription is pending approval.");
             }
             if (!getUser.IsSubscriptionActive && getUser.SubscriptionEndDate < DateTime.UtcNow.AddHours(1))
             {
-                return ResponseFactory.Success<bool>(false, "User does not have an active subscription");
+                return ResponseFactory.Fail<bool>("User does not have an active subscription");
             }
             return ResponseFactory.Success<bool>(true, "User has an active subscription.");
 
         }
         public async Task<BaseResponse<bool>> CheckActiveCustomerSubscription(string userId)
         {
-            var getCustomer = await _applicationDbContext.Customers.Where(x => x.UserId == userId).FirstOrDefaultAsync();
+            var getCustomer = await _applicationDbContext.Customers.Where(x => x.UserId == userId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
+            var getSubscription = await _applicationDbContext.Subscriptions.Where(s => s.SubscriberId == userId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
+            if (getSubscription == null)
+            {
+                return ResponseFactory.Fail<bool>(new NotFoundException("No subscription found for this Customer."), "No subscription found for this Customer.");
+            }
             if (getCustomer == null)
             {
                 return ResponseFactory.Fail<bool>(new NotFoundException("User is not a Customer."), "Customer not found.");
             }
+            if (getSubscription.IsSubscriberConfirmPayment && !string.IsNullOrEmpty(getSubscription.ProofOfPayment))
+            {
+                return ResponseFactory.Success<bool>(true, "Your subscription is pending approval.");
+            }
             if (!getCustomer.IsSubscriptionActive && getCustomer.SubscriptionEndDate < DateTime.UtcNow.AddHours(1))
             {
-                return ResponseFactory.Success<bool>(false, "User does not have an active subscription");
+                return ResponseFactory.Fail<bool>("User does not have an active subscription");
             }
             return ResponseFactory.Success<bool>(true, "User has an active subscription.");
         }
         public async Task<BaseResponse<bool>> AdminConfirmSubscriptionPayment(string subscriptionId)
         {
-            var getSubscriptions = await _applicationDbContext.Subscriptions.Where(x => x.Id == subscriptionId).FirstOrDefaultAsync();
-            if (getSubscriptions == null)
+            try
             {
-                return ResponseFactory.Fail<bool>(new NotFoundException("Subscription not found."), "Subscription not found.");
+                var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+                var getSubscriptions = await _applicationDbContext.Subscriptions.Where(x => x.Id == subscriptionId).Include(x => x.Subscriber).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
+                if (getSubscriptions == null)
+                {
+                    return ResponseFactory.Fail<bool>(new NotFoundException("Subscription not found."), "Subscription not found.");
+                }
+                if (!string.IsNullOrEmpty(getSubscriptions.SubscriptionActivatorId) && getSubscriptions.IsActive && getSubscriptions.IsActive)
+                {
+                    return ResponseFactory.Fail<bool>(new("Subscription has already been treated."), "Subscription has already been treated.");
+                }
+                getSubscriptions.IsAdminConfirmPayment = true;
+                getSubscriptions.IsActive = true;
+                getSubscriptions.SubscriptionStartDate = DateTime.UtcNow.AddHours(1);
+                getSubscriptions.SubscriptionEndDate = DateTime.UtcNow.AddMonths(1);
+                getSubscriptions.SubscriptionActivatorId = loggedInUser.Id;
+
+                _applicationDbContext.SaveChanges();
+                return ResponseFactory.Success<bool>(true, "Subscription confirmed successfully.");
             }
-            getSubscriptions.IsAdminConfirmPayment = true;
-            _applicationDbContext.SaveChanges();
-            return ResponseFactory.Success<bool>(true, "Subscription confirmed successfully.");
+            catch (Exception ex)
+            {
+                return ResponseFactory.Fail<bool>($"Error: {ex.Message}");
+            }
         }
         public async Task<BaseResponse<bool>> UserConfirmSubscriptionPayment(string subscriptionId)
         {
-            var getSubscriptions = await _applicationDbContext.Subscriptions.Where(x => x.Id == subscriptionId).FirstOrDefaultAsync();
+            var getSubscriptions = await _applicationDbContext.Subscriptions.Where(x => x.Id == subscriptionId).OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync();
             if (getSubscriptions == null)
             {
                 return ResponseFactory.Fail<bool>(new NotFoundException("Subscription not found."), "Subscription not found.");

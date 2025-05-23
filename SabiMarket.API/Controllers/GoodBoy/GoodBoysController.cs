@@ -5,6 +5,9 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.Interfaces;
+using SabiMarket.Services.Dtos.Levy;
+using System.Security.Claims;
+using SabiMarket.Infrastructure.Helpers;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -14,11 +17,13 @@ public class GoodBoysController : ControllerBase
 {
     private readonly IGoodBoysService _goodBoysService;
     private readonly ILogger<GoodBoysController> _logger;
+    private readonly ICurrentUserService _currentUser;
 
-    public GoodBoysController(IGoodBoysService goodBoysService, ILogger<GoodBoysController> logger)
+    public GoodBoysController(IGoodBoysService goodBoysService, ILogger<GoodBoysController> logger, ICurrentUserService currentUser = null)
     {
         _goodBoysService = goodBoysService;
         _logger = logger;
+        _currentUser = currentUser;
     }
 
     [HttpPost]
@@ -93,14 +98,79 @@ public class GoodBoysController : ControllerBase
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
 
-    [HttpPost("traders/{traderId}/payments")]
+    [HttpPost("updatetraderpayment/{traderId}")]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ProcessPayment(string traderId, [FromBody] ProcessLevyPaymentDto request)
     {
-        var response = await _goodBoysService.UpdateTraderPayment(traderId, request);
+        var response = await _goodBoysService.ProcessTraderLevyPayment(traderId, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+    [HttpGet("dashboard/stats")]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyDashboardStatsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyDashboardStatsDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyDashboardStatsDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetDashboardStats([FromQuery] string goodboyId, [FromQuery] DateTime? fromDate = null,
+    [FromQuery] DateTime? toDate = null,
+    [FromQuery] string searchQuery = null,
+    [FromQuery] PaginationFilter paginationFilter = null)
+    {
+   
+        // Get the current user's ID
+        //var userId = _currentUser.GetUserId();
+
+        // Get dashboard statistics for the GoodBoy
+        var result = await _goodBoysService.GetDashboardStats(goodboyId, fromDate, toDate, searchQuery, paginationFilter);
+        return result.IsSuccessful ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("dashboard/today-levies")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTodayLeviesForGoodBoy(
+    [FromQuery] int pageNumber = 1,
+    [FromQuery] int pageSize = 10)
+    {
+        var userId = _currentUser.GetUserId();
+        var pagination = new PaginationFilter
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var result = await _goodBoysService.GetTodayLeviesForGoodBoy(userId, pagination);
+
+        if (result.IsSuccessful)
+        {
+            return Ok(result);
+        }
+
+        return BadRequest(result);
+    }
+
+    [HttpPost("dashboard/collect-levy")]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyLevyPaymentResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyLevyPaymentResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyLevyPaymentResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CollectLevy([FromBody] LevyPaymentCreateDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        // Get the current user's ID
+        var userId = _currentUser.GetUserId();
+
+        // Set the GoodBoy ID for the levy payment
+        request.GoodBoyId = userId;
+
+        // Collect the levy payment
+        var result = await _goodBoysService.CollectLevyPayment(request);
+        return result.IsSuccessful ? Ok(result) : BadRequest(result);
     }
 }

@@ -5,17 +5,11 @@ public class CreateAssistantOfficerRequestDtoValidator : AbstractValidator<Creat
 {
     public CreateAssistantOfficerRequestDtoValidator()
     {
-        RuleFor(x => x.FirstName)
-            .NotEmpty().WithMessage("First name is required")
-            .MinimumLength(2).WithMessage("First name must be at least 2 characters")
-            .MaximumLength(50).WithMessage("First name cannot exceed 50 characters")
-            .Matches("^[a-zA-Z]*$").WithMessage("First name can only contain letters");
-
-        RuleFor(x => x.LastName)
-            .NotEmpty().WithMessage("Last name is required")
-            .MinimumLength(2).WithMessage("Last name must be at least 2 characters")
-            .MaximumLength(50).WithMessage("Last name cannot exceed 50 characters")
-            .Matches("^[a-zA-Z]*$").WithMessage("Last name can only contain letters");
+        RuleFor(x => x.FullName)
+            .NotEmpty().WithMessage("Full name is required")
+            .MinimumLength(3).WithMessage("Full name must be at least 3 characters")
+            .MaximumLength(100).WithMessage("Full name cannot exceed 100 characters")
+            .Matches(@"^[a-zA-Z\s]*$").WithMessage("Full name can only contain letters and spaces");
 
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email is required")
@@ -27,12 +21,13 @@ public class CreateAssistantOfficerRequestDtoValidator : AbstractValidator<Creat
             .Matches(@"^[0-9]{11}$").WithMessage("Phone number must be exactly 11 digits")
             .Must(phone => phone.StartsWith("0")).WithMessage("Phone number must start with 0");
 
-        RuleFor(x => x.Level)
-            .NotEmpty().WithMessage("Level is required")
-            .MaximumLength(50).WithMessage("Level cannot exceed 50 characters");
+        RuleFor(x => x.Gender)
+            .NotEmpty().WithMessage("Gender is required")
+            .Must(gender => gender == "Male" || gender == "Female" || gender == "Other")
+            .WithMessage("Gender must be 'Male', 'Female', or 'Other'");
 
-        RuleFor(x => x.MarketId)
-            .NotEmpty().WithMessage("Market ID is required")
-            .MaximumLength(50).WithMessage("Market ID cannot exceed 50 characters");
+        RuleForEach(x => x.MarketIds)
+      .NotEmpty().WithMessage("Market ID cannot be empty")
+      .MaximumLength(50).WithMessage("Market ID cannot exceed 50 characters");
     }
 }

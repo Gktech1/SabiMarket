@@ -20,20 +20,21 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
         [Required]
         public string ChairmanId { get; set; }
 
+        public string? LocalGovernmentId { get; set; }   
+
         public bool IsBlocked { get; set; } = false;
 
         [ForeignKey("UserId")]
         [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual ApplicationUser User { get; set; }
-
-        [ForeignKey("MarketId")]
-        [DeleteBehavior(DeleteBehavior.NoAction)]
-        public virtual Market Market { get; set; }
-
         [ForeignKey("ChairmanId")]
         [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual Chairman Chairman { get; set; }
 
+        [ForeignKey("LocalGovernmentId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
+        public virtual LocalGovernment LocalGovernment { get; set; }
+        public virtual ICollection<Market> Markets { get; set; } = new List<Market>();
         public virtual ICollection<GoodBoy> GoodBoys { get; set; } = new List<GoodBoy>();
         public virtual ICollection<Trader> AssignedTraders { get; set; } = new List<Trader>();
     }

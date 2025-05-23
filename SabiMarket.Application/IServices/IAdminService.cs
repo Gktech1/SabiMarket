@@ -1,6 +1,7 @@
 ﻿using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
+using SabiMarket.Domain.Enum;
 
 namespace SabiMarket.Application.IServices
 {
@@ -15,6 +16,11 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<bool>> UpdateDashboardAccess(string adminId, UpdateAdminAccessDto accessDto);
         Task<BaseResponse<bool>> DeactivateAdmin(string adminId);
         Task<BaseResponse<bool>> ReactivateAdmin(string adminId);
+        Task<BaseResponse<DashboardReportDto>> GetDashboardReportDataAsync(
+         string lgaFilter = null,
+         string marketFilter = null,
+         int? year = null,
+         TimeFrame timeFrame = TimeFrame.ThisWeek);
         Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogResponseDto>>>> GetAdminAuditLogs(
             string adminId, DateTime? startDate, DateTime? endDate, PaginationFilter paginationFilter);
         Task<BaseResponse<bool>> DeleteRole(string roleId);
@@ -30,6 +36,11 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<PaginatorDto<IEnumerable<TeamMemberResponseDto>>>> GetTeamMembers(
          TeamMemberFilterRequestDto filterDto,
          PaginationFilter paginationFilter);
+        Task<BaseResponse<byte[]>> ExportReport(ReportExportRequestDto request);
+        Task<BaseResponse<PaginatorDto<IEnumerable<UserResponseDto>>>> GetAllUsers(
+    UserFilterRequestDto filterDto,
+    PaginationFilter paginationFilter);
+        Task<BaseResponse<AssignRoleResponseDto>> AssignUserRoleAndPermissions(string userId, string roleId, List<PermissionDto> permissions, bool removeExistingRoles = false);
     }
 }
 

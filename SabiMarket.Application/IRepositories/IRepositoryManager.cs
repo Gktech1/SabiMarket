@@ -1,4 +1,6 @@
-﻿using SabiMarket.Application.Interfaces;
+﻿using System.Data;
+using Microsoft.EntityFrameworkCore.Storage;
+using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories.SowFoodIRepositories;
 using SabiMarket.Infrastructure.Repositories;
 
@@ -33,7 +35,22 @@ namespace SabiMarket.Application.IRepositories
 
         public IAdvertisementRepository AdvertisementRepository { get; }
         public ICustomerRepository CustomerRepository { get; }
-        #region SOW FOOD
+
+        public IOfficerMarketAssignmentRepository OfficerMarketAssignmentRepository { get; }
+        /// <summary>
+        /// Begins a new database transaction with the default isolation level (ReadCommitted)
+        /// </summary>
+        /// <returns>The transaction object</returns>
+        Task<IDbContextTransaction> BeginTransactionAsync();
+
+        /// <summary>
+        /// Begins a new database transaction with the specified isolation level
+        /// </summary>
+        /// <param name="isolationLevel">The isolation level for the transaction</param>
+        /// <returns>The transaction object</returns>
+        Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel);
+
+        #region Sow Food
         public ISowFoodCompanyRepository SowFoodCompanyRepository { get; }
         public ISowFoodCompanyCustomerRepository SowFoodCompanyCustomerRepository { get; }
         public ISowFoodCompanyProductionItemRepository SowFoodCompanyProductionItemRepository { get; }

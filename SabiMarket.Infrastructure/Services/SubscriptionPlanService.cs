@@ -27,6 +27,7 @@ namespace SabiMarket.Infrastructure.Services
             {
                 Frequency = dto.Frequency,
                 Amount = dto.Amount,
+                IsActive = true
             };
 
             _repositoryManager.SubscriptionPlanRepository.AddSubscriptionPlan(subscription);

@@ -32,7 +32,7 @@ public class SubscriptionRepository : GeneralRepository<Subscription>, ISubscrip
     {
         return await FindAll(false).Include(x => x.Subscriber)
                        .Where(a => a.Subscriber.FirstName.Contains(searchString) ||
-                       a.Subscriber.LastName.Contains(searchString) || a.SGId.ToLower() == searchString.ToLower())
+                       a.Subscriber.LastName.Contains(searchString))
                        .Paginate(paginationFilter);
     }
 

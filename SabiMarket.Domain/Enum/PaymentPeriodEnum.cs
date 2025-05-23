@@ -2,9 +2,12 @@
 {
     public enum PaymentPeriodEnum
     {
-        Daily,
-        Weekly,
-        Monthly,
-        Yearly
+        Daily = 1,
+        Weekly = 7,
+        BiWeekly = 14,
+        Monthly = 30,
+        Quarterly = 90,
+        HalfYearly = 180,
+        Yearly = 365
     }
 }

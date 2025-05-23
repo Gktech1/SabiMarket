@@ -27,7 +27,7 @@ namespace SabiMarket.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
 
         public async Task<Vendor> GetVendorByUserId(string userId, bool trackChanges) =>
-            await FindByCondition(v => v.UserId == userId, trackChanges)
+            await FindByCondition(v => v.UserId == userId, trackChanges).Include(x => x.User).ThenInclude(l => l.LocalGovernment)
                 .FirstOrDefaultAsync();
 
 
@@ -50,8 +50,10 @@ namespace SabiMarket.Infrastructure.Repositories
         PaginationFilter paginationFilter, bool trackChanges)
         {
             var query = FindAll(trackChanges)
-                .Include(v => v.User)
                 .Include(p => p.Products)
+                .Include(p => p.User)
+                    .ThenInclude(x => x.LocalGovernment)
+                    .ThenInclude(x => x.Markets)
                 .OrderBy(v => v.User.FirstName);
             return await query.Paginate(paginationFilter);
         }

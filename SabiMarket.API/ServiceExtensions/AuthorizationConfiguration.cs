@@ -10,10 +10,14 @@ namespace SabiMarket.API.ServiceExtensions
         public const string RequireCaretakerOnly = "RequireCaretakerOnly";
         public const string RequireTraderOnly = "RequireTraderOnly";
         public const string RequiredTeamMember = "RequireTeamMember";
+        public const string RequireAssistOfficer = "RequireAssistOfficer";
+
+
 
         // Combined policies
         public const string RequireMarketStaff = "RequireMarketStaff";
         public const string RequireMarketManagement = "RequireMarketManagement";
+        public const string RequiredVendorCustomerAndAdmin = "RequiredVendorCustomerAndAdmin ";
     }
 
     public static class AuthorizationConfiguration
@@ -36,6 +40,9 @@ namespace SabiMarket.API.ServiceExtensions
             options.AddPolicy(PolicyNames.RequireTraderOnly,
                 policy => policy.RequireRole(UserRoles.Trader));
 
+            options.AddPolicy(PolicyNames.RequireAssistOfficer,
+              policy => policy.RequireRole( UserRoles.AssistOfficer));
+
             // Combined role policies
             options.AddPolicy(PolicyNames.RequireMarketStaff,
                 policy => policy.RequireRole(
@@ -44,11 +51,21 @@ namespace SabiMarket.API.ServiceExtensions
                     UserRoles.AssistOfficer
                 ));
 
+            // Combined role policies
+            options.AddPolicy(PolicyNames.RequiredVendorCustomerAndAdmin,
+                policy => policy.RequireRole(
+                    UserRoles.Customer,
+                    UserRoles.Vendor,
+                    UserRoles.Admin
+                    )); 
+
             options.AddPolicy(PolicyNames.RequireMarketManagement,
                 policy => policy.RequireRole(
                     UserRoles.Admin,
                     UserRoles.Chairman,
-                    UserRoles.Caretaker
+                    UserRoles.Caretaker,
+                    UserRoles.AssistOfficer,
+                    UserRoles.Trader
                 ));
         }
     }

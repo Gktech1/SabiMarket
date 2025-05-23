@@ -1,12 +1,18 @@
 ﻿using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
+using SabiMarket.Domain.DTOs;
+using SabiMarket.Domain.Enum;
+using SabiMarket.Services.Dtos.Levy;
+using System.Threading.Tasks;
+using LevySetupResponseDto = SabiMarket.Application.DTOs.Requests.LevySetupResponseDto;
 
 namespace SabiMarket.Application.IServices
 {
     public interface IChairmanService
     {
         Task<BaseResponse<LGAResponseDto>> GetLocalGovernmentById(string id);
+        Task<BaseResponse<TraderResponseDto>> CreateTrader(CreateTraderRequestDto request);
         Task<BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>> GetLocalGovernments(
        LGAFilterRequestDto filterDto,
        PaginationFilter paginationFilter);
@@ -14,23 +20,40 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<PaginatorDto<IEnumerable<LGResponseDto>>>> GetLocalGovernmentAreas(
            string searchTerm,
              PaginationFilter paginationFilter);
-
         Task<BaseResponse<ChairmanResponseDto>> GetChairmanById(string chairmanId);
+        Task<BaseResponse<PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>>> GetLevyPayments(
+      PaymentPeriodEnum? period,
+      string searchQuery,
+      PaginationFilter paginationFilter);
         Task<BaseResponse<ChairmanResponseDto>> CreateChairman(CreateChairmanRequestDto chairmanDto);
+
+        Task<BaseResponse<ChairmanDashboardStatsDto>> GetChairmanDashboardStats(string chairmanId);
+
+        Task<BaseResponse<PaginatorDto<List<AssistOfficerListDto>>>> GetAssistOfficers(
+              PaginationFilter pagination,
+              string searchTerm = "",
+              string status = "Active");
         Task<BaseResponse<bool>> UpdateChairmanProfile(string chairmanId, UpdateProfileDto profileDto);
-        Task<BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>> GetChairmen(
-            PaginationFilter paginationFilter);
-        Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets();
+        Task<BaseResponse<AdminDashboardResponse>> GetChairmen(string? searchTerm, PaginationFilter paginationFilter);
+        Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets(string localgovermentId = null, string searchQuery = null);
+        // Task<BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>> GetChairmen(string? searchTerm, PaginationFilter paginationFilter);
+        //Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets(string localgovermentId = null);
         Task<BaseResponse<DashboardMetricsResponseDto>> GetDashboardMetrics();
         Task<BaseResponse<bool>> AssignCaretakerToMarket(string marketId, string caretakerId);
         Task<BaseResponse<bool>> AssignCaretakerToChairman(string chairmanId, string caretakerId);
         Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers();
         Task<BaseResponse<IEnumerable<ReportResponseDto>>> GetChairmanReports(string chairmanId);
+        Task<BaseResponse<AssistantOfficerResponseDto>> UpdateAssistantOfficer(string officerId, UpdateAssistantOfficerRequestDto request);
         Task<BaseResponse<bool>> UnblockAssistantOfficer(string officerId);
         Task<BaseResponse<bool>> BlockAssistantOfficer(string officerId);
         Task<BaseResponse<AssistantOfficerResponseDto>> CreateAssistantOfficer(CreateAssistantOfficerRequestDto officerDto);
         Task<BaseResponse<AssistantOfficerResponseDto>> GetAssistantOfficerById(string officerId);
+        Task<BaseResponse<bool>> DeleteAssistCenterOfficerByAdmin(string officerId);
         Task<BaseResponse<MarketResponseDto>> CreateMarket(CreateMarketRequestDto request);
+        Task<BaseResponse<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>> SearchLevyPayments(
+    string chairmanId,
+    string searchQuery,
+    PaginationFilter paginationFilter);
         Task<BaseResponse<bool>> UpdateMarket(string marketId, UpdateMarketRequestDto request);
         Task<BaseResponse<bool>> DeleteMarket(string marketId);
         Task<BaseResponse<MarketDetailsDto>> GetMarketDetails(string marketId);
@@ -64,6 +87,25 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<LevyResponseDto>> GetLevyById(string levyId);
         Task<BaseResponse<PaginatorDto<IEnumerable<LevyResponseDto>>>> GetAllLevies(string chairmanId, PaginationFilter filter);
         Task<BaseResponse<PaginatorDto<IEnumerable<LevyInfoResponseDto>>>> GetMarketLevies(string marketId, PaginationFilter paginationFilter);
-        Task<BaseResponse<bool>> DeleteChairmanById(string chairmanId);
+        Task<BaseResponse<bool>> DeleteChairmanByAdmin(string chairmanId);
+
+        Task<BaseResponse<LocalGovernmentWithUsersResponseDto>> GetLocalGovernmentWithUsersByUserId(string userId);
+
+        Task<BaseResponse<TraderDashboardResponseDto>> GetTraderDashboard(string traderId);
+        Task<BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>> GetAllLevyPaymentsForTrader(
+            string traderId,
+            DateTime? fromDate,
+            DateTime? toDate,
+            string searchQuery,
+            PaginationFilter pagination);
+        Task<BaseResponse<TraderLevyPaymentDto>> RecordLevyPayment(LevyPaymentCreateDto paymentDto);
+
+        Task<BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>> GetLevyPaymentsForTrader(
+         string traderId,
+         DateTime? fromDate,
+         DateTime? toDate,
+         string searchQuery,
+         PaginationFilter pagination);
+
     }
 }

@@ -4,6 +4,7 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.IServices;
 using SabiMarket.Infrastructure.Helpers;
+using System.ComponentModel.DataAnnotations;
 
 namespace SabiMarket.API.Controllers
 {
@@ -170,6 +171,93 @@ namespace SabiMarket.API.Controllers
             }
 
             return Ok(response);
+        }
+
+        /// <summary>
+        /// Initiates password reset by sending OTP to the provided phone number
+        /// </summary>
+        /// <param name="request">Contains phone number to send OTP to</param>
+        /// <returns>Success status of the OTP sending operation</returns>
+        /// <response code="200">OTP sent successfully</response>
+        /// <response code="400">Invalid phone number</response>
+        /// <response code="500">Internal server error</response>
+        [HttpPost("forgot-password")]
+        [AllowAnonymous] // No authorization required for this endpoint
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto request)
+        {
+
+            var response = await _settingsService.SendPasswordResetOTP(request);
+
+            if (!response.IsSuccessful)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// Verifies the OTP sent to the phone number
+        /// </summary>
+        /// <param name="request">Contains phone number and OTP code</param>
+        /// <returns>Success status of the OTP verification</returns>
+        /// <response code="200">OTP verified successfully</response>
+        /// <response code="400">Invalid phone number or OTP</response>
+        /// <response code="500">Internal server error</response>
+        [HttpPost("verify-otp")]
+        [AllowAnonymous] // No authorization required for this endpoint
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> VerifyOTP([FromBody] VerifyOTPDto request)
+        {
+            var response = await _settingsService.VerifyPasswordResetOTP(request);
+
+            if (!response.IsSuccessful)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+
+        }
+
+        /// <summary>
+        /// Resets the password after OTP verification
+        /// </summary>
+        /// <param name="request">Contains phone number and new password</param>
+        /// <returns>Success status of the password reset operation</returns>
+        /// <response code="200">Password reset successfully</response>
+        /// <response code="400">Invalid phone number or password</response>
+        /// <response code="404">User not found</response>
+        /// <response code="500">Internal server error</response>
+        [HttpPost("reset-password")]
+        [AllowAnonymous] // No authorization required for this endpoint
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto request)
+        {
+
+                var response = await _settingsService.ResetPasswordAfterOTP(
+                    request);
+
+                if (!response.IsSuccessful)
+                {
+                    return response.Error?.StatusCode switch
+                    {
+                        StatusCodes.Status404NotFound => NotFound(response),
+                        StatusCodes.Status400BadRequest => BadRequest(response),
+                        _ => BadRequest(response)
+                    };
+                }
+
+            return Ok(response);
+         
         }
     }
 }

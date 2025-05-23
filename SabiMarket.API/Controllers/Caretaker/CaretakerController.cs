@@ -5,11 +5,15 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
+using SabiMarket.Infrastructure.Services;
+using SabiMarket.Application.Interfaces;
+using SabiMarket.Application.DTOs.MarketParticipants;
+using SabiMarket.Domain.Exceptions;
 
 [Route("api/[controller]")]
 [ApiController]
 [Produces("application/json")]
-[Authorize(Policy = PolicyNames.RequireCaretakerOnly)]
+[Authorize(Policy = PolicyNames.RequireMarketManagement)]
 public class CaretakerController : ControllerBase
 {
     private readonly ICaretakerService _caretakerService;
@@ -24,7 +28,7 @@ public class CaretakerController : ControllerBase
     }
 
     [HttpPost("createcaretaker")]
-    [Authorize(Policy = PolicyNames.RequireAdminOnly)]
+    [Authorize(Policy = PolicyNames.RequireMarketManagement)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status500InternalServerError)]
@@ -34,8 +38,47 @@ public class CaretakerController : ControllerBase
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 
-    [HttpGet("{id}")]
+    /// <summary>
+    /// Update an existing caretaker
+    /// </summary>
+    /// <param name="caretakerId">ID of the caretaker to update</param>
+    /// <param name="request">Updated caretaker data</param>
+    /// <returns>Updated caretaker details</returns>
+    [HttpPut("update-caretakers/{caretakerId}")]
     [Authorize(Policy = PolicyNames.RequireMarketManagement)]
+    [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateCaretaker(string caretakerId, [FromBody] UpdateCaretakerRequestDto request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var response = await _caretakerService.UpdateCaretaker(caretakerId, request);
+
+        if (!response.IsSuccessful)
+        {
+            if (response.Error is NotFoundException)
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
+
+        return Ok(response);
+    }
+
+    [HttpDelete("delete-caretaker/{caretakerId}")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteCaretaker(string caretakerId)
+    {
+        var response = await _caretakerService.DeleteCaretaker(caretakerId);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+    [HttpGet("{id}")]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(BaseResponse<CaretakerResponseDto>), StatusCodes.Status500InternalServerError)]
@@ -46,7 +89,6 @@ public class CaretakerController : ControllerBase
     }
 
     [HttpGet("getcaretakers")]
-    [Authorize(Policy = PolicyNames.RequireMarketManagement)]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<CaretakerResponseDto>>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<CaretakerResponseDto>>>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetCaretakers([FromQuery] PaginationFilter paginationFilter)
@@ -88,8 +130,8 @@ public class CaretakerController : ControllerBase
 
     [HttpGet("{caretakerId}/levy-payments")]
     [Authorize(Policy = PolicyNames.RequireMarketStaff)]
-    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentResponseDto>>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentResponseDto>>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLevyPayments(string caretakerId, [FromQuery] PaginationFilter paginationFilter)
     {
         var response = await _caretakerService.GetLevyPayments(caretakerId, paginationFilter);
@@ -98,22 +140,32 @@ public class CaretakerController : ControllerBase
 
     [HttpGet("levy-payments/{levyId}")]
     [Authorize(Policy = PolicyNames.RequireMarketStaff)]
-    [ProducesResponseType(typeof(BaseResponse<LevyPaymentResponseDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<LevyPaymentResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyLevyPaymentResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyLevyPaymentResponseDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLevyPaymentDetails(string levyId)
     {
         var response = await _caretakerService.GetLevyPaymentDetails(levyId);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
-
-    [HttpPost("{caretakerId}/goodboys")]
+    [HttpPost("create-goodboys")]
     [Authorize(Policy = PolicyNames.RequireCaretakerOnly)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddGoodBoy(string caretakerId, [FromBody] CreateGoodBoyDto request)
     {
-        var response = await _caretakerService.AddGoodBoy(caretakerId, request);
+        var response = await _caretakerService.CreateGoodBoy(caretakerId, request);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+    [HttpPut("update-goodboys/{goodBoyId}")]
+    [Authorize(Policy = PolicyNames.RequireCaretakerOnly)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<GoodBoyResponseDto>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateGoodBoy(string goodBoyId, [FromBody] UpdateGoodBoyRequestDto request)
+    {
+        var response = await _caretakerService.UpdateGoodBoy(goodBoyId, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 
@@ -145,5 +197,20 @@ public class CaretakerController : ControllerBase
     {
         var response = await _caretakerService.BlockGoodBoy(caretakerId, goodBoyId);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+    [HttpDelete("deletegoodboy{goodBoyId}")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteGoodBoy(string goodBoyId)
+    {
+        var response = await _caretakerService.DeleteGoodBoyByCaretaker(goodBoyId);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
     }
 }

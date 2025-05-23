@@ -26,7 +26,7 @@ namespace SabiMarket.Infrastructure.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
-        private readonly ILogger<AuthenticationService> _logger; 
+        private readonly ILogger<AuthenticationService> _logger;
         private readonly IValidator<RegistrationRequestDto> _registrationValidator;
         private readonly IValidator<LoginRequestDto> _loginValidator;
         private readonly RoleManager<ApplicationRole> _roleManager;
@@ -69,7 +69,18 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Find user by email
-                var user = await _userManager.FindByEmailAsync(loginRequest.Email);
+                //var user = await _userManager.FindByEmailAsync(loginRequest.Email);
+                var user = await _userManager.Users
+                                        .Include(u => u.Admin)
+                                        .Include(u => u.Chairman)
+                                        .Include(u => u.Trader)
+                                        .Include(u => u.Vendor)
+                                        .Include(u => u.Customer)
+                                        .Include(u => u.GoodBoy)
+                                        .Include(u => u.Caretaker)
+                                        .Include(u => u.AssistCenterOfficer)
+                                        .Include(u => u.LocalGovernment)
+                                        .FirstOrDefaultAsync(u => u.Email == loginRequest.Email);
                 if (user == null)
                 {
                     return ResponseFactory.Fail<LoginResponseDto>(
@@ -105,17 +116,23 @@ namespace SabiMarket.Infrastructure.Services
                 // Get associated entity based on role
                 var userDetails = await GetUserDetailsByRole(user, roles.First());
 
-                // Update last login
-                //user.IsActive = true;   
-                user.LastLoginAt = DateTime.UtcNow;
-                await _userManager.UpdateAsync(user);
-
                 // Generate JWT token with claims
                 //var (token, expiresAt) = await GenerateJwtTokenAsync(user, roles.First(), userDetails);
                 var (token, expiresAt, jwtId) = await GenerateJwtTokenAsync(user, roles.First(), userDetails);
 
-                // Generate refresh token
+                // Generate and save refresh token with all properties
+
                 user.RefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+                user.RefreshTokenJwtId = jwtId;
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(30); // Set appropriate expiry
+                user.IsRefreshTokenUsed = false;
+                user.LastLoginAt = DateTime.UtcNow;
+
+                // Save the updated user with refresh token
+                await _userManager.UpdateAsync(user);
+
+                // Generate refresh token
+                // user.RefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
                 var response = new LoginResponseDto
                 {
                     AccessToken = token,
@@ -131,7 +148,7 @@ namespace SabiMarket.Infrastructure.Services
                         Role = roles.First(),
                         LastLoginAt = user.LastLoginAt ?? DateTime.UtcNow,
                         ProfileImageUrl = user.ProfileImageUrl,
-                        AdditionalDetails = userDetails
+                        AdditionalDetails = userDetails,
                     }
                 };
 
@@ -152,10 +169,15 @@ namespace SabiMarket.Infrastructure.Services
             try
             {
                 // Find user with valid refresh token
-                var user = await _userManager.Users.FirstOrDefaultAsync(u =>
+                /*var user = await _userManager.Users.FirstOrDefaultAsync(u =>
                     u.RefreshToken == refreshToken &&
                     u.RefreshTokenExpiryTime > DateTime.UtcNow &&
-                    u.IsRefreshTokenUsed != true);
+                    u.IsRefreshTokenUsed != true);*/
+
+                var user = await _userManager.Users.FirstOrDefaultAsync(u =>
+                                        u.RefreshToken == refreshToken &&
+                                        u.RefreshTokenExpiryTime > DateTime.UtcNow &&
+                                        (u.IsRefreshTokenUsed == null || u.IsRefreshTokenUsed == false));
 
                 if (user == null)
                 {
@@ -286,46 +308,30 @@ namespace SabiMarket.Infrastructure.Services
                 switch (request.Role.ToUpper())
                 {
                     case "VENDOR":
-                        if (request.VendorDetails == null)
-                        {
-                            await _userManager.DeleteAsync(user);
-                            return ResponseFactory.Fail<RegistrationResponseDto>(
-                                new BadRequestException("Vendor details are required"),
-                                "Missing vendor information");
-                        }
-
                         var vendor = new Vendor
                         {
                             Id = Guid.NewGuid().ToString(),
                             UserId = user.Id,
-                            LocalGovernmentId = request.VendorDetails.LocalGovernmentId.ToString(),
+                            LocalGovernmentId = request.VendorDetails.LocalGovernmentId.ToString() ?? "",
                             BusinessName = request.VendorDetails.BusinessName,
                             BusinessAddress = request.Address,
                             BusinessDescription = request.VendorDetails.BusinessDescription,
                             VendorCode = $"V-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
-                            Type = VendorTypeEnum.Other,
+                            Type = request.VendorDetails.VendorTypeEnum ?? VendorTypeEnum.Other, // Replace with appropriate default,
                             IsVerified = false,
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow
                         };
 
-                         _repositoryMannager.VendorRepository.Create(vendor);
+                        _repositoryMannager.VendorRepository.Create(vendor);
                         break;
 
                     case "CUSTOMER":
-                        if (request.CustomerDetails == null)
-                        {
-                            await _userManager.DeleteAsync(user);
-                            return ResponseFactory.Fail<RegistrationResponseDto>(
-                                new BadRequestException("Customer details are required"),
-                                "Missing customer information");
-                        }
-
                         var customer = new Customer
                         {
                             Id = Guid.NewGuid().ToString(),
                             UserId = user.Id,
-                            LocalGovernmentId = request.CustomerDetails.LocalGovernmentId.ToString(),
+                            LocalGovernmentId = request.CustomerDetails.LocalGovernmentId.ToString() ?? "",
                             FullName = $"{request.FirstName} {request.LastName}",
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow
@@ -335,13 +341,6 @@ namespace SabiMarket.Infrastructure.Services
                         break;
 
                     case "ADVERTISER":
-                        if (request.AdvertiserDetails == null)
-                        {
-                            await _userManager.DeleteAsync(user);
-                            return ResponseFactory.Fail<RegistrationResponseDto>(
-                                new BadRequestException("Advertiser details are required"),
-                                "Missing advertiser information");
-                        }
 
                         var advertisement = new Advertisement
                         {
@@ -398,208 +397,6 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        /*  public async Task<BaseResponse<RegistrationResponseDto>> RegisterAsync(RegistrationRequestDto request)
-          {
-              try
-              {
-                  // Validate email format using regex
-                  var emailPattern = @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
-                  if (!Regex.IsMatch(request.Email, emailPattern))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Invalid email format"),
-                          "Please provide a valid email address");
-                  }
-
-                  // Validate password strength
-                  if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Password must be at least 8 characters long"),
-                          "Invalid password");
-                  }
-
-               *//*   if (!request.Password.Any(char.IsUpper))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Password must contain at least one uppercase letter"),
-                          "Invalid password");
-                  }
-
-                  if (!request.Password.Any(char.IsLower))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Password must contain at least one lowercase letter"),
-                          "Invalid password");
-                  }
-
-                  if (!request.Password.Any(char.IsDigit))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Password must contain at least one number"),
-                          "Invalid password");
-                  }
-
-                  if (!request.Password.Any(ch => !char.IsLetterOrDigit(ch)))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Password must contain at least one special character"),
-                          "Invalid password");
-                  }
-
-                  // Check if email already exists
-                  var existingUser = await _userManager.FindByEmailAsync(request.Email);
-                  if (existingUser != null)
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Email already registered"),
-                          "Email exists");
-                  }*//*
-
-                  // Rest of your existing code...
-                  if (!await _roleManager.RoleExistsAsync(request.Role.ToUpper()))
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Invalid role specified"),
-                          "Invalid role");
-                  }
-
-                  var user = new ApplicationUser
-                  {
-                      Id = Guid.NewGuid().ToString(),
-                      UserName = request.Email,
-                      Email = request.Email,
-                      FirstName = request.FirstName,
-                      LastName = request.LastName,
-                      PhoneNumber = request.PhoneNumber,
-                      Address = request.Address,
-                      ProfileImageUrl = request.ProfileImageUrl ?? "",
-                      IsActive = true,
-                      EmailConfirmed = true,
-                      CreatedAt = DateTime.UtcNow,
-                  };
-
-                  var result = await _userManager.CreateAsync(user, request.Password);
-                  if (!result.Succeeded)
-                  {
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description))),
-                          "User creation failed");
-                  }
-
-                  var roleResult = await _userManager.AddToRoleAsync(user, request.Role.ToUpper());
-                  if (!roleResult.Succeeded)
-                  {
-                      await _userManager.DeleteAsync(user);
-                      return ResponseFactory.Fail<RegistrationResponseDto>(
-                          new BadRequestException("Failed to assign role"),
-                          "Role assignment failed");
-                  }
-
-                  var response = new RegistrationResponseDto
-                  {
-                      UserId = user.Id,
-                      Email = user.Email,
-                      Role = request.Role,
-                      Message = "Registration successful. You can now log in",
-                      RequiresApproval = RequiresApproval(request.Role)
-                  };
-
-                  return ResponseFactory.Success(response, "Registration successful");
-              }
-              catch (Exception ex)
-              {
-                  _logger.LogError(ex, "Registration failed for email: {Email}", request.Email);
-                  return ResponseFactory.Fail<RegistrationResponseDto>(
-                      new BadRequestException("An unexpected error occurred during registration"),
-                      "Registration failed");
-              }
-          }
-  */
-        /* public async Task<BaseResponse<RegistrationResponseDto>> RegisterAsync(RegistrationRequestDto request)
-         {
-             try
-             {
-                 // Validate request using FluentValidation
-              *//*   var validationResult = await _registrationValidator.ValidateAsync(request);
-                 if (!validationResult.IsValid)
-                 {
-                     return ResponseFactory.Fail<RegistrationResponseDto>(
-                         new FluentValidation.ValidationException(validationResult.Errors),
-                         "Validation failed");
-                 }*//*
-
-                 // Check if email already exists
-                 var existingUser = await _userManager.FindByEmailAsync(request.Email);
-                 if (existingUser != null)
-                 {
-                     return ResponseFactory.Fail<RegistrationResponseDto>(
-                         new BadRequestException("Email already registered"),
-                         "Email exists");
-                 }
-
-                 // Validate role
-                 if (!await _roleManager.RoleExistsAsync(request.Role.ToUpper()))
-                 {
-                     return ResponseFactory.Fail<RegistrationResponseDto>(
-                         new BadRequestException("Invalid role specified"),
-                         "Invalid role");
-                 }
-
-                 // Create base user
-                 var user = new ApplicationUser
-                 {
-                     Id = Guid.NewGuid().ToString(),
-                     UserName = request.Email,
-                     Email = request.Email,
-                     FirstName = request.FirstName,
-                     LastName = request.LastName,
-                     PhoneNumber = request.PhoneNumber,
-                     Address = request.Address,
-                     ProfileImageUrl = request.ProfileImageUrl ?? "",
-                     IsActive = true,
-                     EmailConfirmed = true,
-                     CreatedAt = DateTime.UtcNow
-                 };
-                 // Create user
-                 var result = await _userManager.CreateAsync(user, request.Password);
-                 if (!result.Succeeded)
-                 {
-                     return ResponseFactory.Fail<RegistrationResponseDto>(
-                         new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description))),
-                         "User creation failed");
-                 }
-
-                 // Assign role
-                 var roleResult = await _userManager.AddToRoleAsync(user, request.Role.ToUpper());
-                 if (!roleResult.Succeeded)
-                 {
-                     await _userManager.DeleteAsync(user);
-                     return ResponseFactory.Fail<RegistrationResponseDto>(
-                         new BadRequestException("Failed to assign role"),
-                         "Role assignment failed");
-                 }
-
-                 var response = new RegistrationResponseDto
-                 {
-                     UserId = user.Id,
-                     Email = user.Email,
-                     Role = request.Role,
-                     Message = "Registration successful. You can now log in",
-                     RequiresApproval = RequiresApproval(request.Role)
-                 };
-
-                 return ResponseFactory.Success(response, "Registration successful");
-             }
-             catch (Exception ex)
-             {
-                 _logger.LogError(ex, "Registration failed for email: {Email}", request.Email);
-                 return ResponseFactory.Fail<RegistrationResponseDto>(
-                     new BadRequestException("An unexpected error occurred during registration"),
-                     "Registration failed");
-             }
-         }
- */
         private bool RequiresApproval(string role)
         {
             return role.ToUpper() switch
@@ -637,7 +434,8 @@ namespace SabiMarket.Infrastructure.Services
             switch (role.ToUpper())
             {
                 case "ADMIN":
-                    // Add any admin-specific details
+                    details.Add("admin", user.AdminId);
+                    details.Add("address", user.Address);
                     break;
 
                 case "CHAIRMAN":
@@ -655,8 +453,12 @@ namespace SabiMarket.Infrastructure.Services
                     if (user.Trader != null)
                     {
                         details.Add("traderId", user.Trader.Id);
-                        details.Add("businessName", user.Trader.BusinessName);
-                        // Add other trader details
+                        details.Add("traderbusinessName", user.Trader.BusinessName);
+                        details.Add("traderbusinessType", user.Trader.TIN);
+                        details.Add("businessType", user.Trader.BusinessType);
+                        details.Add("traderMarketId", user.Trader.MarketId);
+                        details.Add("traderCaretakerId", user.Trader.CaretakerId);
+
                     }
                     break;
 
@@ -665,9 +467,11 @@ namespace SabiMarket.Infrastructure.Services
                     {
                         details.Add("vendorId", user.Vendor.Id);
                         details.Add("businessName", user.Vendor.BusinessName);
-                        details.Add("businessType", user.Vendor.BusinessDescription);
-                        details.Add("businessType", user.Vendor.BusinessAddress);
-                        // Add other vendor-specific details
+                        details.Add("businessDescription", user.Vendor.BusinessDescription);
+                        details.Add("businessAddress", user.Vendor.BusinessAddress);
+                        details.Add("vendorLocalGovernmentId", user.Vendor.LocalGovernmentId);
+                        details.Add("vendorIsSubscriptionActive", user.Vendor.IsSubscriptionActive);
+                        details.Add("VendorAdvertisements", user.Vendor.Advertisements);
                     }
                     break;
 
@@ -675,26 +479,33 @@ namespace SabiMarket.Infrastructure.Services
                     if (user.Customer != null)
                     {
                         details.Add("customerId", user.Customer.Id);
-                        details.Add("customerId", user.Customer.LocalGovernmentId);
-                        details.Add("customerType", user.Customer.LocalGovernment);
-                        details.Add("preferredMarket", user.Customer.FullName);
-                        // Add other customer-specific details
+                        details.Add("fullname", user.Customer.FullName);
                     }
                     break;
 
                 case "GOODBOY":
                     if (user.GoodBoy != null)
                     {
+                        //details.Add("goodBoyTraderId", user.Trader.Id);
                         details.Add("goodBoyId", user.GoodBoy.Id);
-                        // Add other GoodBoy details
+                        details.Add("Status", user.GoodBoy.Status);
+                        details.Add("GoodBoyCaretakerId", user.GoodBoy?.CaretakerId);
+                        details.Add("goodBoyIdMarketId", user.GoodBoy.MarketId);
+
                     }
                     break;
 
                 case "CARETAKER":
                     if (user.Caretaker != null)
                     {
-                        details.Add("caretakerId", user.Caretaker.Id);
-                        // Add other caretaker details
+                        details.Add("caretaker", new
+                        {
+                            Id = user.Caretaker.Id,
+                            MarketId = user.Caretaker.MarketId,
+                            ChairmanId = user.Caretaker.ChairmanId,
+                            LocalGovernmentId = user.Caretaker.LocalGovernmentId,
+                            IsBlocked = user.Caretaker.IsBlocked
+                        });
                     }
                     break;
 
@@ -702,7 +513,11 @@ namespace SabiMarket.Infrastructure.Services
                     if (user.AssistCenterOfficer != null)
                     {
                         details.Add("officerId", user.AssistCenterOfficer.Id);
-                        // Add other officer details
+                        details.Add("assistCenterOfficerChairmanId", user.AssistCenterOfficer.ChairmanId);
+                        details.Add("assistCenterOfficerLocalGovernmentId", user.AssistCenterOfficer.LocalGovernmentId);
+                        details.Add("assistCenterOfficerMarketId", user.AssistCenterOfficer?.MarketId);
+                        details.Add("assistCenterOfficerIsActive", user.AssistCenterOfficer.IsActive);
+                        details.Add("assistCenterOfficerIsBlocked", user.AssistCenterOfficer.IsBlocked);
                     }
                     break;
 
@@ -715,7 +530,11 @@ namespace SabiMarket.Infrastructure.Services
             //{
             //    details.Add("localGovernmentId", user.LocalGovernmentId.Value);
             //}
-            if (user.LocalGovernmentId != null)
+            /* if (user.LocalGovernmentId != null)
+             {
+                 details.Add("localGovernmentId", user.LocalGovernmentId);
+             }*/
+            if (user.LocalGovernmentId != null && !details.ContainsKey("localGovernmentId"))
             {
                 details.Add("localGovernmentId", user.LocalGovernmentId);
             }

@@ -11,17 +11,10 @@ namespace SabiMarket.Domain.Entities.LevyManagement
     [Table("LevyPayments")]
     public class LevyPayment : BaseEntity
     {
-        [Required]
-        public string ChairmanId { get; set; }
-
-        [Required]
-        public string MarketId { get; set; }
-
-        [Required]
-        public string TraderId { get; set; }
-
-        [Required]
-        public string GoodBoyId { get; set; }
+        public string? ChairmanId { get; set; }
+        public string? MarketId { get; set; }
+        public string? TraderId { get; set; }
+        public string? GoodBoyId { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
@@ -31,7 +24,7 @@ namespace SabiMarket.Domain.Entities.LevyManagement
         public PaymentPeriodEnum Period { get; set; }
 
         [Required]
-        public PaymentMethodEnum PaymentMethod { get; set; }
+        public PaymenPeriodEnum PaymentMethod { get; set; }
 
         [Required]
         public PaymentStatusEnum PaymentStatus { get; set; }
@@ -55,8 +48,8 @@ namespace SabiMarket.Domain.Entities.LevyManagement
         [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual Market Market { get; set; }
 
-        [ForeignKey("GoodBoyId")]
-        [DeleteBehavior(DeleteBehavior.NoAction)]
+        /*[ForeignKey("GoodBoyId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]*/
         public virtual GoodBoy GoodBoy { get; set; }
 
         [ForeignKey("ChairmanId")]

@@ -12,9 +12,14 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
     {
         public string ProductName { get; set; }
         public string ImageUrl { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
         public bool IsAvailbleForUrgentPurchase { get; set; }
-        public string Category { get; set; }
+        public string? ProductCategoryId { get; set; }
+
+        [ForeignKey("ProductCategoryId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]
+        public ProductCategory ProductCategory { get; set; }
         public CurrencyTypeEnum CurrencyType { get; set; }
         public string VendorId { get; set; }
         public virtual Vendor Vendor { get; set; }

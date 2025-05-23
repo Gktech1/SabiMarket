@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.UserManagement;
+using SabiMarket.Domain.Enum;
 
 namespace SabiMarket.Domain.Entities.MarketParticipants
 {
@@ -22,9 +23,16 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
 
         [Required]
         public string? BusinessName { get; set; }
+
+        
+        public string? TraderName { get; set; }
+
         public string BusinessType { get; set; }
         public string? QRCode { get; set; }
-        
+
+        public MarketTypeEnum TraderOccupancy { get; set; }
+
+
         [ForeignKey("UserId")]
         [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual ApplicationUser User { get; set; }

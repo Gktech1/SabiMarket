@@ -5,6 +5,7 @@ using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
+using SabiMarket.Domain.Enum;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -33,7 +34,11 @@ namespace SabiMarket.Domain.Entities.UserManagement
         public DateTime CreatedAt { get; set; }
 
         public DateTime? LastLoginAt { get; set; }
+        public string? PasswordResetToken { get; set; }  // Custom column for password reset
+        public DateTime? PasswordResetExpiry { get; set; } // Expiry timestamp
         public string? RefreshToken { get; set; }
+        public bool? PasswordResetVerified { get; set; } = false;
+        public DeliveryMethod? PasswordResetMethod { get; set; }
         public string? RefreshTokenJwtId { get; set; }
         public DateTime? RefreshTokenExpiryTime { get; set; }
         public bool? IsRefreshTokenUsed { get; set; }

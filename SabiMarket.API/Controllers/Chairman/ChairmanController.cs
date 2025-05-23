@@ -5,6 +5,9 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IServices;
+using SabiMarket.Domain.Exceptions;
+using SabiMarket.Domain.Enum;
+using SabiMarket.Domain.DTOs;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -23,6 +26,22 @@ public class ChairmanController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// Get dashboard statistics for the logged-in chairman
+    /// </summary>
+    /// <returns>Dashboard statistics including trader counts, caretaker counts, and revenue metrics</returns>
+    [HttpGet("chairmandashboardstats")]
+    [ProducesResponseType(typeof(BaseResponse<ChairmanDashboardStatsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<ChairmanDashboardStatsDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<ChairmanDashboardStatsDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<ChairmanDashboardStatsDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetChairmanDashboardStats(string chairmanId)
+    {
+        var response = await _chairmanService.GetChairmanDashboardStats(chairmanId);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
+
+    }
+
     [HttpGet("getall-localgovernments")]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>), StatusCodes.Status400BadRequest)]
@@ -34,6 +53,78 @@ public class ChairmanController : ControllerBase
         return !response.IsSuccessful
             ? StatusCode(StatusCodes.Status500InternalServerError, response)
             : Ok(response);
+    }
+
+    /// <summary>
+    /// Get all assistant officers with pagination, search and status filtering
+    /// </summary>
+    /// <param name="pageNumber">Page number for pagination (default: 1)</param>
+    /// <param name="pageSize">Number of items per page (default: 10)</param>
+    /// <param name="searchTerm">Search term to filter assistant officers</param>
+    /// <param name="status">Status filter (Active, Inactive, All)</param>
+    /// <returns>Paginated list of assistant officers</returns>
+    [HttpGet("get-assistantofficers")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<AssistOfficerListDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAssistantOfficers(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? searchTerm = "",
+        [FromQuery] string status = "Active")
+    {
+        var paginationFilter = new PaginationFilter(pageNumber, pageSize);
+        var response = await _chairmanService.GetAssistOfficers(paginationFilter, searchTerm, status);
+        return Ok(response);
+
+    }
+
+    /// <summary>
+    /// Create a new trader
+    /// </summary>
+    /// <param name="request">Trader creation details</param>
+    /// <returns>Created trader information including default password</returns>
+    [HttpPost("create-trader")]
+    [Authorize(Policy = PolicyNames.RequireMarketStaff)]
+    [ProducesResponseType(typeof(BaseResponse<TraderResponseDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(BaseResponse<string>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateTrader([FromBody] CreateTraderRequestDto request)
+    {
+        var response = await _chairmanService.CreateTrader(request);
+        return !response.IsSuccessful
+            ? BadRequest(response)
+            : StatusCode(StatusCodes.Status201Created, response);
+    }
+
+    /// <summary>
+    /// Search levy payments for a chairman's market
+    /// </summary>
+    /// <param name="chairmanId">ID of the chairman</param>
+    /// <param name="query">Search term to filter levy payments</param>
+    /// <param name="pageNumber">Page number for pagination (defaults to 1)</param>
+    /// <param name="pageSize">Number of items per page (defaults to 10)</param>
+    /// <returns>Paginated list of levy payments matching the search criteria</returns>
+    [HttpGet("searchlevies")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentDetailDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SearchLevyPayments(
+        string chairmanId,
+        [FromQuery] string query,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var paginationFilter = new PaginationFilter
+        {
+            PageNumber = pageNumber < 1 ? 1 : pageNumber,
+            PageSize = pageSize > 50 ? 50 : (pageSize < 1 ? 10 : pageSize)
+        };
+
+        var response = await _chairmanService.SearchLevyPayments(chairmanId, query, paginationFilter);
+        return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
 
     [HttpGet("search-localgovernmentarea")]
@@ -66,7 +157,7 @@ public class ChairmanController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> DeleteChairman(string chairmanId)
     {
-        var response = await _chairmanService.DeleteChairmanById(chairmanId);
+        var response = await _chairmanService.DeleteChairmanByAdmin(chairmanId);
 
         if (!response.IsSuccessful)
         {
@@ -115,6 +206,22 @@ public class ChairmanController : ControllerBase
     {
         var response = await _chairmanService.GetReportMetrics(dateRange.StartDate, dateRange.EndDate);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+    [HttpGet("levypayments")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<LevyPaymentWithTraderDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetLevyPayments(
+    [FromQuery] PaymentPeriodEnum? period,
+    [FromQuery] string? search,
+    [FromQuery] PaginationFilter paginationFilter)
+    {
+        var response = await _chairmanService.GetLevyPayments(period, search, paginationFilter);
+
+        return response.IsSuccessful
+            ? Ok(response)
+            : BadRequest(response);
     }
 
     [HttpDelete("markets/{marketId}")]
@@ -177,7 +284,7 @@ public class ChairmanController : ControllerBase
 
     [HttpPost("levy-setup")]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), statusCode: StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ConfigureLevySetup([FromBody] LevySetupRequestDto request)
     {
@@ -194,6 +301,144 @@ public class ChairmanController : ControllerBase
         return !response.IsSuccessful ?
             StatusCode(StatusCodes.Status500InternalServerError, response) :
             Ok(response);
+    }
+    /// <summary>
+    /// Get dashboard information for a trader including next payment date, total levies paid, and recent payments
+    /// </summary>
+    /// <param name="traderId">The ID of the trader</param>
+    /// <returns>Trader dashboard information</returns>
+    [HttpGet("dashboard/{traderId}")]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTraderDashboard(string traderId)
+    {
+        try
+        {
+
+            _logger.LogInformation($"Getting dashboard for trader {traderId}");
+            var response = await _chairmanService.GetTraderDashboard(traderId);
+
+            if (!response.IsSuccessful)
+            {
+                _logger.LogWarning($"Failed to get dashboard for trader {traderId}: {response.Message}");
+                return NotFound(response);
+            }
+
+            _logger.LogInformation($"Successfully retrieved dashboard for trader {traderId}");
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting dashboard for trader {traderId}");
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                ResponseFactory.Fail<TraderDashboardResponseDto>("An unexpected error occurred"));
+        }
+    }
+
+    /// <summary>
+    /// Get all levy payments for a trader with pagination and filtering
+    /// </summary>
+    /// <param name="traderId">The ID of the trader</param>
+    /// <param name="fromDate">Optional start date for filtering</param>
+    /// <param name="toDate">Optional end date for filtering</param>
+    /// <param name="searchQuery">Optional search query</param>
+    /// <param name="pageNumber">Page number for pagination (default: 1)</param>
+    /// <param name="pageSize">Number of items per page (default: 10)</param>
+    /// <returns>Paginated list of levy payments</returns>
+    [HttpGet("levies/{traderId}")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAllLevyPaymentsForTrader(
+        string traderId,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        [FromQuery] string? searchQuery,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+
+        _logger.LogInformation($"Getting levy payments for trader {traderId}, " +
+            $"Date Range: {fromDate?.ToString("yyyy-MM-dd") ?? "All"} to {toDate?.ToString("yyyy-MM-dd") ?? "All"}, " +
+            $"Search: {searchQuery ?? "None"}, Page {pageNumber}, Size {pageSize}");
+
+        var pagination = new PaginationFilter
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var response = await _chairmanService.GetAllLevyPaymentsForTrader(
+            traderId,
+            fromDate,
+            toDate,
+            searchQuery,
+            pagination);
+
+        if (!response.IsSuccessful)
+        {
+            _logger.LogWarning($"Failed to get levy payments for trader {traderId}: {response.Message}");
+            return BadRequest(response);
+        }
+
+        _logger.LogInformation($"Successfully retrieved {response.Data?.PageItems?.Count ?? 0} levy payments for trader {traderId}");
+        return Ok(response);
+
+    }
+
+    /// <summary>
+    /// Get detailed levy payments for a trader with enhanced filtering
+    /// </summary>
+    /// <param name="traderId">The ID of the trader</param>
+    /// <param name="fromDate">Optional start date for filtering</param>
+    /// <param name="toDate">Optional end date for filtering</param>
+    /// <param name="searchQuery">Optional search query</param>
+    /// <param name="pageNumber">Page number for pagination (default: 1)</param>
+    /// <param name="pageSize">Number of items per page (default: 10)</param>
+    /// <returns>Paginated list of levy payments with enhanced filtering</returns>
+    [HttpGet("payments/{traderId}")]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetLevyPaymentsForTrader(
+        string traderId,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        [FromQuery] string searchQuery,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+
+        _logger.LogInformation($"Getting detailed levy payments for trader {traderId}, " +
+            $"Date Range: {fromDate?.ToString("yyyy-MM-dd") ?? "All"} to {toDate?.ToString("yyyy-MM-dd") ?? "All"}, " +
+            $"Search: {searchQuery ?? "None"}, Page {pageNumber}, Size {pageSize}");
+
+        var pagination = new PaginationFilter
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        var response = await _chairmanService.GetLevyPaymentsForTrader(
+            traderId,
+            fromDate,
+            toDate,
+            searchQuery,
+            pagination);
+
+        if (!response.IsSuccessful)
+        {
+            _logger.LogWarning($"Failed to get detailed levy payments for trader {traderId}: {response.Message}");
+            return BadRequest(response);
+        }
+
+        _logger.LogInformation($"Successfully retrieved {response.Data?.PageItems?.Count ?? 0} detailed levy payments for trader {traderId}");
+        return Ok(response);
+
     }
 
     [HttpGet("traders/{traderId}/details")]
@@ -295,14 +540,57 @@ public class ChairmanController : ControllerBase
         var response = await _chairmanService.GetAssistantOfficerById(id);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
     }
-
-    [HttpPost("assistant-officer")]
+    /// <summary>
+    /// Create a new assistant officer
+    /// </summary>
+    /// <param name="request">Assistant officer creation details</param>
+    /// <returns>Created assistant officer details including default password</returns>
+    [HttpPost("createassistant-officer")]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateAssistantOfficer([FromBody] CreateAssistantOfficerRequestDto request)
     {
         var response = await _chairmanService.CreateAssistantOfficer(request);
-        return !response.IsSuccessful ? BadRequest(response) : CreatedAtAction(nameof(GetAssistantOfficerById), new { id = response.Data.Id }, response);
+        return response.IsSuccessful ? Ok(response) : BadRequest(response);
+    }
+
+    /// <summary>
+    /// Update an existing assistant officer
+    /// </summary>
+    /// <param name="officerId">ID of the assistant officer to update</param>
+    /// <param name="request">Assistant officer update details</param>
+    /// <returns>Updated assistant officer details</returns>
+    [HttpPut("updateassistant-officer/{officerId}")]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateAssistantOfficer(string officerId, [FromBody] UpdateAssistantOfficerRequestDto request)
+    {
+        var response = await _chairmanService.UpdateAssistantOfficer(officerId, request);
+        return response.IsSuccessful ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpGet("assistant-officer/{officerId}")]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAssistantOfficer(string officerId)
+    {
+        var response = await _chairmanService.GetAssistantOfficerById(officerId);
+
+        if (!response.IsSuccessful)
+        {
+            _logger.LogWarning($"Get assistant officer failed: {response.Message}");
+
+            if (response.Error is NotFoundException)
+                return NotFound(response);
+            else
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+        }
+
+        return Ok(response);
     }
 
     [HttpPatch("assistant-officer/{officerId}/unblock")]
@@ -322,6 +610,21 @@ public class ChairmanController : ControllerBase
     {
         var response = await _chairmanService.BlockAssistantOfficer(officerid);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
+    }
+
+    [HttpDelete("deleteassistofficer/{officerId}")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteAssistantOfficer(string officerId)
+    {
+        var response = await _chairmanService.DeleteAssistCenterOfficerByAdmin(officerId);
+        if (!response.IsSuccessful)
+        {
+            return StatusCode(response.Error.StatusCode, response);
+        }
+        return Ok(response);
     }
 
     [HttpGet("chairman/{id}/reports")]
@@ -345,9 +648,9 @@ public class ChairmanController : ControllerBase
     [HttpGet("markets")]
     [ProducesResponseType(typeof(BaseResponse<IEnumerable<MarketResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<IEnumerable<MarketResponseDto>>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetAllMarkets()
+    public async Task<IActionResult> GetAllMarkets(string? localgovernmentId, string? searchTerm)
     {
-        var response = await _chairmanService.GetAllMarkets();
+        var response = await _chairmanService.GetAllMarkets(localgovernmentId!, searchTerm!);
         return !response.IsSuccessful ? StatusCode(StatusCodes.Status500InternalServerError, response) : Ok(response);
     }
 
@@ -404,11 +707,11 @@ public class ChairmanController : ControllerBase
     }
 
     [HttpGet("chairmen")]
-    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<ChairmanResponseDto>>>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetChairmen([FromQuery] PaginationFilter paginationFilter)
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<AdminDashboardResponse>>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<PaginatorDto<IEnumerable<AdminDashboardResponse>>>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetChairmen([FromQuery] string? searchTerm, [FromQuery] PaginationFilter paginationFilter)
     {
-        var response = await _chairmanService.GetChairmen(paginationFilter);
+        var response = await _chairmanService.GetChairmen(searchTerm, paginationFilter);
         return Ok(response);
     }
 

@@ -9,8 +9,7 @@ namespace SabiMarket.Domain.Entities
     [Table("AuditLogs")]
     public class AuditLog : BaseEntity
     {
-        [Required]
-        public string UserId { get; set; }
+        public string? UserId { get; set; }
 
         [Required]
         public DateTime Date { get; set; }

@@ -1,4 +1,7 @@
-﻿using SabiMarket.Application.Interfaces;
+﻿using System.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Application.IRepositories.SowFoodIRepositories;
 using SabiMarket.Infrastructure.Data;
@@ -27,6 +30,8 @@ namespace SabiMarket.Infrastructure.Repositories
         //private readonly Lazy<ISowFoodStaffRepository> _staffRepository;
         private readonly Lazy<ICustomerRepository> _customerRepository;
         private readonly Lazy<IAdvertisementRepository> _advertisementRepository;
+        private readonly Lazy<IOfficerMarketAssignmentRepository> _officerMarketAssignmentRepository;
+
         #region Sow Food
         private readonly Lazy<ISowFoodCompanyRepository> _sowFoodCompanyRepository;
         private readonly Lazy<ISowFoodCompanyCustomerRepository> _sowFoodCompanyCustomerRepository;
@@ -37,6 +42,7 @@ namespace SabiMarket.Infrastructure.Repositories
         private readonly Lazy<ISowFoodCompanyStaffAttendanceRepository> _sowFoodCompanyStaffAttendanceRepository;
         private readonly Lazy<ISowFoodCompanyStaffRepository> _sowFoodCompanyStaffRepository;
         #endregion
+
 
 
         public RepositoryManager(ApplicationDbContext context)
@@ -60,6 +66,7 @@ namespace SabiMarket.Infrastructure.Repositories
             //_staffRepository = new Lazy<ISowFoodStaffRepository>(() => new SowFoodStaffRepository(_context));
             _advertisementRepository = new Lazy<IAdvertisementRepository>(() => new AdvertisementRepository(_context));
             _customerRepository = new Lazy<ICustomerRepository>(() => new CustomerRepository(_context));
+            _officerMarketAssignmentRepository = new Lazy<IOfficerMarketAssignmentRepository>(() => new OfficerMarketAssignmentRepository(_context));
 
             _sowFoodCompanyRepository = new Lazy<ISowFoodCompanyRepository>(() => new SowFoodCompanyRepository(_context));
             _sowFoodCompanyCustomerRepository = new Lazy<ISowFoodCompanyCustomerRepository>(() => new SowFoodCompanyCustomerRepository(_context));
@@ -98,6 +105,8 @@ namespace SabiMarket.Infrastructure.Repositories
         //public ISowFoodStaffRepository StaffRepository => _staffRepository.Value;
         public IAdvertisementRepository AdvertisementRepository => _advertisementRepository.Value;
         public ICustomerRepository CustomerRepository => _customerRepository.Value;
+        public IOfficerMarketAssignmentRepository OfficerMarketAssignmentRepository => _officerMarketAssignmentRepository.Value;
+        //public ICustomerRepository CustomerRepository => _customerRepository.Value;
 
         public ISowFoodCompanyRepository SowFoodCompanyRepository => _sowFoodCompanyRepository.Value;
 
@@ -115,5 +124,23 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public ISowFoodCompanyStaffRepository SowFoodCompanyStaffRepository => _sowFoodCompanyStaffRepository.Value;
         public Task SaveChangesAsync() => _context.SaveChangesAsync();
+        /// <summary>
+        /// Begins a new database transaction
+        /// </summary>
+        /// <returns>The transaction object</returns>
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        }
+
+        /// <summary>
+        /// Begins a new database transaction with the specified isolation level
+        /// </summary>
+        /// <param name="isolationLevel">The isolation level for the transaction</param>
+        /// <returns>The transaction object</returns>
+        public async Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel)
+        {
+            return await _context.Database.BeginTransactionAsync(isolationLevel);
+        }
     }
 }
