@@ -373,9 +373,9 @@ namespace SabiMarket.Infrastructure.Services.SowFood
                 if (!string.IsNullOrEmpty(dto.SowFoodCompanyShelfItemId))
                 {
                     Log.Information("Fetching shelf item with ID {ShelfItemId}", dto.SowFoodCompanyShelfItemId);
-                    var getCompanyDetails = _repositoryManager.SowFoodCompanyRepository.
+                    var getCompanyDetails = await _repositoryManager.SowFoodCompanyRepository.GetCompanyById(dto.SowFoodCompanyCustomerId, true);
                     var shelfItem = await _repositoryManager.SowFoodCompanyShelfItemRepository
-                        .GetCompanyShelfItemById(dto.SowFoodCompanyShelfItemId, true);
+                        .GetCompanyShelfItemById(dto.SowFoodCompanyShelfItemId, dto.SowFoodCompanyId, true);
 
                     if (shelfItem == null)
                     {

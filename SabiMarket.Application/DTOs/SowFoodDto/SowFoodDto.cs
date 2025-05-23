@@ -60,6 +60,7 @@ namespace SabiMarket.Application.DTOs.SowFoodDto
         public string? SowFoodCompanyProductItemId { get; set; }
         public string? SowFoodCompanyShelfItemId { get; set; }
         public string? SowFoodCompanyCustomerId { get; set; }
+        public string? SowFoodCompanyId { get; set; }
 
     }
 
