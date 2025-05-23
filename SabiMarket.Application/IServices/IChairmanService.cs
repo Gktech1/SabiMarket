@@ -3,12 +3,16 @@ using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Domain.DTOs;
 using SabiMarket.Domain.Enum;
+using SabiMarket.Services.Dtos.Levy;
+using System.Threading.Tasks;
+using LevySetupResponseDto = SabiMarket.Application.DTOs.Requests.LevySetupResponseDto;
 
 namespace SabiMarket.Application.IServices
 {
     public interface IChairmanService
     {
         Task<BaseResponse<LGAResponseDto>> GetLocalGovernmentById(string id);
+        Task<BaseResponse<TraderResponseDto>> CreateTrader(CreateTraderRequestDto request);
         Task<BaseResponse<PaginatorDto<IEnumerable<LGAResponseDto>>>> GetLocalGovernments(
        LGAFilterRequestDto filterDto,
        PaginationFilter paginationFilter);
@@ -86,6 +90,22 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<bool>> DeleteChairmanByAdmin(string chairmanId);
 
         Task<BaseResponse<LocalGovernmentWithUsersResponseDto>> GetLocalGovernmentWithUsersByUserId(string userId);
+
+        Task<BaseResponse<TraderDashboardResponseDto>> GetTraderDashboard(string traderId);
+        Task<BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>> GetAllLevyPaymentsForTrader(
+            string traderId,
+            DateTime? fromDate,
+            DateTime? toDate,
+            string searchQuery,
+            PaginationFilter pagination);
+        Task<BaseResponse<TraderLevyPaymentDto>> RecordLevyPayment(LevyPaymentCreateDto paymentDto);
+
+        Task<BaseResponse<PaginatorDto<List<TraderLevyPaymentDto>>>> GetLevyPaymentsForTrader(
+         string traderId,
+         DateTime? fromDate,
+         DateTime? toDate,
+         string searchQuery,
+         PaginationFilter pagination);
 
     }
 }

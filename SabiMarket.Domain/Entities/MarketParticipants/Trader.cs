@@ -23,6 +23,10 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
 
         [Required]
         public string? BusinessName { get; set; }
+
+        
+        public string? TraderName { get; set; }
+
         public string BusinessType { get; set; }
         public string? QRCode { get; set; }
 

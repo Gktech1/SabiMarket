@@ -454,7 +454,7 @@ namespace SabiMarket.Infrastructure.Services
                     {
                         details.Add("traderId", user.Trader.Id);
                         details.Add("traderbusinessName", user.Trader.BusinessName);
-                        details.Add("traderbusinessName", user.Trader.TIN);
+                        details.Add("traderbusinessType", user.Trader.TIN);
                         details.Add("businessType", user.Trader.BusinessType);
                         details.Add("traderMarketId", user.Trader.MarketId);
                         details.Add("traderCaretakerId", user.Trader.CaretakerId);
@@ -479,8 +479,6 @@ namespace SabiMarket.Infrastructure.Services
                     if (user.Customer != null)
                     {
                         details.Add("customerId", user.Customer.Id);
-                        details.Add("CustomerLocalGovernmentId", user.Customer.LocalGovernmentId);
-                        details.Add("LGA", user.Customer.LocalGovernment.Name);
                         details.Add("fullname", user.Customer.FullName);
                     }
                     break;
@@ -488,6 +486,7 @@ namespace SabiMarket.Infrastructure.Services
                 case "GOODBOY":
                     if (user.GoodBoy != null)
                     {
+                        //details.Add("goodBoyTraderId", user.Trader.Id);
                         details.Add("goodBoyId", user.GoodBoy.Id);
                         details.Add("Status", user.GoodBoy.Status);
                         details.Add("GoodBoyCaretakerId", user.GoodBoy?.CaretakerId);

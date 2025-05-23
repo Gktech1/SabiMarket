@@ -1,6 +1,7 @@
 ﻿using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.DTOs;
+using SabiMarket.Services.Dtos.Levy;
 
 namespace SabiMarket.Application.Interfaces
 {
@@ -21,7 +22,20 @@ namespace SabiMarket.Application.Interfaces
 
         Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto);
         Task<BaseResponse<bool>> VerifyTraderPaymentStatus(string traderId);
-        Task<BaseResponse<bool>> UpdateTraderPayment(string traderId, ProcessLevyPaymentDto paymentDto);
+        Task<BaseResponse<bool>> ProcessTraderLevyPayment(string traderId, ProcessLevyPaymentDto paymentDto);
+        //Task<BaseResponse<bool>> UpdateTraderPayment(string traderId, ProcessLevyPaymentDto paymentDto);
+       // Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(string goodBoyId, DateTime? fromDate = null, DateTime? toDate = null);
+        Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(
+    string goodBoyId,
+    DateTime? fromDate = null,
+    DateTime? toDate = null,
+    string searchQuery = null,
+    PaginationFilter paginationFilter = null);
+        // Task<BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetTodayLeviesForGoodBoy(string goodBoyId);
+        Task<BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>> GetTodayLeviesForGoodBoy(
+    string goodBoyId,
+    PaginationFilter pagination);
+        Task<BaseResponse<GoodBoyLevyPaymentResponseDto>> CollectLevyPayment(LevyPaymentCreateDto levyPaymentDto);
     }
 
 }

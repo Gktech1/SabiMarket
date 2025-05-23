@@ -13,15 +13,13 @@ using SabiMarket.Domain.Entities;
 using SabiMarket.Domain.Enum;
 using SabiMarket.Domain.Exceptions;
 using SabiMarket.Infrastructure.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using SabiMarket.Infrastructure.Utilities;
 using System.Text.Json;
 using SabiMarket.Application.Interfaces;
 using ValidationException = FluentValidation.ValidationException;
+using SabiMarket.Services.Dtos.Levy;
+using System.Linq.Expressions;
+using Microsoft.Extensions.Configuration;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -34,7 +32,8 @@ namespace SabiMarket.Infrastructure.Services
         private readonly ICurrentUserService _currentUser;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IValidator<CreateGoodBoyRequestDto> _createGoodBoyValidator;
-        private readonly IValidator<UpdateGoodBoyProfileDto> _updateProfileValidator;
+        private readonly IConfiguration _configuration;
+        //private readonly IValidator<UpdateGoodBoyProfileDto> _updateProfileValidator;
 
         public GoodBoysService(
             IRepositoryManager repository,
@@ -43,8 +42,7 @@ namespace SabiMarket.Infrastructure.Services
             UserManager<ApplicationUser> userManager,
             ICurrentUserService currentUser,
             IHttpContextAccessor httpContextAccessor,
-            IValidator<CreateGoodBoyRequestDto> createGoodBoyValidator,
-            IValidator<UpdateGoodBoyProfileDto> updateProfileValidator)
+            IValidator<CreateGoodBoyRequestDto> createGoodBoyValidator, IConfiguration configuration)
         {
             _repository = repository;
             _logger = logger;
@@ -53,7 +51,7 @@ namespace SabiMarket.Infrastructure.Services
             _currentUser = currentUser;
             _httpContextAccessor = httpContextAccessor;
             _createGoodBoyValidator = createGoodBoyValidator;
-            _updateProfileValidator = updateProfileValidator;
+            _configuration = configuration;
         }
 
         private string GetCurrentIpAddress()
@@ -185,7 +183,7 @@ namespace SabiMarket.Infrastructure.Services
         {
             try
             {
-                var validationResult = await _updateProfileValidator.ValidateAsync(profileDto);
+               /* var validationResult = await _updateProfileValidator.ValidateAsync(profileDto);
                 if (!validationResult.IsValid)
                 {
                     await CreateAuditLog(
@@ -196,7 +194,7 @@ namespace SabiMarket.Infrastructure.Services
                     return ResponseFactory.Fail<bool>(
                         new FluentValidation.ValidationException(validationResult.Errors),
                         "Validation failed");
-                }
+                }*/
 
                 var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyById(goodBoyId, trackChanges: true);
                 if (goodBoy == null)
@@ -385,20 +383,28 @@ namespace SabiMarket.Infrastructure.Services
             try
             {
                 // Validate QR code format (OSH/LAG/23401)
-                if (!scanDto.QRCodeData.StartsWith("OSH/LAG/"))
+                /*if (!scanDto.QRCodeData.StartsWith("OSH/LAG/"))
                 {
                     return ResponseFactory.Fail<TraderQRValidationResponseDto>(
                         "Invalid trader QR code");
+                }*/
+
+                if(string.IsNullOrEmpty(scanDto?.TraderId))
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                       "traderId is required");
                 }
 
-                var traderId = scanDto.QRCodeData.Replace("OSH/LAG/", "");
-                var trader = await _repository.GoodBoyRepository.GetGoodBoyById(traderId, trackChanges: false);
+                //var traderId = scanDto.QRCodeData.Replace("OSH/LAG/", "");
+
+                // Get the trader by ID
+                var trader = await _repository.TraderRepository.GetTraderById(scanDto?.TraderId, trackChanges: false);
 
                 if (trader == null)
                 {
                     await CreateAuditLog(
                         "QR Code Validation Failed",
-                        $"Invalid trader ID from QR Code: {traderId}",
+                        $"Invalid trader ID from QR Code: {scanDto?.TraderId}",
                         "Payment Processing"
                     );
                     return ResponseFactory.Fail<TraderQRValidationResponseDto>(
@@ -406,7 +412,7 @@ namespace SabiMarket.Infrastructure.Services
                         "Invalid trader QR code");
                 }
 
-                // Check if scanning user is authorized
+                // Check if scanning user is authorized (must be a GoodBoy)
                 var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyByUserId(scanDto.ScannedByUserId);
                 if (goodBoy == null)
                 {
@@ -415,16 +421,47 @@ namespace SabiMarket.Infrastructure.Services
                         "Unauthorized to scan trader QR codes");
                 }
 
+                // Get payment frequency and amount from most recent levy payment for this market and trader occupancy
+                var levySetups = await _repository.LevyPaymentRepository.GetByMarketAndOccupancyAsync(
+                    trader.MarketId,
+                    trader.TraderOccupancy);
+
+                string paymentFrequency = "Not configured";
+                LevyPayment latestSetup = null;
+                if (levySetups != null && levySetups.Any())
+                {
+                    // Get the most recent levy payment setup for this trader occupancy
+                        latestSetup = levySetups
+                        .OrderByDescending(lp => lp.CreatedAt)
+                        .FirstOrDefault();
+
+                    if (latestSetup != null)
+                    {
+                        // Format payment frequency string based on period and amount
+                        paymentFrequency = $"{GetPeriodDays(latestSetup.Period)} days - N{latestSetup.Amount}";
+                    }
+                }
+             
+                // Get the most recent payment for this trader
+                var latestPayment = trader.LevyPayments
+                    .OrderByDescending(p => p.PaymentDate)
+                    .FirstOrDefault();
+
+                var updatepaymenturl = _configuration.GetSection("ProcesspaymentUrl").Value;
+               //https://localhost:7111/api/GoodBoys/updatetraderpayment/8FFF4B79-DA26-4628-A3F2-4CFFBC07DAC9
+
+                // Create response with dynamic data from the trader entity
                 var validationResponse = new TraderQRValidationResponseDto
                 {
                     TraderId = trader.Id,
                     TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
-                    TraderOccupancy = "Open Space",
-                    TraderIdentityNumber = $"OSH/LAG/{trader.Id}",
-                    PaymentFrequency = "2 days - N500",
-                    LastPaymentDate = trader.LevyPayments
-                        .OrderByDescending(p => p.PaymentDate)
-                        .FirstOrDefault()?.PaymentDate
+                    TraderOccupancy = trader.TraderOccupancy.ToString(),
+                    TraderIdentityNumber =   trader.TIN, //$"OSH/LAG/{trader.Id}",
+                    PaymentFrequency = paymentFrequency,
+                    Amount = latestSetup.Amount,
+                    PayementPeriod = latestSetup.Period,
+                    LastPaymentDate = latestPayment?.PaymentDate,
+                    UpdatePaymentUrl = $"{updatepaymenturl}/api/GoodBoys/updatetraderpayment/{scanDto?.TraderId}"
                 };
 
                 await CreateAuditLog(
@@ -442,6 +479,85 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        // Helper method to convert PaymentPeriodEnum to number of days
+        private int GetPeriodDays(PaymentPeriodEnum period)
+        {
+            return period switch
+            {
+                PaymentPeriodEnum.Daily => 1,
+                PaymentPeriodEnum.Weekly => 7,
+                PaymentPeriodEnum.BiWeekly => 14,
+                PaymentPeriodEnum.Monthly => 30,
+                PaymentPeriodEnum.Quarterly => 90,
+                PaymentPeriodEnum.HalfYearly => 180,
+                PaymentPeriodEnum.Yearly => 365,
+                _ => 0
+            };
+        }
+
+        /* public async Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto)
+         {
+             try
+             {
+                 // Validate QR code format (OSH/LAG/23401)
+                 if (!scanDto.QRCodeData.StartsWith("OSH/LAG/"))
+                 {
+                     return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                         "Invalid trader QR code");
+                 }
+
+                 var traderId = scanDto.QRCodeData.Replace("OSH/LAG/", "");
+                 var trader = await _repository.GoodBoyRepository.GetGoodBoyById(traderId, trackChanges: false);
+
+                 if (trader == null)
+                 {
+                     await CreateAuditLog(
+                         "QR Code Validation Failed",
+                         $"Invalid trader ID from QR Code: {traderId}",
+                         "Payment Processing"
+                     );
+                     return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                         new NotFoundException("Trader not found"),
+                         "Invalid trader QR code");
+                 }
+
+                 // Check if scanning user is authorized
+                 var goodBoy = await _repository.GoodBoyRepository.GetGoodBoyByUserId(scanDto.ScannedByUserId);
+                 if (goodBoy == null)
+                 {
+                     return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                         new UnauthorizedException("Unauthorized scan attempt"),
+                         "Unauthorized to scan trader QR codes");
+                 }
+
+                 var validationResponse = new TraderQRValidationResponseDto
+                 {
+                     TraderId = trader.Id,
+                     TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
+                     TraderOccupancy = "Open Space",
+                     TraderIdentityNumber = $"OSH/LAG/{trader.Id}",
+                     PaymentFrequency = "2 days - N500",
+                     LastPaymentDate = trader.LevyPayments
+                         .OrderByDescending(p => p.PaymentDate)
+                         .FirstOrDefault()?.PaymentDate,
+                     UpdatePaymentUrl = ""
+                 };
+
+                 await CreateAuditLog(
+                     "Trader QR Code Scanned",
+                     $"Trader QR Code scanned by GoodBoy: {goodBoy.Id} for Trader: {trader.Id}",
+                     "Payment Processing"
+                 );
+
+                 return ResponseFactory.Success(validationResponse, "Trader QR code validated successfully");
+             }
+             catch (Exception ex)
+             {
+                 _logger.LogError(ex, "Error validating trader QR code");
+                 return ResponseFactory.Fail<TraderQRValidationResponseDto>(ex, "An unexpected error occurred");
+             }
+         }
+ */
         public async Task<BaseResponse<bool>> VerifyTraderPaymentStatus(string traderId)
         {
             try
@@ -477,7 +593,149 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<bool>> UpdateTraderPayment(string traderId, ProcessLevyPaymentDto paymentDto)
+        public async Task<BaseResponse<bool>> ProcessTraderLevyPayment(string traderId, ProcessLevyPaymentDto paymentDto)
+        {
+            try
+            {
+                // 1. Get the trader
+                var trader = await _repository.TraderRepository.GetByIdWithInclude(
+                    traderId,
+                    t => t.LevyPayments);
+
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Trader not found"),
+                        "Trader not found");
+                }
+
+                // 2. Get the goodboy
+                var goodboy = await _repository.GoodBoyRepository.GetGoodBoyByUserId(paymentDto.GoodBoyId);
+                if (goodboy == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Goodboy not found"),
+                        "Goodboy not found");
+                }
+
+                // 3. Validate if goodboy can collect from this trader (same market and caretaker)
+                if (trader.MarketId != goodboy.MarketId)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new ValidationException("Goodboy is not authorized to collect payment from this trader"),
+                        "Not authorized to collect payment from this trader (different market)");
+                }
+
+                // 4. Check if trader is under the goodboy's caretaker (if applicable)
+                if (!string.IsNullOrEmpty(trader.CaretakerId) && trader.CaretakerId != goodboy.CaretakerId)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new ValidationException("Goodboy is not authorized to collect payment from this trader"),
+                        "Not authorized to collect payment from this trader (different caretaker)");
+                }
+
+                // 5. Get the last payment and check if payment is due based on frequency
+                var lastPayment = trader.LevyPayments
+                    .Where(p => p.PaymentStatus == PaymentStatusEnum.Paid)
+                    .OrderByDescending(p => p.PaymentDate)
+                    .FirstOrDefault();
+
+                if (lastPayment != null)
+                {
+                    var paymentDue = IsPaymentDue(lastPayment, paymentDto.Period);
+                    if (!paymentDue.isDue)
+                    {
+                        return ResponseFactory.Fail<bool>(
+                            new ValidationException($"Payment not due yet. Next payment due on {paymentDue.nextPaymentDate}"),
+                            $"Payment not due yet. Next payment due on {paymentDue.nextPaymentDate:dd/MM/yyyy}");
+                    }
+                }
+
+                // 6. Create the levy payment
+                var currentDate = DateTime.UtcNow;
+                var levyPayment = new LevyPayment
+                {
+                    TraderId = traderId,
+                    GoodBoyId = paymentDto.GoodBoyId,
+                    MarketId = trader.MarketId,
+                    ChairmanId = trader.Market?.ChairmanId, // Get from market if needed
+                    Amount = paymentDto.Amount,
+                    Period = paymentDto.Period,
+                    PaymentMethod = paymentDto.PaymentMethod ?? PaymenPeriodEnum.Cash,
+                    PaymentStatus = PaymentStatusEnum.Paid,
+                    TransactionReference = paymentDto.TransactionReference ?? GenerateTransactionReference(),
+                    HasIncentive = paymentDto.HasIncentive,
+                    IncentiveAmount = paymentDto.IncentiveAmount ?? 0,
+                    PaymentDate = currentDate,
+                    CollectionDate = currentDate,
+                    Notes = paymentDto.Notes ?? "",
+                    QRCodeScanned = paymentDto.QRCodeScanned
+                };
+
+                _repository.LevyPaymentRepository.Create(levyPayment);
+
+                await CreateAuditLog(
+                    "Levy Payment Processed",
+                    $"Payment processed by GoodBoy {goodboy.User.FirstName} {goodboy.User.LastName} for Trader: {trader.TraderName}, Amount: ₦{paymentDto.Amount}",
+                    "Payment Processing"
+                );
+
+                await _repository.SaveChangesAsync();
+
+                return ResponseFactory.Success(true, "Payment processed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing trader levy payment for traderId: {TraderId}", traderId);
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while processing payment");
+            }
+        }
+
+        // Helper method to check if payment is due based on period
+        private (bool isDue, DateTime nextPaymentDate) IsPaymentDue(LevyPayment lastPayment, PaymentPeriodEnum currentPeriod)
+        {
+            var lastPaymentDate = lastPayment.PaymentDate.Date;
+            var currentDate = DateTime.UtcNow.Date;
+
+            switch (lastPayment.Period)
+            {
+                case PaymentPeriodEnum.Daily:
+                    var nextDailyPayment = lastPaymentDate.AddDays(1);
+                    return (currentDate >= nextDailyPayment, nextDailyPayment);
+
+                case PaymentPeriodEnum.Weekly:
+                    var nextWeeklyPayment = lastPaymentDate.AddDays(7);
+                    return (currentDate >= nextWeeklyPayment, nextWeeklyPayment);
+
+                case PaymentPeriodEnum.BiWeekly:
+                    var nextBiWeeklyPayment = lastPaymentDate.AddDays(14);
+                    return (currentDate >= nextBiWeeklyPayment, nextBiWeeklyPayment);
+
+                case PaymentPeriodEnum.Monthly:
+                    var nextMonthlyPayment = lastPaymentDate.AddMonths(1);
+                    return (currentDate >= nextMonthlyPayment, nextMonthlyPayment);
+
+                case PaymentPeriodEnum.Quarterly:
+                    var nextQuarterlyPayment = lastPaymentDate.AddMonths(3);
+                    return (currentDate >= nextQuarterlyPayment, nextQuarterlyPayment);
+
+                case PaymentPeriodEnum.Yearly:
+                    var nextYearlyPayment = lastPaymentDate.AddYears(1);
+                    return (currentDate >= nextYearlyPayment, nextYearlyPayment);
+
+                default:
+                    // If no specific period, allow payment (e.g., one-time payments)
+                    return (true, currentDate);
+            }
+        }
+
+        // Helper method to generate transaction reference
+        private string GenerateTransactionReference()
+        {
+            return $"TXN-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..8].ToUpper()}";
+        }
+
+        /*public async Task<BaseResponse<bool>> UpdateTraderPayment(string traderId, ProcessLevyPaymentDto paymentDto)
         {
             try
             {
@@ -520,6 +778,450 @@ namespace SabiMarket.Infrastructure.Services
                 _logger.LogError(ex, "Error updating trader payment");
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
+        }*/
+
+        /*    public async Task<BaseResponse<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetTodayLeviesForGoodBoy(string goodBoyId)
+            {
+                var correlationId = Guid.NewGuid().ToString();
+                var userId = _currentUser.GetUserId();
+                try
+                {
+                    await CreateAuditLog(
+                        "Today's Levies Query",
+                        $"CorrelationId: {correlationId} - Retrieving today's levies for GoodBoy ID: {goodBoyId}",
+                        "Levy Management"
+                    );
+
+                    var today = DateTime.Now.Date;
+                    var tomorrow = today.AddDays(1);
+
+                    var todayLevies = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRange(
+                        goodBoyId);
+
+                    var levyPaymentDtos = _mapper.Map<IEnumerable<GoodBoyLevyPaymentResponseDto>>(todayLevies);
+
+                    await CreateAuditLog(
+                        "Today's Levies Retrieved",
+                        $"CorrelationId: {correlationId} - Retrieved {levyPaymentDtos.Count()} levies for GoodBoy ID: {goodBoyId}",
+                        "Levy Management"
+                    );
+
+                    return ResponseFactory.Success(levyPaymentDtos, "Today's levies retrieved successfully");
+                }
+                catch (Exception ex)
+                {
+                    await CreateAuditLog(
+                        "Today's Levies Query Failed",
+                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                        "Levy Management"
+                    );
+                    return ResponseFactory.Fail<IEnumerable<GoodBoyLevyPaymentResponseDto>>(ex, "An unexpected error occurred");
+                }
+            }
+    */
+
+        /*   public async Task<BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>> GetTodayLeviesForGoodBoy(
+        string goodBoyId,
+        PaginationFilter pagination)
+           {
+               var correlationId = Guid.NewGuid().ToString();
+               try
+               {
+                   await CreateAuditLog(
+                       "Today's Levies Query",
+                       $"CorrelationId: {correlationId} - Retrieving today's levies for GoodBoy ID: {goodBoyId}, Page {pagination.PageNumber}, Size {pagination.PageSize}",
+                       "Levy Management"
+                   );
+
+                   // Get paginated levy payments from repository
+                   var leviesPaginated = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRange(
+                       goodBoyId,
+                       pagination,
+                       trackChanges: false
+                   );
+
+                   // Map entities to DTOs
+                   var levyPaymentDtos = _mapper.Map<List<GoodBoyLevyPaymentResponseDto>>(leviesPaginated.PageItems);
+
+                   // Manually fix the trader names after mapping
+                   int index = 0;
+                   foreach (var levy in leviesPaginated.PageItems)
+                   {
+                       if (levy.Trader?.User != null)
+                       {
+                           levyPaymentDtos[index].TraderName = $"{levy.Trader.User.FirstName} {levy.Trader.User.LastName}".Trim();
+                       }
+                       else
+                       {
+                           levyPaymentDtos[index].TraderName = "Unknown Trader";
+                       }
+                       levyPaymentDtos[index].Status = levy.PaymentStatus.ToString();
+                       index++;
+                   }
+
+                   // Create final paginated result with DTOs
+                   var paginatedResult = new PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>
+                   {
+                       PageItems = levyPaymentDtos,
+                       CurrentPage = leviesPaginated.CurrentPage,
+                       PageSize = leviesPaginated.PageSize,
+                       NumberOfPages = leviesPaginated.NumberOfPages
+                   };
+
+                   await CreateAuditLog(
+                       "Today's Levies Retrieved",
+                       $"CorrelationId: {correlationId} - Retrieved {levyPaymentDtos.Count} levies for GoodBoy ID: {goodBoyId} on page {pagination.PageNumber}",
+                       "Levy Management"
+                   );
+
+                   return ResponseFactory.Success(paginatedResult, "Today's levies retrieved successfully");
+               }
+               catch (Exception ex)
+               {
+                   await CreateAuditLog(
+                       "Today's Levies Query Failed",
+                       $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                       "Levy Management"
+                   );
+                   return ResponseFactory.Fail<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>(ex, "An unexpected error occurred");
+               }
+           }*/
+
+        public async Task<BaseResponse<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>> GetTodayLeviesForGoodBoy(
+    string goodBoyId,
+    PaginationFilter pagination)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Today's Levies Query",
+                    $"CorrelationId: {correlationId} - Retrieving today's levies for GoodBoy ID: {goodBoyId}, Page {pagination.PageNumber}, Size {pagination.PageSize}",
+                    "Levy Management"
+                );
+
+                // Use the repository method that returns DTOs
+                var leviesPaginated = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRange(
+                    goodBoyId,
+                    pagination,
+                    trackChanges: false
+                );
+
+                // Convert from IEnumerable to List
+                var levyPaymentsList = leviesPaginated.PageItems.ToList();
+
+                // Create final paginated result
+                var paginatedResult = new PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>
+                {
+                    PageItems = levyPaymentsList,
+                    CurrentPage = leviesPaginated.CurrentPage,
+                    PageSize = leviesPaginated.PageSize,
+                    NumberOfPages = leviesPaginated.NumberOfPages
+                };
+
+                await CreateAuditLog(
+                    "Today's Levies Retrieved",
+                    $"CorrelationId: {correlationId} - Retrieved {levyPaymentsList.Count} levies for GoodBoy ID: {goodBoyId} on page {pagination.PageNumber}",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(paginatedResult, "Today's levies retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Today's Levies Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Levy Management"
+                );
+                return ResponseFactory.Fail<PaginatorDto<List<GoodBoyLevyPaymentResponseDto>>>(ex, "An unexpected error occurred");
+            }
+        }
+        public async Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(
+      string goodBoyId,
+      DateTime? fromDate = null,
+      DateTime? toDate = null,
+      string searchQuery = null,
+      PaginationFilter paginationFilter = null)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            var userId = _currentUser.GetUserId();
+            try
+            {
+                await CreateAuditLog(
+                    "Dashboard Stats Query",
+                    $"CorrelationId: {correlationId} - Retrieving dashboard stats for GoodBoy ID: {goodBoyId}",
+                    "Levy Management"
+                );
+
+                // Set default date range if not provided (current month)
+                if (!fromDate.HasValue || !toDate.HasValue)
+                {
+                    fromDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                    toDate = fromDate.Value.AddMonths(1).AddDays(-1);
+                }
+
+                // Set default pagination if not provided
+                paginationFilter ??= new PaginationFilter();
+
+                // Get trader count managed by the good boy
+                var traderCount = await _repository.TraderRepository.GetTraderCountByGoodBoyIdAsync(goodBoyId);
+
+                // Get total levy amount collected by the good boy in the date range
+                var totalLevies = await _repository.LevyPaymentRepository.GetTotalLevyAmountByGoodBoyIdAsync(
+                    userId,
+                    fromDate.Value,
+                    toDate.Value
+                );
+
+                // Get all levy payments for the good boy in the date range
+                var allLevyPayments = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRangeAsync(
+                    userId,
+                    fromDate.Value,
+                    toDate.Value
+                );
+
+                // Apply search filter if provided
+                var filteredPayments = allLevyPayments;
+                if (!string.IsNullOrWhiteSpace(searchQuery))
+                {
+                    searchQuery = searchQuery.Trim().ToLower();
+                    filteredPayments = allLevyPayments.Where(p =>
+                        (p.TraderName != null && p.TraderName.ToLower().Contains(searchQuery))
+                    // Add other search fields as needed, like transaction reference if available
+                    );
+                }
+
+                // Apply pagination manually to filtered results
+                var totalCount = filteredPayments.Count();
+                var totalPages = (int)Math.Ceiling((double)totalCount / paginationFilter.PageSize);
+
+                var paginatedPayments = filteredPayments
+                    .Skip((paginationFilter.PageNumber - 1) * paginationFilter.PageSize)
+                    .Take(paginationFilter.PageSize)
+                    .ToList();
+
+                // Map DTOs to the required format
+                var paymentDtos = paginatedPayments.Select(p => new LevyPaymentDto
+                {
+                    PayerName = p.TraderName ?? "Unknown Trader",
+                    PaymentTime = p.PaymentDate,
+                    Amount = p.Amount
+                }).ToList();
+
+                // Create final paginated result for payments
+                var paginatedPaymentsResult = new PaginatorDto<List<LevyPaymentDto>>
+                {
+                    PageItems = paymentDtos,
+                    CurrentPage = paginationFilter.PageNumber,
+                    PageSize = paginationFilter.PageSize,
+                    NumberOfPages = totalPages
+                };
+
+                // Convert PaginatorDto<List<T>> to PaginatorDto<IEnumerable<T>> for GoodBoyDashboardStatsDto
+                var paginatedPaymentsForDto = new PaginatorDto<IEnumerable<LevyPaymentDto>>
+                {
+                    PageItems = paymentDtos,
+                    CurrentPage = paginatedPaymentsResult.CurrentPage,
+                    PageSize = paginatedPaymentsResult.PageSize,
+                    NumberOfPages = paginatedPaymentsResult.NumberOfPages
+                };
+
+                var result = new GoodBoyDashboardStatsDto
+                {
+                    TraderCount = traderCount,
+                    TotalLevies = totalLevies,
+                    Payments = paginatedPaymentsForDto
+                };
+
+                await CreateAuditLog(
+                    "Dashboard Stats Retrieved",
+                    $"CorrelationId: {correlationId} - Dashboard stats retrieved for GoodBoy ID: {goodBoyId}, " +
+                    $"Page {paginationFilter.PageNumber}, Size {paginationFilter.PageSize}",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(result, "Dashboard statistics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Dashboard Stats Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Levy Management"
+                );
+                return ResponseFactory.Fail<GoodBoyDashboardStatsDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        /* public async Task<BaseResponse<GoodBoyDashboardStatsDto>> GetDashboardStats(
+     string goodBoyId,
+     DateTime? fromDate = null,
+     DateTime? toDate = null,
+     string searchQuery = null,
+     PaginationFilter paginationFilter = null)
+         {
+             var correlationId = Guid.NewGuid().ToString();
+             var userId = _currentUser.GetUserId();
+             try
+             {
+                 await CreateAuditLog(
+                     "Dashboard Stats Query",
+                     $"CorrelationId: {correlationId} - Retrieving dashboard stats for GoodBoy ID: {goodBoyId}",
+                     "Levy Management"
+                 );
+
+                 // Set default date range if not provided (current month)
+                 if (!fromDate.HasValue || !toDate.HasValue)
+                 {
+                     fromDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                     toDate = fromDate.Value.AddMonths(1).AddDays(-1);
+                 }
+
+                 // Set default pagination if not provided
+                 paginationFilter ??= new PaginationFilter();
+
+                 // Get trader count managed by the good boy
+                 var traderCount = await _repository.TraderRepository.GetTraderCountByGoodBoyIdAsync(goodBoyId);
+
+                 // Get total levy amount collected by the good boy in the date range
+                 var totalLevies = await _repository.LevyPaymentRepository.GetTotalLevyAmountByGoodBoyIdAsync(
+                     userId,
+                     fromDate.Value,
+                     toDate.Value
+                 );
+
+                 // Get levy payments for the good boy using the existing GetLevyPaymentsByDateRangeAsync method
+                 var payments = await _repository.LevyPaymentRepository.GetLevyPaymentsByDateRangeAsync(
+                     userId,
+                     fromDate.Value,
+                     toDate.Value
+                 );
+
+                 // Filter payments by search query if provided
+                 if (!string.IsNullOrWhiteSpace(searchQuery))
+                 {
+                     searchQuery = searchQuery.Trim().ToLower();
+                     payments = payments.Where(p =>
+                         (p.Trader?.User?.FirstName != null && p.Trader.User.FirstName.ToLower().Contains(searchQuery)) ||
+                         (p.Trader?.User?.LastName != null && p.Trader.User.LastName.ToLower().Contains(searchQuery)) ||
+                         (p.TransactionReference != null && p.TransactionReference.ToLower().Contains(searchQuery))
+                     ).ToList();
+                 }
+
+                 // Apply pagination manually since we already have the full list from the repository
+                 var totalCount = payments.Count();
+                 var totalPages = (int)Math.Ceiling((double)totalCount / paginationFilter.PageSize);
+
+                 var paginatedPayments = payments
+                     .OrderByDescending(p => p.PaymentDate)
+                     .Skip((paginationFilter.PageNumber - 1) * paginationFilter.PageSize)
+                     .Take(paginationFilter.PageSize)
+                     .ToList();
+
+                 // Map payment entities to DTOs
+                 var paymentDtos = paginatedPayments.Select(p => new LevyPaymentDto
+                 {
+                     PayerName = p.Trader?.User != null
+                         ? $"{p.Trader.User.FirstName} {p.Trader.User.LastName}"
+                         : "Unknown Trader",
+                     PaymentTime = p.PaymentDate,
+                     Amount = p.Amount
+                 });
+
+                 var result = new GoodBoyDashboardStatsDto
+                 {
+                     TraderCount = traderCount,
+                     TotalLevies = totalLevies,
+                     Payments = new PaginatorDto<IEnumerable<LevyPaymentDto>>
+                     {
+                         PageItems = paymentDtos,
+                         CurrentPage = paginationFilter.PageNumber,
+                         PageSize = paginationFilter.PageSize,
+                         NumberOfPages = totalPages
+                     }
+                 };
+
+                 await CreateAuditLog(
+                     "Dashboard Stats Retrieved",
+                     $"CorrelationId: {correlationId} - Dashboard stats retrieved for GoodBoy ID: {goodBoyId}",
+                     "Levy Management"
+                 );
+
+                 return ResponseFactory.Success(result, "Dashboard statistics retrieved successfully");
+             }
+             catch (Exception ex)
+             {
+                 await CreateAuditLog(
+                     "Dashboard Stats Query Failed",
+                     $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                     "Levy Management"
+                 );
+                 _logger.LogError(ex, "Error retrieving dashboard stats: {ErrorMessage}", ex.Message);
+                 return ResponseFactory.Fail<GoodBoyDashboardStatsDto>(ex, "An unexpected error occurred");
+             }
+         }*/
+
+        public async Task<BaseResponse<GoodBoyLevyPaymentResponseDto>> CollectLevyPayment(LevyPaymentCreateDto levyPaymentDto)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Levy Payment Collection",
+                    $"CorrelationId: {correlationId} - Collecting levy payment from Trader ID: {levyPaymentDto.TraderId}",
+                    "Levy Management"
+                );
+
+                // Validate trader exists
+                var trader = await _repository.TraderRepository.GetTraderById(levyPaymentDto.TraderId, false);
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<GoodBoyLevyPaymentResponseDto>("Trader not found");
+                }
+
+                // Create the levy payment entity
+                var levyPayment = new LevyPayment
+                {
+                    TraderId = levyPaymentDto.TraderId,
+                    GoodBoyId = levyPaymentDto.GoodBoyId,
+                    MarketId = trader.MarketId,
+                    Amount = levyPaymentDto.Amount,
+                    Period = levyPaymentDto.Period,
+                    PaymentMethod = levyPaymentDto.PaymentMethod,
+                    PaymentStatus = PaymentStatusEnum.Paid,
+                    TransactionReference = Guid.NewGuid().ToString(),
+                    HasIncentive = levyPaymentDto.HasIncentive,
+                    IncentiveAmount = levyPaymentDto.IncentiveAmount,
+                    PaymentDate = DateTime.Now,
+                    CollectionDate = DateTime.Now,
+                    Notes = levyPaymentDto.Notes,
+                    QRCodeScanned = levyPaymentDto.QRCodeScanned
+                };
+
+                 _repository.LevyPaymentRepository.AddPayment(levyPayment);
+                await _repository.SaveChangesAsync();
+
+                var levyPaymentResponse = _mapper.Map<GoodBoyLevyPaymentResponseDto>(levyPayment);
+
+                await CreateAuditLog(
+                    "Levy Payment Collected",
+                    $"CorrelationId: {correlationId} - Levy payment collected from Trader ID: {levyPaymentDto.TraderId}",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(levyPaymentResponse, "Levy payment collected successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Levy Payment Collection Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Levy Management"
+                );
+                return ResponseFactory.Fail<GoodBoyLevyPaymentResponseDto>(ex, "An unexpected error occurred");
+            }
         }
     }
 }
+

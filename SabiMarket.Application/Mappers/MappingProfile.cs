@@ -67,6 +67,26 @@ public class MappingProfile : Profile
 
         CreateMap<Chairman, ChairmanResponseDto>();
 
+        CreateMap<LevyPayment, LevyResponseDto>()
+           // Map enum values to string displays
+           .ForMember(dest => dest.PaymentPeriod, opt => opt.MapFrom(src => GetPeriodDisplay(src.Period)))
+           .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => GetPaymentMethodDisplay(src.PaymentMethod)))
+           .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => GetPaymentStatusDisplay(src.PaymentStatus)))
+           // Handle potential null values
+           .ForMember(dest => dest.IncentiveAmount, opt => opt.MapFrom(src => src.IncentiveAmount ?? 0m))
+           .ForMember(dest => dest.QRCodeScanned, opt => opt.MapFrom(src => src.QRCodeScanned.ToString()))
+           // Direct mappings for other properties
+           .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+           .ForMember(dest => dest.ChairmanId, opt => opt.MapFrom(src => src.ChairmanId))
+           .ForMember(dest => dest.TraderId, opt => opt.MapFrom(src => src.TraderId))
+           .ForMember(dest => dest.GoodBoyId, opt => opt.MapFrom(src => src.GoodBoyId))
+           .ForMember(dest => dest.Amount, opt => opt.MapFrom(src => src.Amount))
+           .ForMember(dest => dest.TransactionReference, opt => opt.MapFrom(src => src.TransactionReference))
+           .ForMember(dest => dest.HasIncentive, opt => opt.MapFrom(src => src.HasIncentive))
+           .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => src.PaymentDate))
+           .ForMember(dest => dest.CollectionDate, opt => opt.MapFrom(src => src.CollectionDate))
+           .ForMember(dest => dest.Notes, opt => opt.MapFrom(src => src.Notes));
+
         // New mappings for LocalGovernment
         CreateMap<LocalGovernment, LocalGovernmentResponseDto>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
@@ -94,6 +114,18 @@ public class MappingProfile : Profile
         CreateMap<(ApplicationUser User, LocalGovernment LocalGovernment), LocalGovernmentWithUsersResponseDto>()
             .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User))
             .ForMember(dest => dest.LocalGovernment, opt => opt.MapFrom(src => src.LocalGovernment));
+
+        CreateMap<Trader, TraderResponseDto>()
+          .ForMember(dest => dest.IdentityNumber, opt => opt.MapFrom(src => src.TIN));
+
+        CreateMap<Trader, TraderDetailsDto>()
+            .IncludeBase<Trader, TraderResponseDto>()
+            .ForMember(dest => dest.TraderIdentityNumber, opt => opt.MapFrom(src => src.TIN))
+            .ForMember(dest => dest.TraderIdentityNumber, opt => opt.MapFrom(src => src.TIN))
+            .ForMember(dest => dest.TraderPhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber))
+            .ForMember(dest => dest.DateAddedFormatted, opt => opt.MapFrom(src => src.CreatedAt.ToString("MMM dd, yyyy, hh:mm tt")))
+            .ForMember(dest => dest.HasQRCode, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.QRCode)))
+            .ForMember(dest => dest.QRCodeImageUrl, opt => opt.MapFrom(src => src.QRCode));
 
         // Map for UsersByLocalGovernmentResponseDto
         CreateMap<(ApplicationUser User, LocalGovernment LocalGovernment), UsersByLocalGovernmentResponseDto>()
@@ -759,13 +791,16 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.TransactionReference, opt => opt.MapFrom(src => src.AccountNumber))
             .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => src.CreatedAt));
 
+        CreateMap<LevyPayment, GoodBoyLevyPaymentResponseDto>()
+    .ForMember(dest => dest.TraderName, opt => opt.MapFrom(src => src.Trader.User.FirstName + " " + src.Trader.User.LastName))
+    .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.PaymentStatus.ToString()));
 
-        CreateMap<LevyPayment, LevyPaymentResponseDto>();
+        CreateMap<LevyPayment, GoodBoyLevyPaymentResponseDto>();
 
         CreateMap<ApplicationRole, RoleResponseDto>();
         CreateMap<RolePermission, RolePermissionDto>();
 
-        CreateMap<LevyPayment, LevyPaymentResponseDto>();
+        //CreateMap<LevyPayment, GoodBoyLevyPaymentResponseDto>();
 
         CreateMap<Market, MarketResponseDto>();
         CreateMap<GoodBoy, GoodBoyResponseDto>();
@@ -782,6 +817,45 @@ public class MappingProfile : Profile
         PaymentPeriodEnum.Yearly => 365,
         _ => 1
     };
+
+    private static string GetPeriodDisplay(PaymentPeriodEnum period)
+    {
+        return period switch
+        {
+            PaymentPeriodEnum.Daily => "Daily",
+            PaymentPeriodEnum.Weekly => "Weekly",
+            PaymentPeriodEnum.BiWeekly => "Bi-Weekly",
+            PaymentPeriodEnum.Monthly => "Monthly",
+            PaymentPeriodEnum.Quarterly => "Quarterly",
+            PaymentPeriodEnum.HalfYearly => "Half-Yearly",
+            PaymentPeriodEnum.Yearly => "Yearly",
+            _ => period.ToString()
+        };
+    }
+
+    private static string GetPaymentMethodDisplay(PaymenPeriodEnum method)
+    {
+        return method switch
+        {
+            PaymenPeriodEnum.Cash => "Cash",
+            PaymenPeriodEnum.BankTransfer => "Bank Transfer",
+            PaymenPeriodEnum.MobileMoney => "Mobile Money",
+            PaymenPeriodEnum.AssistCenter => "Assist Center",
+            _ => method.ToString()
+        };
+    }
+
+    private static string GetPaymentStatusDisplay(PaymentStatusEnum status)
+    {
+        return status switch
+        {
+            PaymentStatusEnum.Pending => "Pending",
+            PaymentStatusEnum.Paid => "Paid",
+            PaymentStatusEnum.Unpaid => "Unpaid",
+            PaymentStatusEnum.Failed => "Failed",
+            _ => status.ToString()
+        };
+    }
 
 
     private List<ReportExportDto.MarketSummary> MapMarketDetails(IEnumerable<Report> reports)

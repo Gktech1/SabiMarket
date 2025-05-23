@@ -202,7 +202,7 @@ namespace SabiMarket.Infrastructure.Services
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     Gender = request.Gender,
-                    ProfileImageUrl = "",
+                    ProfileImageUrl = request.PhotoUrl,
                     LocalGovernmentId = request.LocalGovernmentId
                 };
 
@@ -889,7 +889,7 @@ namespace SabiMarket.Infrastructure.Services
             }
     */
         // Levy Management
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<LevyPaymentResponseDto>>>> GetLevyPayments(
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>>> GetLevyPayments(
             string caretakerId, PaginationFilter paginationFilter)
         {
             try
@@ -899,13 +899,13 @@ namespace SabiMarket.Infrastructure.Services
 
                 if (levyPayments == null)
                 {
-                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyPaymentResponseDto>>>(
+                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>>(
                         new NotFoundException("No levy payments found"),
                         "Levy payments not found");
                 }
 
-                var levyPaymentDtos = _mapper.Map<IEnumerable<LevyPaymentResponseDto>>(levyPayments.PageItems);
-                var response = new PaginatorDto<IEnumerable<LevyPaymentResponseDto>>
+                var levyPaymentDtos = _mapper.Map<IEnumerable<GoodBoyLevyPaymentResponseDto>>(levyPayments.PageItems);
+                var response = new PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>
                 {
                     PageItems = levyPaymentDtos,
                     CurrentPage = levyPayments.CurrentPage,
@@ -918,12 +918,12 @@ namespace SabiMarket.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving levy payments");
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<LevyPaymentResponseDto>>>(
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>>(
                     ex, "An unexpected error occurred");
             }
         }
 
-        public async Task<BaseResponse<LevyPaymentResponseDto>> GetLevyPaymentDetails(string levyId)
+        public async Task<BaseResponse<GoodBoyLevyPaymentResponseDto>> GetLevyPaymentDetails(string levyId)
         {
             try
             {
@@ -932,18 +932,18 @@ namespace SabiMarket.Infrastructure.Services
 
                 if (levyPayment == null)
                 {
-                    return ResponseFactory.Fail<LevyPaymentResponseDto>(
+                    return ResponseFactory.Fail<GoodBoyLevyPaymentResponseDto>(
                         new NotFoundException("Levy payment not found"),
                         "Levy payment not found");
                 }
 
-                var levyPaymentDto = _mapper.Map<LevyPaymentResponseDto>(levyPayment);
+                var levyPaymentDto = _mapper.Map<GoodBoyLevyPaymentResponseDto>(levyPayment);
                 return ResponseFactory.Success(levyPaymentDto, "Levy payment details retrieved successfully");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving levy payment details");
-                return ResponseFactory.Fail<LevyPaymentResponseDto>(ex, "An unexpected error occurred");
+                return ResponseFactory.Fail<GoodBoyLevyPaymentResponseDto>(ex, "An unexpected error occurred");
             }
         }
 
@@ -1498,14 +1498,14 @@ namespace SabiMarket.Infrastructure.Services
                     PhoneNumber = g.User?.PhoneNumber ?? "",
                     MarketId = g.MarketId,
                     MarketName = g.Market?.MarketName ?? "Unknown Market",
-                    LevyPayments = g.LevyPayments?.Select(lp => new LevyPaymentResponseDto
+                    LevyPayments = g.LevyPayments?.Select(lp => new GoodBoyLevyPaymentResponseDto
                     {
                         Id = lp.Id,
                         Amount = lp.Amount,
                         PaymentDate = lp.PaymentDate,
                         Status = lp.PaymentStatus.ToString(),
                         CreatedAt = lp.CreatedAt
-                    }).ToList() ?? new List<LevyPaymentResponseDto>()
+                    }).ToList() ?? new List<GoodBoyLevyPaymentResponseDto>()
                 }).ToList();
 
                 var response = new PaginatorDto<IEnumerable<GoodBoyResponseDto>>

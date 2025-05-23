@@ -98,6 +98,18 @@ namespace SabiMarket.Infrastructure.Data
         .WithMany()
         .HasForeignKey(o => o.MarketId)
         .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<LevyPayment>()
+           .HasOne(lp => lp.Trader)
+           .WithMany(t => t.LevyPayments)
+           .HasForeignKey(lp => lp.TraderId)
+           .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Trader>()
+                .HasOne(t => t.User)
+                .WithOne(u => u.Trader)
+                .HasForeignKey<Trader>(t => t.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
