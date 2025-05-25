@@ -99,11 +99,11 @@ namespace SabiMarket.Infrastructure.Data
         .HasForeignKey(o => o.MarketId)
         .OnDelete(DeleteBehavior.NoAction);
 
-            modelBuilder.Entity<LevyPayment>()
+            /*modelBuilder.Entity<LevyPayment>()
            .HasOne(lp => lp.Trader)
            .WithMany(t => t.LevyPayments)
            .HasForeignKey(lp => lp.TraderId)
-           .OnDelete(DeleteBehavior.NoAction);
+           .OnDelete(DeleteBehavior.NoAction);*/
 
             modelBuilder.Entity<Trader>()
                 .HasOne(t => t.User)

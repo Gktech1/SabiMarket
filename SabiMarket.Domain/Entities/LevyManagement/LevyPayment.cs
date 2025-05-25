@@ -40,12 +40,12 @@ namespace SabiMarket.Domain.Entities.LevyManagement
         public string Notes { get; set; }
         public string QRCodeScanned { get; set; }
 
-        [ForeignKey("TraderId")]
-        [DeleteBehavior(DeleteBehavior.NoAction)]
+        /*[ForeignKey("TraderId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]*/
         public virtual Trader Trader { get; set; }
 
-        [ForeignKey("MarketId")]
-        [DeleteBehavior(DeleteBehavior.NoAction)]
+        /*[ForeignKey("MarketId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]*/
         public virtual Market Market { get; set; }
 
         /*[ForeignKey("GoodBoyId")]

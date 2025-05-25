@@ -1465,6 +1465,64 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        /*  public async Task<BaseResponse<bool>> ConfigureLevySetup(LevySetupRequestDto request)
+          {
+              var correlationId = Guid.NewGuid().ToString();
+              var userId = _currentUser.GetUserId();
+              try
+              {
+                  await CreateAuditLog(
+                      "Levy Setup Configuration",
+                      $"CorrelationId: {correlationId} - Configuring new levy setup for {request.MarketId} ({request.MarketType})",
+                      "Levy Management"
+                  );
+
+                  var existingLevy = await _repository.LevyPaymentRepository.GetByMarketAndOccupancyAsync(request.MarketId, request.TraderOccupancy);
+
+                  if (existingLevy != null && existingLevy.Any())
+                  {
+                      return ResponseFactory.Fail<bool>("Levy setup already exists for this market and trader occupancy.");
+                  }
+                  var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                  if (chairman == null)
+                  {
+                      return ResponseFactory.Fail<bool>("Chairman not found");
+                  }
+
+                  var levySetup = _mapper.Map<LevyPayment>(request);
+
+                  levySetup.ChairmanId = chairman.Id;
+                  levySetup.TraderId = "";
+                  levySetup.GoodBoyId = "";
+                  levySetup.Amount = request.Amount;
+                  levySetup.MarketId = request.MarketId;
+                  levySetup.Period = request.PaymentFrequencyDays;
+                  levySetup.Notes = "Initial Levy Setup by the Chairman";
+                  levySetup.TransactionReference = "";
+                  levySetup.QRCodeScanned = "";
+
+                  _repository.LevyPaymentRepository.AddPayment(levySetup);
+                  await _repository.SaveChangesAsync();
+
+                  await CreateAuditLog(
+                      "Levy Setup Configured",
+                      $"CorrelationId: {correlationId} - Levy setup configured successfully for {request.MarketId}",
+                      "Levy Management"
+                  );
+
+                  return ResponseFactory.Success(true, "Levy setup configured successfully");
+              }
+              catch (Exception ex)
+              {
+                  await CreateAuditLog(
+                      "Levy Setup Configuration Failed",
+                      $"CorrelationId: {correlationId} - Error: {ex.Message}\nStackTrace: {ex.StackTrace}",
+                      "Levy Management"
+                  );
+                  return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+              }
+          }*/
+
         public async Task<BaseResponse<bool>> ConfigureLevySetup(LevySetupRequestDto request)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -1477,26 +1535,42 @@ namespace SabiMarket.Infrastructure.Services
                     "Levy Management"
                 );
 
+                // Check if levy already exists
                 var existingLevy = await _repository.LevyPaymentRepository.GetByMarketAndOccupancyAsync(request.MarketId, request.TraderOccupancy);
-
-                if (existingLevy != null || existingLevy.Any())
+                if (existingLevy != null && existingLevy.Any())
                 {
                     return ResponseFactory.Fail<bool>("Levy setup already exists for this market and trader occupancy.");
                 }
+
+                // Get chairman
                 var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
                 if (chairman == null)
                 {
                     return ResponseFactory.Fail<bool>("Chairman not found");
                 }
 
+                // Create levy setup
                 var levySetup = _mapper.Map<LevyPayment>(request);
-
                 levySetup.ChairmanId = chairman.Id;
-                levySetup.TraderId = "";
-                levySetup.GoodBoyId = "";
+                levySetup.TraderId = null; // Use null instead of empty string
+                levySetup.GoodBoyId = null; // Use null instead of empty string
+                levySetup.Amount = request.Amount;
+                levySetup.MarketId = request.MarketId;
+
+                // Fix: Convert PaymentFrequencyDays to PaymentPeriodEnum
+                levySetup.Period = ConvertDaysToPaymentPeriod((int)request.PaymentFrequencyDays);
+
+                // Set required properties that were missing
+                levySetup.PaymentMethod = PaymenPeriodEnum.Cash; // Set appropriate default or get from request
+                levySetup.PaymentStatus = PaymentStatusEnum.Pending; // Set appropriate default
+                levySetup.PaymentDate = DateTime.UtcNow;
+                levySetup.CollectionDate = DateTime.UtcNow.AddDays((int)request.PaymentFrequencyDays);
+
                 levySetup.Notes = "Initial Levy Setup by the Chairman";
-                levySetup.TransactionReference = "";
-                levySetup.QRCodeScanned = "";
+                levySetup.TransactionReference = GenerateTransactionReference(correlationId);
+                levySetup.QRCodeScanned = string.Empty; // Use empty string since column doesn't allow null
+                levySetup.HasIncentive = false; // Set default value
+                levySetup.IncentiveAmount = null; // No incentive for initial setup
 
                 _repository.LevyPaymentRepository.AddPayment(levySetup);
                 await _repository.SaveChangesAsync();
@@ -1518,6 +1592,27 @@ namespace SabiMarket.Infrastructure.Services
                 );
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
+        }
+        // Helper method to convert days to PaymentPeriodEnum
+        private PaymentPeriodEnum ConvertDaysToPaymentPeriod(int days)
+        {
+            return days switch
+            {
+                1 => PaymentPeriodEnum.Daily,
+                7 => PaymentPeriodEnum.Weekly,
+                14 => PaymentPeriodEnum.BiWeekly,
+                30 => PaymentPeriodEnum.Monthly,
+                90 => PaymentPeriodEnum.Quarterly,
+                180 => PaymentPeriodEnum.HalfYearly,
+                365 => PaymentPeriodEnum.Yearly,
+                _ => PaymentPeriodEnum.Daily // Default to Daily if no exact match
+            };
+        }
+
+        // Helper method to generate transaction reference
+        private string GenerateTransactionReference(string correlationId)
+        {
+            return $"LEVY-{DateTime.UtcNow:yyyyMMdd}-{correlationId[..8]}";
         }
         public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> SearchMarkets(string searchTerm)
         {
