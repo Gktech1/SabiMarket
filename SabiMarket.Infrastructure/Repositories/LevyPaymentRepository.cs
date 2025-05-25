@@ -266,6 +266,19 @@ namespace SabiMarket.Infrastructure.Repositories
             }
         }
 
+        public async Task<LevyPayment> GetByIdAsync(string id, bool trackChanges = false)
+        {
+            return await FindByCondition(x => x.Id == id, trackChanges)
+                .Include(x => x.Market)
+                .Include(x => x.Trader)
+                    .ThenInclude(t => t.User)
+                .Include(x => x.Chairman)
+                    .ThenInclude(c => c.User)
+                .Include(x => x.GoodBoy)
+                    .ThenInclude(gb => gb.User)
+                .FirstOrDefaultAsync();
+        }
+
         /*  public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
           {
               try

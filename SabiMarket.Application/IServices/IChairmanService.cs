@@ -68,6 +68,7 @@ namespace SabiMarket.Application.IServices
         // Settings Management
         Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogDto>>>> GetAuditLogs(PaginationFilter filter);
         Task<BaseResponse<bool>> ConfigureLevySetup(LevySetupRequestDto request);
+        Task<BaseResponse<bool>> UpdateLevySetup(UpdateLevySetupRequestDto request);
         Task<BaseResponse<IEnumerable<LevySetupResponseDto>>> GetLevySetups();
 
         // Report Generation

@@ -1593,6 +1593,66 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
+
+        public async Task<BaseResponse<bool>> UpdateLevySetup(UpdateLevySetupRequestDto request)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            var userId = _currentUser.GetUserId();
+
+            try
+            {
+                await CreateAuditLog(
+                    "Levy Setup Update",
+                    $"CorrelationId: {correlationId} - Updating levy setup ID: {request.LevyId}",
+                    "Levy Management"
+                );
+
+                // Get the existing levy payment
+                var existingLevy = await _repository.LevyPaymentRepository.GetByIdAsync(request.LevyId);
+                if (existingLevy == null)
+                {
+                    return ResponseFactory.Fail<bool>("Levy setup not found");
+                }
+
+                // Verify user has permission to update this levy (optional - depending on your business rules)
+                var chairman = await _repository.ChairmanRepository.GetChairmanById(userId, false);
+                if (chairman == null)
+                {
+                    return ResponseFactory.Fail<bool>("Chairman not found");
+                }
+
+                // Update the levy properties
+                existingLevy.MarketId = request.MarketId ?? string.Empty;
+                existingLevy.Amount = request.Amount;
+                existingLevy.Period = ConvertDaysToPaymentPeriod((int)request.PaymentFrequencyDays);
+                existingLevy.UpdatedAt = DateTime.UtcNow;
+
+                // Add update notes
+                existingLevy.Notes = $"Updated by Chairman on {DateTime.UtcNow:yyyy-MM-dd HH:mm} - {existingLevy.Notes}";
+
+                _repository.LevyPaymentRepository.Update(existingLevy);
+                await _repository.SaveChangesAsync();
+
+                await CreateAuditLog(
+                    "Levy Setup Updated",
+                    $"CorrelationId: {correlationId} - Levy setup updated successfully for ID: {request.LevyId}",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(true, "Levy setup updated successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Levy Setup Update Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}\nStackTrace: {ex.StackTrace}",
+                    "Levy Management"
+                );
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while updating levy setup");
+            }
+        }
+
+    
         // Helper method to convert days to PaymentPeriodEnum
         private PaymentPeriodEnum ConvertDaysToPaymentPeriod(int days)
         {

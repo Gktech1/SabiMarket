@@ -292,6 +292,16 @@ public class ChairmanController : ControllerBase
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 
+    [HttpPost("update-levysetup")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), statusCode: StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateLevySetup([FromBody] UpdateLevySetupRequestDto request)
+    {
+        var response = await _chairmanService.UpdateLevySetup(request);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
     [HttpGet("levy-setups")]
     [ProducesResponseType(typeof(BaseResponse<IEnumerable<LevySetupResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<IEnumerable<LevySetupResponseDto>>), StatusCodes.Status500InternalServerError)]
