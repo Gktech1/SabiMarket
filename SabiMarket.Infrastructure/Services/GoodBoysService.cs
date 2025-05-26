@@ -610,7 +610,7 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // 2. Get the goodboy
-                var goodboy = await _repository.GoodBoyRepository.GetGoodBoyByUserId(paymentDto.GoodBoyId);
+                var goodboy = await _repository.GoodBoyRepository.GetGoodBoyById(paymentDto.GoodBoyId);
                 if (goodboy == null)
                 {
                     return ResponseFactory.Fail<bool>(
@@ -643,12 +643,12 @@ namespace SabiMarket.Infrastructure.Services
                 if (lastPayment != null)
                 {
                     var paymentDue = IsPaymentDue(lastPayment, paymentDto.Period);
-                    if (!paymentDue.isDue)
+                    /*if (!paymentDue.isDue)
                     {
                         return ResponseFactory.Fail<bool>(
                             new ValidationException($"Payment not due yet. Next payment due on {paymentDue.nextPaymentDate}"),
                             $"Payment not due yet. Next payment due on {paymentDue.nextPaymentDate:dd/MM/yyyy}");
-                    }
+                    }*/
                 }
 
                 // 6. Create the levy payment
@@ -676,7 +676,7 @@ namespace SabiMarket.Infrastructure.Services
 
                 await CreateAuditLog(
                     "Levy Payment Processed",
-                    $"Payment processed by GoodBoy {goodboy.User.FirstName} {goodboy.User.LastName} for Trader: {trader.TraderName}, Amount: ₦{paymentDto.Amount}",
+                    $"Payment processed by GoodBoy: {goodboy.Id}  for Trader: {trader.TraderName}, Amount: ₦{paymentDto.Amount}",
                     "Payment Processing"
                 );
 
