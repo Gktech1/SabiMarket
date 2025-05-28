@@ -52,6 +52,7 @@ namespace SabiMarket.Application.DTOs.SowFoodDto
         public string Name { get; set; }
         public int Quantity { get; set; }
         public string ImageUrl { get; set; }
+        public DateTime DateOfProduction { get; set; }
     }
     public class CreateSowFoodCompanySalesRecordDto
     {
@@ -61,6 +62,16 @@ namespace SabiMarket.Application.DTOs.SowFoodDto
         public string? SowFoodCompanyShelfItemId { get; set; }
         public string? SowFoodCompanyCustomerId { get; set; }
         public string? SowFoodCompanyId { get; set; }
+
+    }
+    public class UpdateSowFoodCompanySalesRecordDto
+    {
+        public int Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public string? SowFoodCompanyProductItemId { get; set; }
+        public string? SowFoodCompanyShelfItemId { get; set; }
+        public string? SowFoodCompanyCustomerId { get; set; }
+        public string SowFoodCompanyId { get; set; }
 
     }
 

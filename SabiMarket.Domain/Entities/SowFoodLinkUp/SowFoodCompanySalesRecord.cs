@@ -1,7 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SabiMarket.Domain.Entities;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
+using SabiMarket.Domain.Entities;
 
 [Table("SowFoodCompanySalesRecords")]
 public class SowFoodCompanySalesRecord : BaseEntity
@@ -18,6 +18,7 @@ public class SowFoodCompanySalesRecord : BaseEntity
     public string? SowFoodCompanyProductItemId { get; set; }
     public string? SowFoodCompanyShelfItemId { get; set; }
     public string? SowFoodCompanyCustomerId { get; set; }
+    public string SowFoodCompanyId { get; set; }
 
     [Required]
     public string SowFoodCompanyStaffId { get; set; }
@@ -37,4 +38,14 @@ public class SowFoodCompanySalesRecord : BaseEntity
     [ForeignKey("SowFoodCompanyStaffId")]
     [DeleteBehavior(DeleteBehavior.NoAction)]
     public virtual SowFoodCompanyStaff SowFoodCompanyStaff { get; set; }
+
+    [ForeignKey("SowFoodCompanyId")]
+    [DeleteBehavior(DeleteBehavior.NoAction)]
+    public virtual SowFoodCompany SowFoodCompany { get; set; }
+}
+public class SowFoodCompanySalesRecordDto
+{
+    public string ProductName { get; set; }
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
 }

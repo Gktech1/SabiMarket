@@ -1,7 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SabiMarket.Domain.Entities;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
+using SabiMarket.Domain.Entities;
 
 [Table("SowFoodCompanyProductionItems")]
 public class SowFoodCompanyProductionItem : BaseEntity
@@ -15,6 +15,7 @@ public class SowFoodCompanyProductionItem : BaseEntity
     public decimal UnitPrice { get; set; }
 
     public string ImageUrl { get; set; }
+    public DateTime DateOfProduction { get; set; }
 
     [Required]
     public string SowFoodCompanyId { get; set; }
