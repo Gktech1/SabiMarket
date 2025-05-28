@@ -1916,8 +1916,41 @@ namespace SabiMarket.Infrastructure.Services
           }
   */
 
-
         public async Task<BaseResponse<IEnumerable<LevySetupResponseDto>>> GetLevySetups()
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Levy Setups Query",
+                    $"CorrelationId: {correlationId} - Retrieving all levy setups",
+                    "Levy Management"
+                );
+
+                var levySetups = await _repository.LevyPaymentRepository.GetAllLevySetupsAsync(false);
+                var levySetupDtos = _mapper.Map<IEnumerable<LevySetupResponseDto>>(levySetups);
+                
+
+                await CreateAuditLog(
+                    "Levy Setups Retrieved",
+                    $"CorrelationId: {correlationId} - Retrieved {levySetupDtos.Count()} setups",
+                    "Levy Management"
+                );
+
+                return ResponseFactory.Success(levySetupDtos, "Levy setups retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                await CreateAuditLog(
+                    "Levy Setups Query Failed",
+                    $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                    "Levy Management"
+                );
+                return ResponseFactory.Fail<IEnumerable<LevySetupResponseDto>>(ex, "An unexpected error occurred");
+            }
+        }
+
+        /*public async Task<BaseResponse<IEnumerable<LevySetupResponseDto>>> GetLevySetups()
         {
             var correlationId = Guid.NewGuid().ToString();
             try
@@ -1949,7 +1982,7 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<IEnumerable<LevySetupResponseDto>>(ex, "An unexpected error occurred");
             }
         }
-
+*/
         // Service Method with Search Query
         public async Task<BaseResponse<IEnumerable<MarketResponseDto>>> GetAllMarkets(string localgovermentId = null, string searchQuery = null)
         {

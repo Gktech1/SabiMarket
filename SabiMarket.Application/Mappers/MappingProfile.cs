@@ -47,7 +47,22 @@ public class MappingProfile : Profile
           .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId))
           .ForMember(dest => dest.User, opt => opt.Ignore());
 
-        CreateMap<Chairman, ChairmanResponseDto>()
+            // Add this missing mapping for LevySetupResponseDto
+            CreateMap<LevyPayment, LevySetupResponseDto>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.TraderName, opt => opt.MapFrom(src => src.Trader != null ? src.Trader.TraderName : "")) // Assuming Trader has FullName property
+                .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market != null ? src.Market.MarketName : ""))
+                .ForMember(dest => dest.TraderOccupancy, opt => opt.MapFrom(src => "")) // Map to appropriate property if available
+                .ForMember(dest => dest.PaymentFrequencyDays, opt => opt.MapFrom(src => ConvertPeriodToDays(src.Period)))
+                .ForMember(dest => dest.Amount, opt => opt.MapFrom(src => src.Amount))
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => src.UpdatedAt));
+
+
+
+            CreateMap<Chairman, ChairmanResponseDto>()
             .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
     src.User != null
         ? string.IsNullOrEmpty(src.FullName) ? $"{src.User.FirstName} {src.User.LastName}" : src.FullName
