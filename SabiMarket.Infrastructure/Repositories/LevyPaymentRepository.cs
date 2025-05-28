@@ -38,7 +38,7 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Include(x => x.Trader)
                 .FirstOrDefaultAsync();
 
-        // Modified method to get levy configurations per market
+      /*  // Modified method to get levy configurations per market
         public async Task<IEnumerable<LevyPayment>> GetAllLevySetupsAsync(bool trackChanges)
         {
             return await _context.LevyPayments
@@ -46,6 +46,19 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Include(lp => lp.Market)
                 .GroupBy(lp => new { lp.MarketId, lp.Period })
                 .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
+                .OrderBy(lp => lp.MarketId)
+                .ThenBy(lp => lp.Period)
+                .ToListAsync();
+        }*/
+
+        public async Task<IEnumerable<LevyPayment>> GetAllLevySetupsAsync(bool trackChanges)
+        {
+            return await _context.LevyPayments
+                .AsTracking(trackChanges ? QueryTrackingBehavior.TrackAll : QueryTrackingBehavior.NoTracking)
+                .Include(lp => lp.Market)
+                .Where(lp => lp.CreatedAt == _context.LevyPayments
+                    .Where(inner => inner.MarketId == lp.MarketId && inner.Period == lp.Period)
+                    .Max(inner => inner.CreatedAt))
                 .OrderBy(lp => lp.MarketId)
                 .ThenBy(lp => lp.Period)
                 .ToListAsync();
