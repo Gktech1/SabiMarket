@@ -475,10 +475,12 @@ public class WaivedProductService : IWaivedProductService
             {
                 return ResponseFactory.Fail<string>(new NotFoundException($"Vendor with Id: {vendorId} not Found."), "Vendor not found.");
             }
+            var customerId = await _applicationDbContext.Customers.Where(x => x.UserId == loggedInUser.Id).FirstOrDefaultAsync();
+
             var complaint = new CustomerFeedback
             {
                 Comment = compalaint,
-                CustomerId = loggedInUser.Id,
+                CustomerId = customerId.Id,
                 Rating = 0,
                 ImageUrl = imageUrl,
                 VendorCode = vendor.VendorCode,
