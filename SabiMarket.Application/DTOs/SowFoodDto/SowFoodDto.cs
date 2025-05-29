@@ -66,11 +66,11 @@ namespace SabiMarket.Application.DTOs.SowFoodDto
     }
     public class UpdateSowFoodCompanySalesRecordDto
     {
+        public string Id { get; set; }
+        public string Name { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
-        public string? SowFoodCompanyProductItemId { get; set; }
-        public string? SowFoodCompanyShelfItemId { get; set; }
-        public string? SowFoodCompanyCustomerId { get; set; }
+        public decimal TotalPrice { get; set; }
         public string SowFoodCompanyId { get; set; }
 
     }

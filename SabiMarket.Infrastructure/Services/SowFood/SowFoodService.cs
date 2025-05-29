@@ -129,28 +129,30 @@ namespace SabiMarket.Infrastructure.Services.SowFood
         {
             try
             {
-                // Get paginated customers from the repository
+                Log.Information("Fetching paginated company customers");
+
                 var customers = await _repositoryManager.SowFoodCompanyCustomerRepository.GetPagedCompanyCustomer(filter);
+
                 if (customers == null || !customers.PageItems.Any())
                 {
-                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<GetSowFoodCompanyCustomerDto>>>(new NotFoundException("No Record Found."), "Record not found.");
+                    Log.Warning("No customer records found");
+                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<GetSowFoodCompanyCustomerDto>>>(
+                        new NotFoundException("No Record Found."), "Record not found.");
                 }
 
-                // Map customer details
                 var customerDetails = customers.PageItems.Select(customer => new GetSowFoodCompanyCustomerDto
                 {
                     EmailAddress = customer.EmailAddress,
-                    Name = customer.FullName,
+                    Name = customer.Name,
                     PhoneNumber = customer.PhoneNumber,
                     BoughtItems = customer.SowFoodCompanySalesRecords?.Select(boughtItem => new BoughtItemDto
                     {
                         Amount = boughtItem.TotalPrice,
-                        ItemName = boughtItem.SowFoodCompanyProductItem.Name,
+                        ItemName = boughtItem.SowFoodCompanyProductItem?.Name ?? boughtItem.SowFoodCompanyShelfItem?.Name ?? "N/A",
                         PurchaseDate = boughtItem.CreatedAt
                     }).ToList() ?? new List<BoughtItemDto>()
                 }).ToList();
 
-                // Return paginated response
                 var response = new PaginatorDto<IEnumerable<GetSowFoodCompanyCustomerDto>>
                 {
                     PageItems = customerDetails,
@@ -159,13 +161,16 @@ namespace SabiMarket.Infrastructure.Services.SowFood
                     NumberOfPages = customers.NumberOfPages
                 };
 
+                Log.Information("Fetched {Count} customer records", customerDetails.Count);
                 return ResponseFactory.Success(response);
             }
             catch (Exception ex)
             {
+                Log.Error(ex, "Error retrieving paginated customers: {Message}", ex.Message);
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<GetSowFoodCompanyCustomerDto>>>(ex, "An error occurred while retrieving the paged customers.");
             }
         }
+
 
         public async Task<BaseResponse<PaginatorDto<IEnumerable<GetSowFoodCompanyCustomerDto>>>> SearchCompanyCustomer(string searchString, PaginationFilter filter)
         {
@@ -443,7 +448,7 @@ namespace SabiMarket.Infrastructure.Services.SowFood
                 Log.Information("Updating sales record with ID {SalesRecordId}", salesRecord.Id);
 
                 var existingRecord = await _repositoryManager.SowFoodCompanySalesRecordRepository
-                    .GetCompanySalesRecordById(salesRecord.Id, salesRecord.SowFoodCompanyCustomer.SowFoodCompanyId, true);
+                    .GetCompanySalesRecordById(salesRecord.Id, salesRecord.SowFoodCompanyId, trackChanges: true);
 
                 if (existingRecord == null)
                 {
@@ -451,8 +456,23 @@ namespace SabiMarket.Infrastructure.Services.SowFood
                     return ResponseFactory.Fail<string>(new NotFoundException("Sales record not found"), "Sales record not found.");
                 }
 
+                // Update core fields
                 existingRecord.Quantity = salesRecord.Quantity;
                 existingRecord.UnitPrice = salesRecord.UnitPrice;
+
+                // Optionally update name on related entities
+                if (!string.IsNullOrWhiteSpace(salesRecord.Name))
+                {
+                    if (existingRecord.SowFoodCompanyProductItem != null)
+                    {
+                        existingRecord.SowFoodCompanyProductItem.Name = salesRecord.Name;
+                    }
+
+                    if (existingRecord.SowFoodCompanyShelfItem != null)
+                    {
+                        existingRecord.SowFoodCompanyShelfItem.Name = salesRecord.Name;
+                    }
+                }
 
                 await _repositoryManager.SaveChangesAsync();
 
@@ -465,6 +485,7 @@ namespace SabiMarket.Infrastructure.Services.SowFood
                 return ResponseFactory.Fail<string>(ex, "An error occurred while updating the sales record.");
             }
         }
+
 
         public void DeleteCompanySalesRecord(string salesRecordId, string companyId)
         {
@@ -481,7 +502,7 @@ namespace SabiMarket.Infrastructure.Services.SowFood
             }
         }
 
-        public async Task<BaseResponse<SowFoodCompanySalesRecord>> GetCompanySalesRecordById(string id, string companyId)
+        public async Task<BaseResponse<SowFoodCompanySalesRecordDto>> GetCompanySalesRecordById(string id, string companyId)
         {
             try
             {
@@ -490,17 +511,16 @@ namespace SabiMarket.Infrastructure.Services.SowFood
                 if (productionItem == null)
                 {
                     Log.Information("No record found");
-                    return ResponseFactory.Fail<SowFoodCompanySalesRecord>(new NotFoundException("No Record Found."), "Record not found.");
+                    return ResponseFactory.Fail<SowFoodCompanySalesRecordDto>(new NotFoundException("No Record Found."), "Record not found.");
                 }
 
                 Log.Information("Mapping production item details");
-                var productionItemDetails = new SowFoodCompanySalesRecord
+                var productionItemDetails = new SowFoodCompanySalesRecordDto
                 {
                     Id = productionItem.Id,
-                    Name = productionItem.Name,
                     Quantity = productionItem.Quantity,
-                    //UnitPrice = productionItem.UnitPrice,
-                    ImageUrl = productionItem.ImageUrl
+                    ProductName = productionItem.SowFoodCompanyShelfItem.Name ?? productionItem.SowFoodCompanyProductItem.Name ?? "N/A",
+                    UnitPrice = productionItem.SowFoodCompanyShelfItem.UnitPrice.ToString() ?? productionItem.SowFoodCompanyProductItem.UnitPrice.ToString(),
                 };
 
                 return ResponseFactory.Success(productionItemDetails);
@@ -508,31 +528,51 @@ namespace SabiMarket.Infrastructure.Services.SowFood
             catch (Exception ex)
             {
                 Log.Information($"Error in GetCompanySalesRecordById: {ex.Message}");
-                return ResponseFactory.Fail<SowFoodCompanySalesRecord>(ex, "An error occurred while retrieving the production item.");
+                return ResponseFactory.Fail<SowFoodCompanySalesRecordDto>(ex, "An error occurred while retrieving the sales record item.");
             }
         }
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<SowFoodCompanySalesRecord>>>> GetCompanySalesRecord(string id, string companyId, PaginationFilter filter)
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<SowFoodCompanySalesRecordDto>>>> GetCompanySalesRecord(string id, string companyId, PaginationFilter filter)
         {
             try
             {
-                Log.Information("Fetching production item by ID");
-                var productionItem = await _repositoryManager.SowFoodCompanySalesRecordRepository.GetPagedCompanySalesRecord(id, companyId, filter);
-                if (productionItem == null)
+                Log.Information("Fetching paged sales records for ID: {Id}, Company: {CompanyId}", id, companyId);
+
+                var pagedRecords = await _repositoryManager.SowFoodCompanySalesRecordRepository.GetPagedCompanySalesRecord(companyId, filter);
+                if (pagedRecords == null || !pagedRecords.PageItems.Any())
                 {
-                    Log.Information("No record found");
-                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<SowFoodCompanySalesRecord>>>(new NotFoundException("No Record Found."), "Record not found.");
+                    Log.Information("No sales records found for the given parameters");
+                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<SowFoodCompanySalesRecordDto>>>(new NotFoundException("No Record Found."), "Record not found.");
                 }
 
-                Log.Information("Mapping production item details");
+                Log.Information("Mapping sales record details to DTO");
+                var mappedDtos = pagedRecords.PageItems.Select(record => new SowFoodCompanySalesRecordDto
+                {
+                    Id = record.Id,
+                    Quantity = record.Quantity,
+                    ProductName = record.SowFoodCompanyShelfItem?.Name
+                                  ?? record.SowFoodCompanyProductItem?.Name
+                                  ?? "N/A",
+                    UnitPrice = (record.SowFoodCompanyShelfItem?.UnitPrice
+                                 ?? record.SowFoodCompanyProductItem?.UnitPrice)?.ToString() ?? "0"
+                });
 
-                return ResponseFactory.Success(productionItem);
+                var result = new PaginatorDto<IEnumerable<SowFoodCompanySalesRecordDto>>
+                {
+                    PageItems = mappedDtos,
+                    CurrentPage = pagedRecords.CurrentPage,
+                    NumberOfPages = pagedRecords.NumberOfPages,
+                    PageSize = pagedRecords.PageSize
+                };
+
+                return ResponseFactory.Success(result);
             }
             catch (Exception ex)
             {
-                Log.Information($"Error in GetCompanySalesRecordById: {ex.Message}");
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<SowFoodCompanySalesRecord>>>(ex, "An error occurred while retrieving the production item.");
+                Log.Error(ex, "Error in GetCompanySalesRecord");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<SowFoodCompanySalesRecordDto>>>(ex, "An error occurred while retrieving the sales records.");
             }
         }
+
 
         #endregion
     }

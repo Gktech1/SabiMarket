@@ -13,7 +13,7 @@ namespace SabiMarket.Infrastructure.Repositories.SowFoodLinkedRepositories
 
         public void AddCompanySalesRecord(SowFoodCompanySalesRecord salesRecord) => Create(salesRecord);
 
-        public async Task<SowFoodCompanySalesRecord> GetCompanySalesRecordById(string id, string companyId, bool trackChanges) => await FindByCondition(x => x.Id == id && x.SowFoodCompanyId == companyId, trackChanges).FirstOrDefaultAsync();
+        public async Task<SowFoodCompanySalesRecord> GetCompanySalesRecordById(string id, string companyId, bool trackChanges) => await FindByCondition(x => x.Id == id && x.SowFoodCompanyId == companyId, trackChanges).Include(x => x.SowFoodCompanyProductItem).Include(x => x.SowFoodCompanyCustomer).Include(x => x.SowFoodCompanyShelfItem).FirstOrDefaultAsync();
 
         public async Task<IEnumerable<SowFoodCompanySalesRecord>> GetAllCompanySalesRecordForExport(string companyId, bool trackChanges) => await FindAll(trackChanges).Where(x => x.SowFoodCompanyId == companyId).ToListAsync();
 

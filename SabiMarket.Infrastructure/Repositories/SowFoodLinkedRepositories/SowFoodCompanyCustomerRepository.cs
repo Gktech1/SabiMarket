@@ -19,7 +19,7 @@ namespace SabiMarket.Infrastructure.Repositories.SowFoodLinkedRepositories
 
         public async Task<PaginatorDto<IEnumerable<SowFoodCompanyCustomer>>> GetPagedCompanyCustomer(PaginationFilter paginationFilter)
         {
-            return await FindAll(false).Include(x => x.SowFoodCompanySalesRecords)
+            return await FindAll(false).Include(x => x.SowFoodCompanySalesRecords).Include(x => x.User)
                        .Paginate(paginationFilter);
         }
 

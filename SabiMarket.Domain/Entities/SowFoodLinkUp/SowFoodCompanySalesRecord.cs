@@ -43,9 +43,3 @@ public class SowFoodCompanySalesRecord : BaseEntity
     [DeleteBehavior(DeleteBehavior.NoAction)]
     public virtual SowFoodCompany SowFoodCompany { get; set; }
 }
-public class SowFoodCompanySalesRecordDto
-{
-    public string ProductName { get; set; }
-    public int Quantity { get; set; }
-    public decimal UnitPrice { get; set; }
-}
