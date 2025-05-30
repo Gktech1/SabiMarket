@@ -2286,7 +2286,7 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Verify the officer is authorized to manage this market
-                bool isAuthorized = false;
+               /* bool isAuthorized = false;
                 if (assistantOfficer.MarketAssignments != null && assistantOfficer.MarketAssignments.Any())
                 {
                     isAuthorized = assistantOfficer.MarketAssignments
@@ -2308,7 +2308,7 @@ namespace SabiMarket.Infrastructure.Services
                     return ResponseFactory.Fail<TraderResponseDto>(
                         new UnauthorizedAccessException("You are not authorized to create traders in this market"),
                         "Unauthorized access");
-                }
+                }*/
 
                 // Check if market exists
                 var market = await _repository.MarketRepository.GetMarketByIdAsync(request.MarketId, false);
