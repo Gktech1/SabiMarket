@@ -136,9 +136,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpDelete("DeleteWaivedProducts")]
-        public async Task<IActionResult> DeleteWaivedProducts(string waiveProductId)
+        public async Task<IActionResult> DeleteWaivedProducts(IdModel dto)
         {
-            var response = await _serviceManager.IWaivedProductService.DeleteProduct(waiveProductId);
+            var response = await _serviceManager.IWaivedProductService.DeleteProduct(dto.id);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -229,9 +229,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
         [Authorize(Policy = PolicyNames.RequireAdminOnly)]
         [HttpPost("AdminConfirmSubscriptionPayment")]
-        public async Task<IActionResult> AdminConfirmSubscriptionPayment(string subscriptionId)
+        public async Task<IActionResult> AdminConfirmSubscriptionPayment(IdModel dto)
         {
-            var response = await _serviceManager.ISubscriptionService.AdminConfirmSubscriptionPayment(subscriptionId);
+            var response = await _serviceManager.ISubscriptionService.AdminConfirmSubscriptionPayment(dto.id);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -247,9 +247,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpPost("UserConfirmSubscriptionPayment")]
-        public async Task<IActionResult> UserConfirmSubscriptionPayment(string subscriptionId)
+        public async Task<IActionResult> UserConfirmSubscriptionPayment(IdModel dto)
         {
-            var response = await _serviceManager.ISubscriptionService.UserConfirmSubscriptionPayment(subscriptionId);
+            var response = await _serviceManager.ISubscriptionService.UserConfirmSubscriptionPayment(dto.id);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -389,9 +389,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpPost("GetSubscriptionPlanById")]
-        public async Task<IActionResult> GetSubscriptionPlanById(string subscriptionPlanId)
+        public async Task<IActionResult> GetSubscriptionPlanById(IdModel dto)
         {
-            var response = await _serviceManager.ISubscriptionPlanService.GetSubscriptionPlanById(subscriptionPlanId);
+            var response = await _serviceManager.ISubscriptionPlanService.GetSubscriptionPlanById(dto.id);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -427,9 +427,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
         [HttpPost("BlockOrUnblockVendor")]
         [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
-        public async Task<IActionResult> BlockOrUnblockVendor(string userId)
+        public async Task<IActionResult> BlockOrUnblockVendor(IdModel dto)
         {
-            var response = await _serviceManager.IWaivedProductService.BlockOrUnblockVendor(userId);
+            var response = await _serviceManager.IWaivedProductService.BlockOrUnblockVendor(dto.id);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -463,9 +463,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpPost("ConfirmCustomerPurchase")]
-        public async Task<IActionResult> ConfirmCustomerPurchase(string id)
+        public async Task<IActionResult> ConfirmCustomerPurchase(IdModel dto)
         {
-            var response = await _serviceManager.IWaivedProductService.ConfirmCustomerPurchase(id);
+            var response = await _serviceManager.IWaivedProductService.ConfirmCustomerPurchase(dto.id);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -481,9 +481,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpPost("CreateProductCategory")]
-        public async Task<IActionResult> CreateProductCategory(string categoryName, string description)
+        public async Task<IActionResult> CreateProductCategory(CreateProductCategory dto)
         {
-            var response = await _serviceManager.IWaivedProductService.CreateProductCategory(categoryName, description);
+            var response = await _serviceManager.IWaivedProductService.CreateProductCategory(dto.categoryName, dto.description);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -498,7 +498,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
-        [HttpPost("GetAllProductCategories")]
+        [HttpGet("GetAllProductCategories")]
         public async Task<IActionResult> GetAllProductCategories()
         {
             var response = await _serviceManager.IWaivedProductService.GetAllProductCategories();
@@ -517,9 +517,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpPost("CreateCustomerComplaint")]
-        public async Task<IActionResult> CreateComplaint(string vendorId, string comPlaintMsg, string imageUrl)
+        public async Task<IActionResult> CreateComplaint(CreateCustomerComplaint dto)
         {
-            var response = await _serviceManager.IWaivedProductService.CreateComplaint(vendorId, comPlaintMsg, imageUrl);
+            var response = await _serviceManager.IWaivedProductService.CreateComplaint(dto.vendorId, dto.comPlaintMsg, dto.imageUrl);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -535,9 +535,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpPost("UpdateCustomerComplaint")]
-        public async Task<IActionResult> UpdateComplaint(string complaintId, string vendorId, string comPlaintMsg, string imageUrl)
+        public async Task<IActionResult> UpdateComplaint(UpdateCustomerComplaint dto)
         {
-            var response = await _serviceManager.IWaivedProductService.UpdateComplaint(complaintId, vendorId, comPlaintMsg, imageUrl);
+            var response = await _serviceManager.IWaivedProductService.UpdateComplaint(dto.complaintId, dto.vendorId, dto.comPlaintMsg, dto.imageUrl);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -589,9 +589,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpDelete("DeleteCustomerComplaint")]
-        public async Task<IActionResult> DeleteCustomerComplaint(string complaintId)
+        public async Task<IActionResult> DeleteCustomerComplaint(DeleteProductCategory dto)
         {
-            var response = await _serviceManager.IWaivedProductService.DeleteComplaint(complaintId);
+            var response = await _serviceManager.IWaivedProductService.DeleteComplaint(dto.complaintId);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -606,9 +606,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
         [HttpDelete("DeleteProductCategory")]
-        public async Task<IActionResult> DeleteProductCategory(string complaintId)
+        public async Task<IActionResult> DeleteProductCategory(DeleteProductCategory dto)
         {
-            var response = await _serviceManager.IWaivedProductService.DeleteProductCategory(complaintId);
+            var response = await _serviceManager.IWaivedProductService.DeleteProductCategory(dto.complaintId);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -623,9 +623,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
         [HttpPost("CreateNextWaiveMarketDate")]
-        public async Task<IActionResult> CreateNextWaiveMarketDate(DateTime nextWaiveMarketDate)
+        public async Task<IActionResult> CreateNextWaiveMarketDate(NextWaiveMarketDate dto)
         {
-            var response = await _serviceManager.IWaivedProductService.CreateNextWaiveMarketDate(nextWaiveMarketDate);
+            var response = await _serviceManager.IWaivedProductService.CreateNextWaiveMarketDate(dto.nextWaiveMarketDate);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -676,9 +676,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpPost("VerifyPaymentWithPaystack")]
-        public async Task<IActionResult> VerifyPaymentWithPaystack(string paymentRef)
+        public async Task<IActionResult> VerifyPaymentWithPaystack(PaymentRef paymentRef)
         {
-            var response = await _paymentService.Verify(paymentRef);
+            var response = await _paymentService.Verify(paymentRef.paymentRef);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
