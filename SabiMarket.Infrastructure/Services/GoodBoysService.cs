@@ -595,6 +595,7 @@ namespace SabiMarket.Infrastructure.Services
 
         public async Task<BaseResponse<bool>> ProcessTraderLevyPayment(string traderId, ProcessLevyPaymentDto paymentDto)
         {
+            var userId = _currentUser.GetUserId();
             try
             {
                 // 1. Get the trader
@@ -656,7 +657,7 @@ namespace SabiMarket.Infrastructure.Services
                 var levyPayment = new LevyPayment
                 {
                     TraderId = traderId,
-                    GoodBoyId = paymentDto.GoodBoyId,
+                    GoodBoyId = userId,
                     MarketId = trader.MarketId,
                     ChairmanId = trader.Market?.ChairmanId, // Get from market if needed
                     Amount = paymentDto.Amount,
