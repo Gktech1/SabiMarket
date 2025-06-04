@@ -10,6 +10,9 @@ namespace SabiMarket.Application.DTOs.Requests
         public string PhoneNumber { get; set; }
         public string CaretakerId { get; set; }
         public string MarketId { get; set; }
+        public string? ProfileImage { get; set; }
+        public string? Gender { get; set; } 
+        public string? LocalGovernmentId { get; set; }  
     }
 
     public class UpdateGoodBoyProfileDto

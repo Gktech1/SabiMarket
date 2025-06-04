@@ -137,18 +137,60 @@ namespace SabiMarket.Infrastructure.Services
                     return ResponseFactory.Fail<GoodBoyResponseDto>("Email already exists");
                 }
 
-                var user = _mapper.Map<ApplicationUser>(goodBoyDto);
+                // Validate CaretakerId exists
+                var caretakerExists = await _repository.CaretakerRepository.GetCaretakerById(goodBoyDto.CaretakerId, false);
+                if (caretakerExists == null)
+                {
+                    await CreateAuditLog(
+                        "GoodBoy Creation Failed",
+                        $"Invalid CaretakerId: {goodBoyDto.CaretakerId} does not exist",
+                        "GoodBoy Creation"
+                    );
+                    return ResponseFactory.Fail<GoodBoyResponseDto>("Invalid CaretakerId provided");
+                }
 
-                var createUserResult = await _userManager.CreateAsync(user);
+                // Validate MarketId exists (if you have a Market repository)
+                var marketExists = await _repository.MarketRepository.GetMarketById(goodBoyDto.MarketId, false);
+                if (marketExists == null)
+                {
+                    await CreateAuditLog(
+                        "GoodBoy Creation Failed",
+                        $"Invalid MarketId: {goodBoyDto.MarketId} does not exist",
+                        "GoodBoy Creation"
+                    );
+                    return ResponseFactory.Fail<GoodBoyResponseDto>("Invalid MarketId provided");
+                }
+
+                var fullname = $"{goodBoyDto.FirstName}  {goodBoyDto.LastName}";
+                // Manual mapping instead of AutoMapper to ensure proper initialization
+                var defaultPassword = GenerateDefaultPassword(fullname);
+                var user = new ApplicationUser
+                {
+                    Id = Guid.NewGuid().ToString(), // Explicitly set the Id
+                    UserName = goodBoyDto.Email,
+                    Email = goodBoyDto.Email,
+                    PhoneNumber = goodBoyDto.PhoneNumber,
+                    FirstName = goodBoyDto.FirstName,
+                    LastName = goodBoyDto.LastName,
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    IsBlocked = false,
+                    EmailConfirmed = true,
+                    Gender = goodBoyDto.Gender ?? string.Empty,
+                    ProfileImageUrl = goodBoyDto.ProfileImage ?? string.Empty,
+                    LocalGovernmentId = goodBoyDto.LocalGovernmentId ?? string.Empty
+                };
+
+                var createUserResult = await _userManager.CreateAsync(user, defaultPassword);
                 if (!createUserResult.Succeeded)
                 {
                     await CreateAuditLog(
                         "GoodBoy Creation Failed",
-                        $"Failed to create user account for: {goodBoyDto.Email}",
+                        $"Failed to create user account for: {goodBoyDto.Email}. Errors: {string.Join(", ", createUserResult.Errors.Select(e => e.Description))}",
                         "GoodBoy Creation"
                     );
                     return ResponseFactory.Fail<GoodBoyResponseDto>(
-                        "Failed to create user");
+                        $"Failed to create user: {string.Join(", ", createUserResult.Errors.Select(e => e.Description))}");
                 }
 
                 var goodBoy = new GoodBoy
@@ -166,10 +208,12 @@ namespace SabiMarket.Infrastructure.Services
 
                 await CreateAuditLog(
                     "Created GoodBoy Account",
-                    $"Created GoodBoy account for {user.Email} ({user.FirstName} {user.LastName})"
+                    $"Created GoodBoy account for {user.Email} ({user.FirstName} {user.LastName})",
+                    "GoodBoy Creation"
                 );
 
                 var createdGoodBoy = _mapper.Map<GoodBoyResponseDto>(goodBoy);
+                createdGoodBoy.DefaultPassword = defaultPassword;
                 return ResponseFactory.Success(createdGoodBoy, "GoodBoy created successfully");
             }
             catch (Exception ex)
@@ -178,7 +222,203 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<GoodBoyResponseDto>(ex, "An unexpected error occurred");
             }
         }
+        private string GenerateDefaultPassword(string fullName)
+        {
+            var nameParts = fullName.Split(' '); // Split the full name into first name and last name
+            var firstName = nameParts[0];
+            var lastName = nameParts.Length > 1 ? nameParts[1] : ""; // Handle cases where only one name is provided
 
+            var random = new Random();
+            var randomNumbers = random.Next(100, 999).ToString(); // Generate a 3-digit random number
+
+            // Special characters pool
+            var specialChars = "!@#$%^&*()-_=+[]{}|;:,.<>?";
+            var specialChar1 = specialChars[random.Next(specialChars.Length)];
+            var specialChar2 = specialChars[random.Next(specialChars.Length)];
+
+            // Generate random uppercase letters
+            var uppercaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var uppercaseLetter = uppercaseLetters[random.Next(uppercaseLetters.Length)];
+
+            // Combine first name, last name, random number, and special characters
+            // Make sure at least one character in the name parts is uppercase
+            var firstNameProcessed = char.ToUpper(firstName[0]) + firstName.Substring(1).ToLower();
+            var lastNameProcessed = !string.IsNullOrEmpty(lastName)
+                ? char.ToUpper(lastName[0]) + lastName.Substring(1).ToLower()
+                : "";
+
+            // Combine all elements with special characters and uppercase
+            var password = $"{firstNameProcessed}{specialChar1}{lastNameProcessed}{randomNumbers}{uppercaseLetter}{specialChar2}";
+
+            // Ensure password has minimum complexity
+            if (password.Length < 8)
+            {
+                // Add additional random characters for very short names
+                var additionalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+                while (password.Length < 8)
+                {
+                    password += additionalChars[random.Next(additionalChars.Length)];
+                }
+            }
+
+            return password;
+        }
+
+
+        /*  public async Task<BaseResponse<GoodBoyResponseDto>> CreateGoodBoy(CreateGoodBoyRequestDto goodBoyDto)
+          {
+              try
+              {
+                  var validationResult = await _createGoodBoyValidator.ValidateAsync(goodBoyDto);
+                  if (!validationResult.IsValid)
+                  {
+                      await CreateAuditLog(
+                          "GoodBoy Creation Failed",
+                          $"Validation failed for new GoodBoy creation with email: {goodBoyDto.Email}",
+                          "GoodBoy Creation"
+                      );
+                      return ResponseFactory.Fail<GoodBoyResponseDto>(
+                          "Validation failed");
+                  }
+
+                  var existingUser = await _userManager.FindByEmailAsync(goodBoyDto.Email);
+                  if (existingUser != null)
+                  {
+                      await CreateAuditLog(
+                          "GoodBoy Creation Failed",
+                          $"Email already exists: {goodBoyDto.Email}",
+                          "GoodBoy Creation"
+                      );
+                      return ResponseFactory.Fail<GoodBoyResponseDto>("Email already exists");
+                  }
+
+                  // Manual mapping instead of AutoMapper to ensure proper initialization
+                  var user = new ApplicationUser
+                  {
+                      Id = Guid.NewGuid().ToString(), // Explicitly set the Id
+                      UserName = goodBoyDto.Email,
+                      Email = goodBoyDto.Email,
+                      PhoneNumber = goodBoyDto.PhoneNumber,
+                      FirstName = goodBoyDto.FirstName,
+                      LastName = goodBoyDto.LastName,
+                      CreatedAt = DateTime.UtcNow,
+                      IsActive = true,
+                      IsBlocked = false,
+                      EmailConfirmed = true,
+                      Gender = goodBoyDto.Gender ?? string.Empty,
+                      ProfileImageUrl = goodBoyDto.ProfileImage,
+                      LocalGovernmentId = goodBoyDto.LocalGovernmentId
+                  };
+                  var createUserResult = await _userManager.CreateAsync(user);
+                  if (!createUserResult.Succeeded)
+                  {
+                      await CreateAuditLog(
+                          "GoodBoy Creation Failed",
+                          $"Failed to create user account for: {goodBoyDto.Email}. Errors: {string.Join(", ", createUserResult.Errors.Select(e => e.Description))}",
+                          "GoodBoy Creation"
+                      );
+                      return ResponseFactory.Fail<GoodBoyResponseDto>(
+                          $"Failed to create user: {string.Join(", ", createUserResult.Errors.Select(e => e.Description))}");
+                  }
+
+                  var goodBoy = new GoodBoy
+                  {
+                      UserId = user.Id,
+                      CaretakerId = goodBoyDto.CaretakerId,
+                      MarketId = goodBoyDto.MarketId,
+                      Status = StatusEnum.Unlocked
+                  };
+
+                  _repository.GoodBoyRepository.AddGoodBoy(goodBoy);
+                  await _repository.SaveChangesAsync();
+
+                  await _userManager.AddToRoleAsync(user, UserRoles.Goodboy);
+
+                  await CreateAuditLog(
+                      "Created GoodBoy Account",
+                      $"Created GoodBoy account for {user.Email} ({user.FirstName} {user.LastName})",
+                      "GoodBoy Creation"
+                  );
+
+                  var createdGoodBoy = _mapper.Map<GoodBoyResponseDto>(goodBoy);
+                  return ResponseFactory.Success(createdGoodBoy, "GoodBoy created successfully");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Error creating GoodBoy");
+                  return ResponseFactory.Fail<GoodBoyResponseDto>(ex, "An unexpected error occurred");
+              }
+          }*/
+
+        /* public async Task<BaseResponse<GoodBoyResponseDto>> CreateGoodBoy(CreateGoodBoyRequestDto goodBoyDto)
+         {
+             try
+             {
+                 var validationResult = await _createGoodBoyValidator.ValidateAsync(goodBoyDto);
+                 if (!validationResult.IsValid)
+                 {
+                     await CreateAuditLog(
+                         "GoodBoy Creation Failed",
+                         $"Validation failed for new GoodBoy creation with email: {goodBoyDto.Email}",
+                         "GoodBoy Creation"
+                     );
+                     return ResponseFactory.Fail<GoodBoyResponseDto>(
+                         "Validation failed");
+                 }
+
+                 var existingUser = await _userManager.FindByEmailAsync(goodBoyDto.Email);
+                 if (existingUser != null)
+                 {
+                     await CreateAuditLog(
+                         "GoodBoy Creation Failed",
+                         $"Email already exists: {goodBoyDto.Email}",
+                         "GoodBoy Creation"
+                     );
+                     return ResponseFactory.Fail<GoodBoyResponseDto>("Email already exists");
+                 }
+
+                 var user = _mapper.Map<ApplicationUser>(goodBoyDto);
+
+                 var createUserResult = await _userManager.CreateAsync(user);
+                 if (!createUserResult.Succeeded)
+                 {
+                     await CreateAuditLog(
+                         "GoodBoy Creation Failed",
+                         $"Failed to create user account for: {goodBoyDto.Email}",
+                         "GoodBoy Creation"
+                     );
+                     return ResponseFactory.Fail<GoodBoyResponseDto>(
+                         "Failed to create user");
+                 }
+
+                 var goodBoy = new GoodBoy
+                 {
+                     UserId = user.Id,
+                     CaretakerId = goodBoyDto.CaretakerId,
+                     MarketId = goodBoyDto.MarketId,
+                     Status = StatusEnum.Blocked
+                 };
+
+                 _repository.GoodBoyRepository.AddGoodBoy(goodBoy);
+                 await _repository.SaveChangesAsync();
+
+                 await _userManager.AddToRoleAsync(user, UserRoles.Goodboy);
+
+                 await CreateAuditLog(
+                     "Created GoodBoy Account",
+                     $"Created GoodBoy account for {user.Email} ({user.FirstName} {user.LastName})"
+                 );
+
+                 var createdGoodBoy = _mapper.Map<GoodBoyResponseDto>(goodBoy);
+                 return ResponseFactory.Success(createdGoodBoy, "GoodBoy created successfully");
+             }
+             catch (Exception ex)
+             {
+                 _logger.LogError(ex, "Error creating GoodBoy");
+                 return ResponseFactory.Fail<GoodBoyResponseDto>(ex, "An unexpected error occurred");
+             }
+         }
+ */
         public async Task<BaseResponse<bool>> UpdateGoodBoyProfile(string goodBoyId, UpdateGoodBoyProfileDto profileDto)
         {
             try
