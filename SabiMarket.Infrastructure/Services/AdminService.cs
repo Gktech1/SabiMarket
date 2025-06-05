@@ -24,6 +24,8 @@ using CloudinaryDotNet.Actions;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Domain.Enum;
 using SabiMarket.Infrastructure.Repositories;
+using iText.Commons.Actions.Contexts;
+using SabiMarket.Infrastructure.Data;
 
 public class AdminService : IAdminService
 {
@@ -38,6 +40,7 @@ public class AdminService : IAdminService
     private readonly IValidator<UpdateAdminProfileDto> _updateProfileValidator;
     private readonly IValidator<CreateRoleRequestDto> _createRoleValidator;
     private readonly IValidator<UpdateRoleRequestDto> _updateRoleValidator;
+    private readonly ApplicationDbContext _dbContext;
 
     public AdminService(
         IRepositoryManager repository,
@@ -50,7 +53,8 @@ public class AdminService : IAdminService
         IValidator<UpdateAdminProfileDto> updateProfileValidator,
         IValidator<CreateRoleRequestDto> createRoleValidator,
         IValidator<UpdateRoleRequestDto> updateRoleValidator,
-        RoleManager<ApplicationRole> roleManager)
+        RoleManager<ApplicationRole> roleManager,
+        ApplicationDbContext dbContext)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -63,6 +67,7 @@ public class AdminService : IAdminService
         _createRoleValidator = createRoleValidator ?? throw new ArgumentNullException(nameof(createRoleValidator));
         _updateRoleValidator = updateRoleValidator ?? throw new ArgumentNullException(nameof(updateRoleValidator));
         _roleManager = roleManager;
+        _dbContext = dbContext;
     }
 
     private string GetCurrentIpAddress()
@@ -2729,7 +2734,226 @@ public class AdminService : IAdminService
         }
     }
 
+    /*  public async Task<BaseResponse<bool>> DeleteTeamMember(string memberId)
+      {
+          try
+          {
+              var userId = _currentUser.GetUserId();
+              var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
+              if (currentAdmin == null || !currentAdmin.HasTeamManagementAccess)
+              {
+                  await CreateAuditLog(
+                      "Team Member Deletion Denied",
+                      $"Unauthorized team member deletion attempt by user: {userId}",
+                      "Team Management"
+                  );
+                  return ResponseFactory.Fail<bool>(
+                      new UnauthorizedException("Access denied"),
+                      "You don't have permission to delete team members");
+              }
+
+              // Use DbContext directly to avoid UserManager tracking conflicts
+              var user = await _dbContext.Users
+                  .FirstOrDefaultAsync(u => u.Id == memberId);
+
+              if (user == null)
+              {
+                  await CreateAuditLog(
+                      "Team Member Deletion Failed",
+                      $"Team member not found with ID: {memberId}",
+                      "Team Management"
+                  );
+                  return ResponseFactory.Fail<bool>(
+                      new NotFoundException("Team member not found"),
+                      "Team member not found");
+              }
+
+              // Store user info for audit log before update
+              var userEmail = user.Email;
+              var userFullName = $"{user.FirstName} {user.LastName}";
+
+              // Soft delete: deactivate the user
+              user.IsActive = false;
+              user.IsBlocked = true; // Optional: also block the user
+
+              // Save changes directly through DbContext
+              var rowsAffected = await _dbContext.SaveChangesAsync();
+
+              if (rowsAffected == 0)
+              {
+                  await CreateAuditLog(
+                      "Team Member Deletion Failed",
+                      $"Failed to deactivate user account for ID: {memberId}",
+                      "Team Management"
+                  );
+                  return ResponseFactory.Fail<bool>(
+                      new ValidationException(new[] { new ValidationFailure("Update", "No changes were saved") }),
+                      "Failed to delete team member");
+              }
+
+              await CreateAuditLog(
+                  "Deleted Team Member",
+                  $"Deactivated team member account for {userEmail} ({userFullName})",
+                  "Team Management"
+              );
+
+              return ResponseFactory.Success(true, "Team member deleted successfully");
+          }
+          catch (Exception ex)
+          {
+              _logger.LogError(ex, "Error deleting team member");
+              return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+          }
+      }*/
+
     public async Task<BaseResponse<bool>> DeleteTeamMember(string memberId)
+    {
+        try
+        {
+            var userId = _currentUser.GetUserId();
+            var currentAdmin = await _repository.AdminRepository.GetAdminByIdAsync(userId, trackChanges: false);
+            if (currentAdmin == null || !currentAdmin.HasTeamManagementAccess)
+            {
+                await CreateAuditLog(
+                    "Team Member Deletion Denied",
+                    $"Unauthorized team member deletion attempt by user: {userId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<bool>(
+                    new UnauthorizedException("Access denied"),
+                    "You don't have permission to delete team members");
+            }
+
+            // Use DbContext directly to avoid UserManager tracking conflicts
+            var user = await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.Id == memberId);
+
+            if (user == null)
+            {
+                await CreateAuditLog(
+                    "Team Member Deletion Failed",
+                    $"Team member not found with ID: {memberId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<bool>(
+                    new NotFoundException("Team member not found"),
+                    "Team member not found");
+            }
+
+            // Store user info for audit log before deletion
+            var userEmail = user.Email;
+            var userFullName = $"{user.FirstName} {user.LastName}";
+
+            // Hard delete: Remove related entities first to avoid foreign key conflicts
+
+            // 1. Delete Admin record if exists
+            var adminRecord = await _dbContext.Admins
+                .FirstOrDefaultAsync(a => a.UserId == memberId);
+            if (adminRecord != null)
+            {
+                _dbContext.Admins.Remove(adminRecord);
+            }
+
+            // 2. Delete other related entities based on user type
+            // Check and delete Chairman
+            var chairman = await _dbContext.Chairmen
+                .FirstOrDefaultAsync(c => c.UserId == memberId);
+            if (chairman != null)
+            {
+                _dbContext.Chairmen.Remove(chairman);
+            }
+
+            // Check and delete Trader
+            var trader = await _dbContext.Traders
+                .FirstOrDefaultAsync(t => t.UserId == memberId);
+            if (trader != null)
+            {
+                _dbContext.Traders.Remove(trader);
+            }
+
+            // Check and delete Vendor
+            var vendor = await _dbContext.Vendors
+                .FirstOrDefaultAsync(v => v.UserId == memberId);
+            if (vendor != null)
+            {
+                _dbContext.Vendors.Remove(vendor);
+            }
+
+            // Check and delete Customer
+            var customer = await _dbContext.Customers
+                .FirstOrDefaultAsync(c => c.UserId == memberId);
+            if (customer != null)
+            {
+                _dbContext.Customers.Remove(customer);
+            }
+
+            // Check and delete Caretaker
+            var caretaker = await _dbContext.Caretakers
+                .FirstOrDefaultAsync(c => c.UserId == memberId);
+            if (caretaker != null)
+            {
+                _dbContext.Caretakers.Remove(caretaker);
+            }
+
+            // Check and delete GoodBoy
+            var goodBoy = await _dbContext.GoodBoys
+                .FirstOrDefaultAsync(g => g.UserId == memberId);
+            if (goodBoy != null)
+            {
+                _dbContext.GoodBoys.Remove(goodBoy);
+            }
+
+            // Check and delete AssistCenterOfficer
+            var assistOfficer = await _dbContext.AssistCenterOfficers
+                .FirstOrDefaultAsync(a => a.UserId == memberId);
+            if (assistOfficer != null)
+            {
+                _dbContext.AssistCenterOfficers.Remove(assistOfficer);
+            }
+
+            // 3. Remove any audit logs related to this user (optional - you might want to keep these)
+            // var auditLogs = await _dbContext.AuditLogs
+            //     .Where(a => a.AdminId == memberId)
+            //     .ToListAsync();
+            // if (auditLogs.Any())
+            // {
+            //     _dbContext.AuditLogs.RemoveRange(auditLogs);
+            // }
+
+            // 4. Finally, delete the ApplicationUser
+            _dbContext.Users.Remove(user);
+
+            // Save all changes
+            var rowsAffected = await _dbContext.SaveChangesAsync();
+
+            if (rowsAffected == 0)
+            {
+                await CreateAuditLog(
+                    "Team Member Deletion Failed",
+                    $"Failed to delete user account for ID: {memberId}",
+                    "Team Management"
+                );
+                return ResponseFactory.Fail<bool>(
+                    new ValidationException(new[] { new ValidationFailure("Delete", "No changes were saved") }),
+                    "Failed to delete team member");
+            }
+
+            await CreateAuditLog(
+                "Deleted Team Member",
+                $"Permanently deleted team member account for {userEmail} ({userFullName})",
+                "Team Management"
+            );
+
+            return ResponseFactory.Success(true, "Team member deleted successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting team member");
+            return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
+        }
+    }
+
+    /*public async Task<BaseResponse<bool>> DeleteTeamMember(string memberId)
     {
         try
         {
@@ -2790,7 +3014,7 @@ public class AdminService : IAdminService
             _logger.LogError(ex, "Error deleting team member");
             return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
         }
-    }
+    }*/
     public async Task<BaseResponse<PaginatorDto<IEnumerable<TeamMemberResponseDto>>>> GetTeamMembers(
      TeamMemberFilterRequestDto filterDto,
      PaginationFilter paginationFilter)
