@@ -14,6 +14,8 @@ namespace SabiMarket.Application.DTOs.Responses
         public string TraderOccupancy { get; set; }
         public string TraderIdentityNumber { get; set; }
         public string PaymentFrequency { get; set; }
+        public string? MarketId { get; set; }
+        public string? MarketName { get; set; }
         public PaymentPeriodEnum PayementPeriod { get; set; } = PaymentPeriodEnum.Weekly;  
         public decimal Amount { get; set; }
         public DateTime? LastPaymentDate { get; set; }

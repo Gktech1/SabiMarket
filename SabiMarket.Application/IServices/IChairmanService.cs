@@ -108,5 +108,9 @@ namespace SabiMarket.Application.IServices
          string searchQuery,
          PaginationFilter pagination);
 
+        Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto);
+
+        Task<BaseResponse<bool>> ProcessTraderLevyPayment(string traderId, ProcessAsstOfficerLevyPaymentDto paymentDto);
+        Task<BaseResponse<bool>> UpdateTraderMarket(string officerId, string traderId, UpdateTraderMarketDto traderDto);
     }
 }

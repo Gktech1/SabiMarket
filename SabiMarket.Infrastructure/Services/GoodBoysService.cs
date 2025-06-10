@@ -701,7 +701,7 @@ namespace SabiMarket.Infrastructure.Services
                     Amount = latestSetup.Amount,
                     PayementPeriod = latestSetup.Period,
                     LastPaymentDate = latestPayment?.PaymentDate,
-                    UpdatePaymentUrl = $"{updatepaymenturl}/api/GoodBoys/updatetraderpayment/{scanDto?.TraderId}"
+                    UpdatePaymentUrl = $"{updatepaymenturl}api/GoodBoys/updatetraderpayment/{scanDto?.TraderId}"
                 };
 
                 await CreateAuditLog(

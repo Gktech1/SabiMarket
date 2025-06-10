@@ -28,6 +28,7 @@ using SabiMarket.Application.Interfaces;
 using LevySetupResponseDto = SabiMarket.Application.DTOs.Requests.LevySetupResponseDto;
 using Mailjet.Client.Resources.SMS;
 using System.Collections.Generic;
+using Microsoft.Extensions.Configuration;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -46,6 +47,7 @@ namespace SabiMarket.Infrastructure.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ApplicationDbContext _context;
         private readonly ICloudinaryService _cloudinaryService;
+        private IConfiguration _configuration;
 
         // Add these properties to your ChairmanService class
         private readonly IValidator<CreateLevyRequestDto> _createLevyValidator;
@@ -67,7 +69,8 @@ namespace SabiMarket.Infrastructure.Services
             IValidator<CreateAssistantOfficerRequestDto> createAssistOfficerValidator,
             ApplicationDbContext context,
             ICloudinaryService cloudinaryService = null,
-            IValidator<CreateTraderRequestDto> createTraderValidator = null)
+            IValidator<CreateTraderRequestDto> createTraderValidator = null,
+            IConfiguration configuration = null)
         {
             _repository = repository;
             _logger = logger;
@@ -84,6 +87,7 @@ namespace SabiMarket.Infrastructure.Services
             _context = context;
             _cloudinaryService = cloudinaryService;
             _createTraderValidator = createTraderValidator;
+            _configuration = configuration;
         }
 
         private string GetCurrentIpAddress()
@@ -3994,6 +3998,81 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred");
             }
         }
+
+        public async Task<BaseResponse<bool>> UpdateTraderMarket(string officerId, string traderId, UpdateTraderMarketDto traderDto)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                // Get the assist center officer with tracking
+                var officer = await _repository.AssistCenterOfficerRepository.GetByIdAsync(officerId, true);
+                if (officer == null)
+                {
+                    return ResponseFactory.Fail<bool>("Assist Center Officer not found");
+                }
+
+                // Verify officer has permission to update this trader
+                // This depends on your business logic - adjust accordingly
+
+                //Get the trader(assuming you have a TraderRepository)
+                 var trader = await _repository.TraderRepository.GetTraderById(traderId, true);
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<bool>("Trader not found");
+                }
+
+                // For now, we'll update the officer's user details as shown in the UI
+                // Adjust this based on your actual Trader entity structure
+
+                if (officer.User != null)
+                {
+                    // Update trader name (assuming it's stored in User.FirstName + LastName)
+                    if (!string.IsNullOrEmpty(traderDto.TraderName) && traderDto.TraderName != "string")
+                    {
+                        var nameParts = traderDto.TraderName.Split(' ', 2);
+                        officer.User.FirstName = nameParts[0];
+                        officer.User.LastName = nameParts.Length > 1 ? nameParts[1] : "";
+                    }
+
+                    if (!string.IsNullOrEmpty(traderDto.PhoneNumber) && traderDto.PhoneNumber != "string")
+                        officer.User.PhoneNumber = traderDto.PhoneNumber;
+
+                    if (!string.IsNullOrEmpty(traderDto.EmailAddress) && traderDto.EmailAddress != "string")
+                        officer.User.Email = traderDto.EmailAddress;
+
+                    if (!string.IsNullOrEmpty(traderDto.Address) && traderDto.Address != "string")
+                        officer.User.Address = traderDto.Address;
+
+                    if (!string.IsNullOrEmpty(traderDto.ProfileImageUrl) && traderDto.ProfileImageUrl != "string")
+                        officer.User.ProfileImageUrl = traderDto.ProfileImageUrl;
+                }
+
+                // Update officer-specific fields
+                if (!string.IsNullOrEmpty(traderDto.TraderOccupancy) && traderDto.TraderOccupancy != "string")
+                    officer.UserLevel = traderDto.TraderOccupancy; // Assuming UserLevel stores occupancy
+
+                // Update market assignment if provided
+                if (!string.IsNullOrEmpty(traderDto.MarketId) && traderDto.MarketId != "string")
+                {
+                    // Validate market exists
+                    var marketExists = await _repository.MarketRepository.GetMarketByIdAsync(traderDto.MarketId, false);
+                    if (marketExists == null)
+                    {
+                        return ResponseFactory.Fail<bool>("Invalid Market ID");
+                    }
+                    officer.MarketId = traderDto.MarketId;
+                }
+
+
+                await _repository.SaveChangesAsync();
+                return ResponseFactory.Success(true, "Trader details updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating trader details: OfficerId: {OfficerId}, TraderId: {TraderId}", officerId, traderId);
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while updating trader details");
+            }
+        }
         public async Task<BaseResponse<PaginatorDto<IEnumerable<AuditLogDto>>>> GetAuditLogs(PaginationFilter filter)
         {
             var correlationId = Guid.NewGuid().ToString();
@@ -4850,6 +4929,290 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<PaginatorDto<List<TraderLevyPaymentDto>>>(ex, "An unexpected error occurred");
             }
         }
+
+        public async Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto)
+        {
+            try
+            {
+                // Validate QR code format (OSH/LAG/23401)
+                /*if (!scanDto.QRCodeData.StartsWith("OSH/LAG/"))
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        "Invalid trader QR code");
+                }*/
+
+                if (string.IsNullOrEmpty(scanDto?.TraderId))
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                       "traderId is required");
+                }
+
+                //var traderId = scanDto.QRCodeData.Replace("OSH/LAG/", "");
+
+                // Get the trader by ID
+                var trader = await _repository.TraderRepository.GetTraderById(scanDto?.TraderId, trackChanges: false);
+
+                if (trader == null)
+                {
+                    await CreateAuditLog(
+                        "QR Code Validation Failed",
+                        $"Invalid trader ID from QR Code: {scanDto?.TraderId}",
+                        "Payment Processing"
+                    );
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new NotFoundException("Trader not found"),
+                        "Invalid trader QR code");
+                }
+
+
+                if (scanDto?.MarketId != trader?.MarketId)
+                {
+                    await CreateAuditLog(
+                        "QR Code Validation Failed",
+                        $"Invalid MarketId from QR Code: {scanDto?.MarketId}",
+                        "Payment Processing"
+                    );
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new NotFoundException("Market  not found for the trader"),
+                        "Invalid trader QR code");
+                }
+
+                // Check if scanning user is authorized (must be a GoodBoy)
+                var assistofficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByUserIdAsync(scanDto.ScannedByUserId, false);
+                if (assistofficer == null)
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new UnauthorizedException("Unauthorized scan attempt"),
+                        "Unauthorized to scan trader QR codes");
+                }
+
+                // Get payment frequency and amount from most recent levy payment for this market and trader occupancy
+                var levySetups = await _repository.LevyPaymentRepository.GetByMarketAndOccupancy(
+                    trader.MarketId,
+                    trader.TraderOccupancy);
+                if(levySetups.Count() < 0)
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new UnauthorizedException("Levy setup not configure"),
+                        "Levy setup not configure");
+                }
+
+                string paymentFrequency = "Not configured";
+                LevyPayment latestSetup = null;
+                if (levySetups != null && levySetups.Any())
+                {
+                    // Get the most recent levy payment setup for this trader occupancy
+                    latestSetup = levySetups
+                    .OrderByDescending(lp => lp.CreatedAt)
+                    .FirstOrDefault();
+
+                    if (latestSetup != null)
+                    {
+                        // Format payment frequency string based on period and amount
+                        paymentFrequency = $"{GetPeriodDays(latestSetup.Period)} days - N{latestSetup.Amount}";
+                    }
+                }
+
+                // Get the most recent payment for this trader
+                /*var latestPayment = trader.LevyPayments
+                    .OrderByDescending(p => p.PaymentDate)
+                .FirstOrDefault();*/
+
+                // Check if scanning user is authorized (must be a GoodBoy)
+                var marketdetail = await _repository.MarketRepository.GetMarketByIdAsync(scanDto?.MarketId, false);
+                if (marketdetail == null)
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new UnauthorizedException("Market is not found"),
+                        "Market is not found");
+                }
+
+                var updatepaymenturl = _configuration.GetSection("ProcesspaymentUrl").Value;
+                //https://localhost:7111/api/GoodBoys/updatetraderpayment/8FFF4B79-DA26-4628-A3F2-4CFFBC07DAC9
+
+                // Create response with dynamic data from the trader entity
+                var validationResponse = new TraderQRValidationResponseDto
+                {
+                    TraderId = trader.Id,
+                    TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
+                    TraderOccupancy = trader.TraderOccupancy.ToString(),
+                    TraderIdentityNumber = trader.TIN, //$"OSH/LAG/{trader.Id}",
+                    PaymentFrequency = paymentFrequency,
+                    Amount = latestSetup.Amount,
+                    MarketId = trader.MarketId,
+                    MarketName = marketdetail?.MarketName ?? string.Empty,
+                    PayementPeriod = latestSetup.Period,
+                    LastPaymentDate = latestSetup?.PaymentDate,
+                    UpdatePaymentUrl = $"{updatepaymenturl}api/Chairman/updatetraderpayment/{scanDto?.TraderId}"
+                };
+
+                await CreateAuditLog(
+                    "Trader QR Code Scanned",
+                    $"Trader QR Code scanned by GoodBoy: {assistofficer.Id} for Trader: {trader.Id}",
+                    "Payment Processing"
+                );
+
+                return ResponseFactory.Success(validationResponse, "Trader QR code validated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating trader QR code");
+                return ResponseFactory.Fail<TraderQRValidationResponseDto>(ex, "An unexpected error occurred");
+            }
+        }
+
+        public async Task<BaseResponse<bool>> ProcessTraderLevyPayment(string traderId, ProcessAsstOfficerLevyPaymentDto paymentDto)
+        {
+            var userId = _currentUser.GetUserId();
+            try
+            {
+                // 1. Get the trader
+                var trader = await _repository.TraderRepository.GetByIdWithInclude(
+                    traderId,
+                    t => t.LevyPayments);
+
+                if (trader == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Trader not found"),
+                        "Trader not found");
+                }
+
+                // 2. Get the goodboy
+                AssistCenterOfficer? assistCenterOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(paymentDto.AssistOfficerId, false);
+                if (assistCenterOfficer == null)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new NotFoundException("Goodboy not found"),
+                        "Goodboy not found");
+                }
+
+                // 3. Validate if goodboy can collect from this trader (same market and caretaker)
+                if (trader.MarketId != assistCenterOfficer.MarketId)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new ValidationException("Assist officer is not authorized to collect payment from this trader"),
+                        "Not authorized to collect payment from this trader (different market)");
+                }
+
+              /*  // 4. Check if trader is under the goodboy's caretaker (if applicable)
+                if (!string.IsNullOrEmpty(trader.CaretakerId) && trader.CaretakerId != assistCenterOfficer.CaretakerId)
+                {
+                    return ResponseFactory.Fail<bool>(
+                        new ValidationException("Goodboy is not authorized to collect payment from this trader"),
+                        "Not authorized to collect payment from this trader (different caretaker)");
+                }*/
+
+                // 5. Get the last payment and check if payment is due based on frequency
+                var lastPayment = trader.LevyPayments
+                    .Where(p => p.PaymentStatus == PaymentStatusEnum.Paid)
+                    .OrderByDescending(p => p.PaymentDate)
+                    .FirstOrDefault();
+
+                if (lastPayment != null)
+                {
+                    var paymentDue = IsPaymentDue(lastPayment, paymentDto.Period);
+                    /*if (!paymentDue.isDue)
+                    {
+                        return ResponseFactory.Fail<bool>(
+                            new ValidationException($"Payment not due yet. Next payment due on {paymentDue.nextPaymentDate}"),
+                            $"Payment not due yet. Next payment due on {paymentDue.nextPaymentDate:dd/MM/yyyy}");
+                    }*/
+                }
+
+                // 6. Create the levy payment
+                var currentDate = DateTime.UtcNow;
+                var levyPayment = new LevyPayment
+                {
+                    TraderId = traderId,
+                    GoodBoyId = userId,
+                    MarketId = trader.MarketId,
+                    ChairmanId = trader.Market?.ChairmanId, // Get from market if needed
+                    Amount = paymentDto.Amount,
+                    Period = paymentDto.Period,
+                    PaymentMethod = paymentDto.PaymentMethod ?? PaymenPeriodEnum.Cash,
+                    PaymentStatus = PaymentStatusEnum.Paid,
+                    TransactionReference = paymentDto.TransactionReference ?? GenerateTransactionReference(),
+                    HasIncentive = paymentDto.HasIncentive,
+                    IncentiveAmount = paymentDto.IncentiveAmount ?? 0,
+                    PaymentDate = currentDate,
+                    CollectionDate = currentDate,
+                    Notes = paymentDto.Notes ?? "",
+                    QRCodeScanned = paymentDto.QRCodeScanned
+                };
+
+                _repository.LevyPaymentRepository.Create(levyPayment);
+
+                await CreateAuditLog(
+                    "Levy Payment Processed",
+                    $"Payment processed by GoodBoy: {assistCenterOfficer.Id}  for Trader: {trader.TraderName}, Amount: ₦{paymentDto.Amount}",
+                    "Payment Processing"
+                );
+
+                await _repository.SaveChangesAsync();
+
+                return ResponseFactory.Success(true, "Payment processed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing trader levy payment for traderId: {TraderId}", traderId);
+                return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while processing payment");
+            }
+        }
+
+        private (bool isDue, DateTime nextPaymentDate) IsPaymentDue(LevyPayment lastPayment, PaymentPeriodEnum currentPeriod)
+        {
+            var lastPaymentDate = lastPayment.PaymentDate.Date;
+            var currentDate = DateTime.UtcNow.Date;
+
+            switch (lastPayment.Period)
+            {
+                case PaymentPeriodEnum.Daily:
+                    var nextDailyPayment = lastPaymentDate.AddDays(1);
+                    return (currentDate >= nextDailyPayment, nextDailyPayment);
+
+                case PaymentPeriodEnum.Weekly:
+                    var nextWeeklyPayment = lastPaymentDate.AddDays(7);
+                    return (currentDate >= nextWeeklyPayment, nextWeeklyPayment);
+
+                case PaymentPeriodEnum.BiWeekly:
+                    var nextBiWeeklyPayment = lastPaymentDate.AddDays(14);
+                    return (currentDate >= nextBiWeeklyPayment, nextBiWeeklyPayment);
+
+                case PaymentPeriodEnum.Monthly:
+                    var nextMonthlyPayment = lastPaymentDate.AddMonths(1);
+                    return (currentDate >= nextMonthlyPayment, nextMonthlyPayment);
+
+                case PaymentPeriodEnum.Quarterly:
+                    var nextQuarterlyPayment = lastPaymentDate.AddMonths(3);
+                    return (currentDate >= nextQuarterlyPayment, nextQuarterlyPayment);
+
+                case PaymentPeriodEnum.Yearly:
+                    var nextYearlyPayment = lastPaymentDate.AddYears(1);
+                    return (currentDate >= nextYearlyPayment, nextYearlyPayment);
+
+                default:
+                    // If no specific period, allow payment (e.g., one-time payments)
+                    return (true, currentDate);
+            }
+        }
+
+        private int GetPeriodDays(PaymentPeriodEnum period)
+        {
+            return period switch
+            {
+                PaymentPeriodEnum.Daily => 1,
+                PaymentPeriodEnum.Weekly => 7,
+                PaymentPeriodEnum.BiWeekly => 14,
+                PaymentPeriodEnum.Monthly => 30,
+                PaymentPeriodEnum.Quarterly => 90,
+                PaymentPeriodEnum.HalfYearly => 180,
+                PaymentPeriodEnum.Yearly => 365,
+                _ => 0
+            };
+        }
+
+
 
         public async Task<BaseResponse<TraderDetailsDto>> GetTraderDetails(string traderId)
         {

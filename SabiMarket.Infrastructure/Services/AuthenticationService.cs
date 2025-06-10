@@ -510,7 +510,7 @@ namespace SabiMarket.Infrastructure.Services
                     }
                     break;
 
-                case "ASSISTCENTEROFFICER":
+                case "ASSIST_OFFICER":
                     if (user.AssistCenterOfficer != null)
                     {
                         details.Add("officerId", user.AssistCenterOfficer.Id);

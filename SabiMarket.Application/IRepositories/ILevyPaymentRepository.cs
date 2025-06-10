@@ -36,6 +36,8 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
 
     Task<IEnumerable<GoodBoyLevyPaymentResponseDto>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate);
 
+    Task<IEnumerable<LevyPayment>> GetByMarketAndOccupancy(string marketId, MarketTypeEnum traderOccupancy);
+
     Task<IEnumerable<LevyPayment>> GetLevyPaymentsByTraderIdAndDateRangeAsync(
            string traderId,
            DateTime fromDate,

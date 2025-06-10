@@ -347,6 +347,48 @@ public class ChairmanController : ControllerBase
         }
     }
 
+    [HttpPost("scan-QRcode")]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<TraderDashboardResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ScanTraderQRCode(ScanTraderQRCodeDto scanDto)
+    {
+        _logger.LogInformation($"Getting Assist Officer Scan QR code for trader {scanDto.TraderId}");
+        var response = await _chairmanService.ValidateTraderQRCode(scanDto);
+
+        if (!response.IsSuccessful)
+        {
+            _logger.LogWarning($"Failed to get scan qr code for trader as an assist officer => {scanDto.TraderId}: {response.Message}");
+            return NotFound(response);
+        }
+
+        _logger.LogInformation($"Successfully scan qr code for trader {scanDto.TraderId}");
+        return Ok(response);
+
+    }
+
+    [HttpPost("updatetraderpayment/{traderId}")]
+    [ProducesResponseType(typeof(BaseResponse<TraderQRValidationResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<TraderQRValidationResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<TraderQRValidationResponseDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ProcessTraderLevyPayment(string traderId, [FromBody] ProcessAsstOfficerLevyPaymentDto request)
+    {
+        var response = await _chairmanService.ProcessTraderLevyPayment(traderId, request);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
+
+    [HttpPut("changetradermarket")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ChangeTraderMarket(string officerId, string traderId, [FromBody] UpdateTraderMarketDto request)
+    {
+        var response = await _chairmanService.UpdateTraderMarket(officerId, traderId, request);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
     /// <summary>
     /// Get all levy payments for a trader with pagination and filtering
     /// </summary>

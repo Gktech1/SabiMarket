@@ -23,6 +23,8 @@ namespace SabiMarket.Application.Interfaces
               string searchTerm,
               PaginationFilter paginationFilter,
               bool trackChanges);
+
+        Task<AssistCenterOfficer> GetAssistantOfficerWithTraderAsync(string officerId, string traderId, bool trackChanges);
         void DeleteAssistOfficer(AssistCenterOfficer assistCenterOfficer);
     }
 }

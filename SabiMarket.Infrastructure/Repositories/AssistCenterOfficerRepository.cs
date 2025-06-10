@@ -142,6 +142,28 @@ namespace SabiMarket.Infrastructure.Repositories
             return await orderedQuery.Paginate(paginationFilter);
         }
 
+        public async Task<AssistCenterOfficer> GetAssistantOfficerWithTraderAsync(string officerId, string traderId, bool trackChanges)
+        {
+            var query = FindByCondition(a => a.Id == officerId, trackChanges);
+
+            // Include related entities
+            query = query
+                .Include(a => a.User)
+                .Include(a => a.Market)
+                .Include(a => a.LocalGovernment)
+                .Include(a => a.Chairman);
+
+            // If you have traders related to officers, include them here
+            // This assumes there's a relationship - adjust based on your actual entity relationships
+
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+
+            return await query.FirstOrDefaultAsync();
+        }
+
         public void DeleteAssistOfficer(AssistCenterOfficer assistCenterOfficer) => Delete(assistCenterOfficer);
 
     }
