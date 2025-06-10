@@ -441,6 +441,7 @@ namespace SabiMarket.Infrastructure.Services
                 case "CHAIRMAN":
                     if (user.Chairman != null)
                     {
+                        details.Add("chairmanId", user.Chairman.Id);
                         details.Add("title", user.Chairman.Title);
                         details.Add("office", user.Chairman.Office);
                         details.Add("termStart", user.Chairman.TermStart);
