@@ -8,6 +8,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
 {
     public class WaiveMarketDates : BaseEntity
     {
-        public DateTime NextWaiveMarket { get; set; }
+        public DateTime NextWaiveMarketDate { get; set; }
+        public string WaiveMarketLocation { get; set; }
     }
 }

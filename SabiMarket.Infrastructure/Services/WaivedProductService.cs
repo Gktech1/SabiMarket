@@ -498,7 +498,7 @@ public class WaivedProductService : IWaivedProductService
 
         }
     }
-    public async Task<BaseResponse<string>> CreateNextWaiveMarketDate(DateTime nextWaiveMarketDate)
+    public async Task<BaseResponse<string>> CreateNextWaiveMarketDate(NextWaiveMarketDateDto nextWaiveMarketDate)
     {
         try
         {
@@ -509,7 +509,8 @@ public class WaivedProductService : IWaivedProductService
             }
             var nextDate = new WaiveMarketDates
             {
-                NextWaiveMarket = nextWaiveMarketDate,
+                NextWaiveMarketDate = nextWaiveMarketDate.MarketDate,
+                WaiveMarketLocation = nextWaiveMarketDate.MarketVenue,
                 IsActive = true
             };
             _applicationDbContext.WaiveMarketDates.Add(nextDate);
@@ -523,22 +524,26 @@ public class WaivedProductService : IWaivedProductService
 
         }
     }
-    public async Task<BaseResponse<DateTime>> GetNextWaiveMarketDate()
+    public async Task<BaseResponse<NextWaiveMarketDateDto>> GetNextWaiveMarketDate()
     {
         try
         {
             var lastDate = await _applicationDbContext.WaiveMarketDates.Where(i => i.IsActive).OrderByDescending(x => x.CreatedAt).FirstOrDefaultAsync();
             if (lastDate == null)
             {
-                return ResponseFactory.Fail<DateTime>(new NotFoundException($"Next Waive Market not Found."), "Next Waive Market not Found.");
+                return ResponseFactory.Fail<NextWaiveMarketDateDto>(new NotFoundException($"Next Waive Market not Found."), "Next Waive Market not Found.");
             };
-
-            return ResponseFactory.Success(lastDate.NextWaiveMarket, "Success");
+            var response = new NextWaiveMarketDateDto
+            {
+                MarketDate = lastDate.NextWaiveMarketDate,
+                MarketVenue = lastDate.WaiveMarketLocation
+            };
+            return ResponseFactory.Success(response, "Success");
         }
         catch (Exception)
         {
 
-            return ResponseFactory.Fail<DateTime>("An Error Occurred. Try again later");
+            return ResponseFactory.Fail<NextWaiveMarketDateDto>("An Error Occurred. Try again later");
 
         }
     }

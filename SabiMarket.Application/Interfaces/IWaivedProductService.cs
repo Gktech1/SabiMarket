@@ -32,7 +32,7 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<string>> BlockOrUnblockVendor(string userId);
         Task<BaseResponse<List<ProductDetailsDto>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter);
         public Task<BaseResponse<int>> GetUrgentPurchaseWaivedProductCount();
-        Task<BaseResponse<DateTime>> GetNextWaiveMarketDate();
-        Task<BaseResponse<string>> CreateNextWaiveMarketDate(DateTime nextWaiveMarketDate);
+        Task<BaseResponse<NextWaiveMarketDateDto>> GetNextWaiveMarketDate();
+        Task<BaseResponse<string>> CreateNextWaiveMarketDate(NextWaiveMarketDateDto nextWaiveMarketDate);
     }
 }

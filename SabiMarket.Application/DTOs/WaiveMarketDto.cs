@@ -16,7 +16,6 @@ namespace SabiMarket.Application.DTOs
     }
     public class CreateCustomerComplaint
     {
-        public string complaintId { get; set; }
         public string vendorId { get; set; }
         public string comPlaintMsg { get; set; }
         public string imageUrl { get; set; }
@@ -35,5 +34,9 @@ namespace SabiMarket.Application.DTOs
         public string id { get; set; }
     }
 
-
+    public class NextWaiveMarketDateDto
+    {
+        public DateTime MarketDate { get; set; }
+        public string MarketVenue { get; set; }
+    }
 }
