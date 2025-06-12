@@ -1,11 +1,14 @@
 ﻿using SabiMarket.Application.DTOs;
 using SabiMarket.Application.IRepositories;
+using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.MarketParticipants;
+using SabiMarket.Domain.Enum;
 using System.Linq.Expressions;
 
 public interface ITraderRepository : IGeneralRepository<Trader>
 {
     void AddTrader(Trader trader);
+    void AddBuildingTypeTrader(TraderBuildingType trader);
     void UpdateTrader(Trader trader);
     Task<Trader> GetByIdWithInclude(string traderId,
             params Expression<Func<Trader, object>>[] includes);
@@ -18,4 +21,6 @@ public interface ITraderRepository : IGeneralRepository<Trader>
     Task<IEnumerable<Trader>> SearchTradersByQRCodeAsync(string qrCode, string goodBoyId);
     Task<int> GetTraderCountByGoodBoyIdAsync(string goodBoyId);
     void DeleteTrader(Trader trader);
+    Task<Trader> GetTraderByIdAsync(string traderId, bool trackChanges);
+    Task<int> GetDistinctTraderBuildingTypesCount(string traderId);
 }

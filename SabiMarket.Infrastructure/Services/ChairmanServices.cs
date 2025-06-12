@@ -2253,6 +2253,8 @@ namespace SabiMarket.Infrastructure.Services
             var correlationId = Guid.NewGuid().ToString();
             var userId = _currentUser.GetUserId();
 
+            var response = new TraderResponseDto();
+
             try
             {
                 await CreateAuditLog(
@@ -2275,6 +2277,27 @@ namespace SabiMarket.Infrastructure.Services
                         "Validation failed");
                 }
 
+                // Validate building types
+                if (!request.BuildingTypes.Any())
+                {
+                    return ResponseFactory.Fail<TraderResponseDto>(
+                        new BadRequestException("At least one building type must be selected"),
+                        "Building types required");
+                }
+
+                // Check for duplicate building types
+                var duplicateBuildingTypes = request.BuildingTypes
+                    .GroupBy(bt => bt.BuildingType)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key);
+
+                if (duplicateBuildingTypes.Any())
+                {
+                    return ResponseFactory.Fail<TraderResponseDto>(
+                        new BadRequestException($"Duplicate building types found: {string.Join(", ", duplicateBuildingTypes)}"),
+                        "Duplicate building types not allowed");
+                }
+
                 // Get Assistant Officer details
                 var assistantOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByUserIdAsync(userId, false);
                 if (assistantOfficer == null)
@@ -2288,31 +2311,6 @@ namespace SabiMarket.Infrastructure.Services
                         new BadRequestException("Assistant Officer not found"),
                         "Assistant Officer not found");
                 }
-
-                // Verify the officer is authorized to manage this market
-               /* bool isAuthorized = false;
-                if (assistantOfficer.MarketAssignments != null && assistantOfficer.MarketAssignments.Any())
-                {
-                    isAuthorized = assistantOfficer.MarketAssignments
-                        .Any(a => a.MarketId == request.MarketId);
-                }
-                else if (assistantOfficer.MarketId == request.MarketId)
-                {
-                    // For backward compatibility
-                    isAuthorized = true;
-                }
-
-                if (!isAuthorized)
-                {
-                    await CreateAuditLog(
-                        "Creation Failed",
-                        $"CorrelationId: {correlationId} - Officer not authorized for this market",
-                        "Trader Management"
-                    );
-                    return ResponseFactory.Fail<TraderResponseDto>(
-                        new UnauthorizedAccessException("You are not authorized to create traders in this market"),
-                        "Unauthorized access");
-                }*/
 
                 // Check if market exists
                 var market = await _repository.MarketRepository.GetMarketByIdAsync(request.MarketId, false);
@@ -2342,23 +2340,6 @@ namespace SabiMarket.Infrastructure.Services
                         "Caretaker not found");
                 }
 
-                // Check if section exists if provided
-                /*   if (!string.IsNullOrEmpty(request.SectionId))
-                   {
-                       var section = await _repository.MarketSectionRepository.GetMarketSectionByIdAsync(request.SectionId, false);
-                       if (section == null)
-                       {
-                           await CreateAuditLog(
-                               "Creation Failed",
-                               $"CorrelationId: {correlationId} - Market section not found",
-                               "Trader Management"
-                           );
-                           return ResponseFactory.Fail<TraderResponseDto>(
-                               new BadRequestException("Market section not found"),
-                               "Market section not found");
-                       }
-                   }*/
-
                 // Create ApplicationUser
                 var nameParts = request.TraderName.Split(' ');
                 var firstName = nameParts[0];
@@ -2368,7 +2349,7 @@ namespace SabiMarket.Infrastructure.Services
                 var user = new ApplicationUser
                 {
                     Id = Guid.NewGuid().ToString(),
-                    UserName = request.PhoneNumber, // Use phone number as username if email not provided
+                    UserName = request.PhoneNumber,
                     Email = request.Email ?? $"{request.PhoneNumber}@placeholder.com",
                     PhoneNumber = request.PhoneNumber,
                     FirstName = firstName,
@@ -2398,7 +2379,6 @@ namespace SabiMarket.Infrastructure.Services
                 var roleResult = await _userManager.AddToRoleAsync(user, UserRoles.Trader);
                 if (!roleResult.Succeeded)
                 {
-                    // Rollback user creation if role assignment fails
                     await _userManager.DeleteAsync(user);
                     await CreateAuditLog(
                         "Creation Failed",
@@ -2416,6 +2396,18 @@ namespace SabiMarket.Infrastructure.Services
                 // Generate QR Code
                 var qrCode = QRCodeHelper.GenerateQRCode(tin);
 
+                // Get levy setup for payment frequency
+                var getAmountFrequency = await _repository.LevyPaymentRepository.GetLevySetupByPaymentFrequency(request.PaymentFrequency);
+                if (getAmountFrequency == null)
+                {
+                    await _userManager.DeleteAsync(user);
+                    return ResponseFactory.Fail<TraderResponseDto>(
+                        new UnauthorizedException("Payment frequency not found"),
+                        "Payment frequency not found");
+                }
+
+                var totalAmount = getAmountFrequency.Amount * request.BuildingTypes.Count;
+
                 // Create Trader entity
                 var trader = new Trader
                 {
@@ -2424,9 +2416,12 @@ namespace SabiMarket.Infrastructure.Services
                     MarketId = request.MarketId,
                     SectionId = request.SectionId,
                     CaretakerId = caretaker.Id,
+                    Amount = totalAmount,
+                    PaymentFrequency = request.PaymentFrequency,
                     TIN = tin,
                     BusinessName = request.BusinessName,
-                    BusinessType = request.BusinessType,
+                    BusinessType = string.Join(", ", request.BuildingTypes.Select(bt => bt.BuildingType.ToString())), // Add this line
+                    MarketName = market.MarketName,
                     TraderName = request.TraderName,
                     QRCode = qrCode,
                     TraderOccupancy = request.TraderOccupancy,
@@ -2434,20 +2429,43 @@ namespace SabiMarket.Infrastructure.Services
                     CreatedAt = DateTime.UtcNow
                 };
 
+                // Add trader first
                 _repository.TraderRepository.AddTrader(trader);
+
+                // Save trader first to generate the ID
+                await _repository.SaveChangesAsync();
+
+                // Now create building types with the saved trader ID
+                var traderBuildingTypes = request.BuildingTypes.Select(bt => new TraderBuildingType
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    TraderId = trader.Id,
+                    BuildingType = bt.BuildingType,
+                    NumberOfBuildingTypes = bt.NumberOfBuildingTypes,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                }).ToList();
+
+                // Add building types
+                foreach (var buildingType in traderBuildingTypes)
+                {
+                    _repository.TraderRepository.AddBuildingTypeTrader(buildingType);
+                }
+
+                // Save building types
                 await _repository.SaveChangesAsync();
 
                 // Get full trader details for response
                 var createdTrader = await _repository.TraderRepository.GetTraderById(trader.Id, false);
 
                 // Map response
-                var response = _mapper.Map<TraderResponseDto>(createdTrader);
+                //response = _mapper.Map<TraderResponseDto>(createdTrader);
                 response.DefaultPassword = defaultPassword;
                 response.TraderName = request.TraderName;
                 response.Email = user.Email;
                 response.PhoneNumber = user.PhoneNumber;
                 response.Gender = user.Gender;
-                response.ProfileImageUrl = user.ProfileImageUrl;
+                //response.ProfileImageUrl = user.ProfileImageUrl;
 
                 await CreateAuditLog(
                     "Trader Created",
@@ -2470,6 +2488,489 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+        /*  public async Task<BaseResponse<TraderResponseDto>> CreateTrader(CreateTraderRequestDto request)
+          {
+              var correlationId = Guid.NewGuid().ToString();
+              var userId = _currentUser.GetUserId();
+
+              try
+              {
+                  await CreateAuditLog(
+                      "Trader Creation",
+                      $"CorrelationId: {correlationId} - Creating new trader: {request.BusinessName}",
+                      "Trader Management"
+                  );
+
+                  // Validate request
+                  var validationResult = await _createTraderValidator.ValidateAsync(request);
+                  if (!validationResult.IsValid)
+                  {
+                      await CreateAuditLog(
+                          "Creation Failed",
+                          $"CorrelationId: {correlationId} - Validation failed",
+                          "Trader Management"
+                      );
+                      return ResponseFactory.Fail<TraderResponseDto>(
+                          new ValidationException(validationResult.Errors),
+                          "Validation failed");
+                  }
+
+                  // Validate building types
+                  if (!request.BuildingTypes.Any())
+                  {
+                      return ResponseFactory.Fail<TraderResponseDto>(
+                          new BadRequestException("At least one building type must be selected"),
+                          "Building types required");
+                  }
+
+                  // Check for duplicate building types
+                  var duplicateBuildingTypes = request.BuildingTypes
+                      .GroupBy(bt => bt.BuildingType)
+                      .Where(g => g.Count() > 1)
+                      .Select(g => g.Key);
+
+                  if (duplicateBuildingTypes.Any())
+                  {
+                      return ResponseFactory.Fail<TraderResponseDto>(
+                          new BadRequestException($"Duplicate building types found: {string.Join(", ", duplicateBuildingTypes)}"),
+                          "Duplicate building types not allowed");
+                  }
+
+                  // Get Assistant Officer details
+                  var assistantOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByUserIdAsync(userId, false);
+                  if (assistantOfficer == null)
+                  {
+                      await CreateAuditLog(
+                          "Creation Failed",
+                          $"CorrelationId: {correlationId} - Assistant Officer not found",
+                          "Trader Management"
+                      );
+                      return ResponseFactory.Fail<TraderResponseDto>(
+                          new BadRequestException("Assistant Officer not found"),
+                          "Assistant Officer not found");
+                  }
+
+                  // Check if market exists
+                  var market = await _repository.MarketRepository.GetMarketByIdAsync(request.MarketId, false);
+                  if (market == null)
+                  {
+                      await CreateAuditLog(
+                          "Creation Failed",
+                          $"CorrelationId: {correlationId} - Market not found",
+                          "Trader Management"
+                      );
+                      return ResponseFactory.Fail<TraderResponseDto>(
+                          new BadRequestException("Market not found"),
+                          "Market not found");
+                  }
+
+                  // Check if caretaker exists
+                  var caretaker = await _repository.CaretakerRepository.GetCaretakerByMarketId(request.MarketId, false);
+                  if (caretaker == null)
+                  {
+                      await CreateAuditLog(
+                          "Creation Failed",
+                          $"CorrelationId: {correlationId} - Caretaker not found",
+                          "Trader Management"
+                      );
+                      return ResponseFactory.Fail<TraderResponseDto>(
+                          new BadRequestException("Caretaker not found"),
+                          "Caretaker not found");
+                  }
+
+                  // Create ApplicationUser
+                  var nameParts = request.TraderName.Split(' ');
+                  var firstName = nameParts[0];
+                  var lastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : "";
+
+                  var defaultPassword = GenerateDefaultPassword(request.TraderName);
+                  var user = new ApplicationUser
+                  {
+                      Id = Guid.NewGuid().ToString(),
+                      UserName = request.PhoneNumber,
+                      Email = request.Email ?? $"{request.PhoneNumber}@placeholder.com",
+                      PhoneNumber = request.PhoneNumber,
+                      FirstName = firstName,
+                      LastName = lastName,
+                      EmailConfirmed = true,
+                      IsActive = true,
+                      CreatedAt = DateTime.UtcNow,
+                      Gender = request.Gender,
+                      ProfileImageUrl = request.ProfileImage,
+                      LocalGovernmentId = market.LocalGovernmentId
+                  };
+
+                  var createUserResult = await _userManager.CreateAsync(user, defaultPassword);
+                  if (!createUserResult.Succeeded)
+                  {
+                      await CreateAuditLog(
+                          "Creation Failed",
+                          $"CorrelationId: {correlationId} - Failed to create user account",
+                          "Trader Management"
+                      );
+                      return ResponseFactory.Fail<TraderResponseDto>(
+                          new Exception(string.Join(", ", createUserResult.Errors.Select(e => e.Description))),
+                          "Failed to create user account");
+                  }
+
+                  // Assign role
+                  var roleResult = await _userManager.AddToRoleAsync(user, UserRoles.Trader);
+                  if (!roleResult.Succeeded)
+                  {
+                      await _userManager.DeleteAsync(user);
+                      await CreateAuditLog(
+                          "Creation Failed",
+                          $"CorrelationId: {correlationId} - Failed to assign trader role",
+                          "Trader Management"
+                      );
+                      return ResponseFactory.Fail<TraderResponseDto>(
+                          new Exception("Failed to assign trader role"),
+                          "Role assignment failed");
+                  }
+
+                  // Generate TIN if not provided
+                  var tin = GenerateTIN(market.Id);
+
+                  // Generate QR Code
+                  var qrCode = QRCodeHelper.GenerateQRCode(tin);
+
+                  // Get levy setup for payment frequency
+                  var getAmountFrequency = await _repository.LevyPaymentRepository.GetLevySetupByPaymentFrequency(request.PaymentFrequency);
+                  if (getAmountFrequency == null)
+                  {
+                      await _userManager.DeleteAsync(user);
+                      return ResponseFactory.Fail<TraderResponseDto>(
+                          new UnauthorizedException("Payment frequency not found"),
+                          "Payment frequency not found");
+                  }
+
+                  // Create Trader entity
+                  var trader = new Trader
+                  {
+                      Id = Guid.NewGuid().ToString(),
+                      UserId = user.Id,
+                      MarketId = request.MarketId,
+                      SectionId = request.SectionId,
+                      CaretakerId = caretaker.Id,
+                      Amount = request.Amount ?? getAmountFrequency?.Amount,
+                      PaymentFrequency = request.PaymentFrequency,
+                      TIN = tin,
+                      BusinessName = request.BusinessName,
+                      MarketName = market.MarketName,
+                      TraderName = request.TraderName,
+                      QRCode = qrCode,
+                      TraderOccupancy = request.TraderOccupancy,
+                      IsActive = true,
+                      CreatedAt = DateTime.UtcNow
+                  };
+
+                  // Create building types for the trader
+                  var traderBuildingTypes = request.BuildingTypes.Select(bt => new TraderBuildingType
+                  {
+                      Id = Guid.NewGuid().ToString(),
+                      TraderId = trader.Id,
+                      BuildingType = bt.BuildingType,
+                      NumberOfBuildingTypes = bt.NumberOfBuildingTypes,
+                      IsActive = true,
+                      CreatedAt = DateTime.UtcNow
+                  }).ToList();
+
+                  // Add to repository
+                  _repository.TraderRepository.AddTrader(trader);
+
+                  // Add building types
+                  foreach (var buildingType in traderBuildingTypes)
+                  {
+                      _repository.TraderRepository.AddBuildingTypeTrader(buildingType);
+                  }
+
+                  await _repository.SaveChangesAsync();
+
+                  // Get full trader details for response
+                  var createdTrader = await _repository.TraderRepository.GetTraderById(trader.Id, false);
+
+                  // Map response
+                  var response = _mapper.Map<TraderResponseDto>(createdTrader);
+                  response.DefaultPassword = defaultPassword;
+                  response.TraderName = request.TraderName;
+                  response.Email = user.Email;
+                  response.PhoneNumber = user.PhoneNumber;
+                  response.Gender = user.Gender;
+                  response.ProfileImageUrl = user.ProfileImageUrl;
+
+                *//*  // Map building types to response
+                  response.BuildingTypes = traderBuildingTypes.Select(bt => new TraderBuildingTypeDto
+                  {
+                      BuildingType = bt.BuildingType,
+                      NumberOfBuildingTypes = bt.NumberOfBuildingTypes
+                  }).ToList();*//*
+
+                  await CreateAuditLog(
+                      "Trader Created",
+                      $"CorrelationId: {correlationId} - Trader created successfully with ID: {trader.Id}",
+                      "Trader Management"
+                  );
+
+                  return ResponseFactory.Success(response,
+                      "Trader created successfully. Please note down the default password.");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogError(ex, "Error creating trader");
+                  await CreateAuditLog(
+                      "Creation Failed",
+                      $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                      "Trader Management"
+                  );
+                  return ResponseFactory.Fail<TraderResponseDto>(ex, "An unexpected error occurred");
+              }
+          }
+  */
+        /*    public async Task<BaseResponse<TraderResponseDto>> CreateTrader(CreateTraderRequestDto request)
+            {
+                var correlationId = Guid.NewGuid().ToString();
+                var userId = _currentUser.GetUserId();
+
+                try
+                {
+                    await CreateAuditLog(
+                        "Trader Creation",
+                        $"CorrelationId: {correlationId} - Creating new trader: {request.BusinessName}",
+                        "Trader Management"
+                    );
+
+                    // Validate request
+                    var validationResult = await _createTraderValidator.ValidateAsync(request);
+                    if (!validationResult.IsValid)
+                    {
+                        await CreateAuditLog(
+                            "Creation Failed",
+                            $"CorrelationId: {correlationId} - Validation failed",
+                            "Trader Management"
+                        );
+                        return ResponseFactory.Fail<TraderResponseDto>(
+                            new ValidationException(validationResult.Errors),
+                            "Validation failed");
+                    }
+
+                    // Get Assistant Officer details
+                    var assistantOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByUserIdAsync(userId, false);
+                    if (assistantOfficer == null)
+                    {
+                        await CreateAuditLog(
+                            "Creation Failed",
+                            $"CorrelationId: {correlationId} - Assistant Officer not found",
+                            "Trader Management"
+                        );
+                        return ResponseFactory.Fail<TraderResponseDto>(
+                            new BadRequestException("Assistant Officer not found"),
+                            "Assistant Officer not found");
+                    }
+
+                    // Verify the officer is authorized to manage this market
+                   *//* bool isAuthorized = false;
+                    if (assistantOfficer.MarketAssignments != null && assistantOfficer.MarketAssignments.Any())
+                    {
+                        isAuthorized = assistantOfficer.MarketAssignments
+                            .Any(a => a.MarketId == request.MarketId);
+                    }
+                    else if (assistantOfficer.MarketId == request.MarketId)
+                    {
+                        // For backward compatibility
+                        isAuthorized = true;
+                    }
+
+                    if (!isAuthorized)
+                    {
+                        await CreateAuditLog(
+                            "Creation Failed",
+                            $"CorrelationId: {correlationId} - Officer not authorized for this market",
+                            "Trader Management"
+                        );
+                        return ResponseFactory.Fail<TraderResponseDto>(
+                            new UnauthorizedAccessException("You are not authorized to create traders in this market"),
+                            "Unauthorized access");
+                    }*//*
+
+                    // Check if market exists
+                    var market = await _repository.MarketRepository.GetMarketByIdAsync(request.MarketId, false);
+                    if (market == null)
+                    {
+                        await CreateAuditLog(
+                            "Creation Failed",
+                            $"CorrelationId: {correlationId} - Market not found",
+                            "Trader Management"
+                        );
+                        return ResponseFactory.Fail<TraderResponseDto>(
+                            new BadRequestException("Market not found"),
+                            "Market not found");
+                    }
+
+                    // Check if caretaker exists
+                    var caretaker = await _repository.CaretakerRepository.GetCaretakerByMarketId(request.MarketId, false);
+                    if (caretaker == null)
+                    {
+                        await CreateAuditLog(
+                            "Creation Failed",
+                            $"CorrelationId: {correlationId} - Caretaker not found",
+                            "Trader Management"
+                        );
+                        return ResponseFactory.Fail<TraderResponseDto>(
+                            new BadRequestException("Caretaker not found"),
+                            "Caretaker not found");
+                    }
+
+                    // Check if section exists if provided
+                    *//*   if (!string.IsNullOrEmpty(request.SectionId))
+                       {
+                           var section = await _repository.MarketSectionRepository.GetMarketSectionByIdAsync(request.SectionId, false);
+                           if (section == null)
+                           {
+                               await CreateAuditLog(
+                                   "Creation Failed",
+                                   $"CorrelationId: {correlationId} - Market section not found",
+                                   "Trader Management"
+                               );
+                               return ResponseFactory.Fail<TraderResponseDto>(
+                                   new BadRequestException("Market section not found"),
+                                   "Market section not found");
+                           }
+                       }*//*
+
+                    // Create ApplicationUser
+                    var nameParts = request.TraderName.Split(' ');
+                    var firstName = nameParts[0];
+                    var lastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : "";
+
+                    var defaultPassword = GenerateDefaultPassword(request.TraderName);
+                    var user = new ApplicationUser
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        UserName = request.PhoneNumber, // Use phone number as username if email not provided
+                        Email = request.Email ?? $"{request.PhoneNumber}@placeholder.com",
+                        PhoneNumber = request.PhoneNumber,
+                        FirstName = firstName,
+                        LastName = lastName,
+                        EmailConfirmed = true,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        Gender = request.Gender,
+                        ProfileImageUrl = request.ProfileImage,
+                        LocalGovernmentId = market.LocalGovernmentId
+                    };
+
+                    var createUserResult = await _userManager.CreateAsync(user, defaultPassword);
+                    if (!createUserResult.Succeeded)
+                    {
+                        await CreateAuditLog(
+                            "Creation Failed",
+                            $"CorrelationId: {correlationId} - Failed to create user account",
+                            "Trader Management"
+                        );
+                        return ResponseFactory.Fail<TraderResponseDto>(
+                            new Exception(string.Join(", ", createUserResult.Errors.Select(e => e.Description))),
+                            "Failed to create user account");
+                    }
+
+                    // Assign role
+                    var roleResult = await _userManager.AddToRoleAsync(user, UserRoles.Trader);
+                    if (!roleResult.Succeeded)
+                    {
+                        // Rollback user creation if role assignment fails
+                        await _userManager.DeleteAsync(user);
+                        await CreateAuditLog(
+                            "Creation Failed",
+                            $"CorrelationId: {correlationId} - Failed to assign trader role",
+                            "Trader Management"
+                        );
+                        return ResponseFactory.Fail<TraderResponseDto>(
+                            new Exception("Failed to assign trader role"),
+                            "Role assignment failed");
+                    }
+
+                    // Generate TIN if not provided
+                    var tin = GenerateTIN(market.Id);
+
+                    // Generate QR Code
+                    var qrCode = QRCodeHelper.GenerateQRCode(tin);
+
+                    var getAmountFrequency = await _repository.LevyPaymentRepository.GetLevySetupByPaymentFrequency(request.PaymentFrequency);
+                    if (getAmountFrequency == null)
+                    {
+                        return ResponseFactory.Fail<TraderResponseDto>(
+                            new UnauthorizedException("Payment frequency not found"),
+                            "Payment frequency not found");
+                    }
+
+                    // Get market details
+                    var marketDetail = await _repository.MarketRepository
+                        .GetMarketByIdAsync(request.MarketId, false);
+
+                    if (marketDetail == null)
+                    {
+                        return ResponseFactory.Fail<TraderResponseDto>(
+                            new UnauthorizedException("Market not found"),
+                            "Market not found");
+                    }
+
+                    // Create Trader entity
+                    var trader = new Trader
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        UserId = user.Id,
+                        MarketId = request.MarketId,
+                        SectionId = request.SectionId,
+                        CaretakerId = caretaker.Id,
+                        Amount = getAmountFrequency?.Amount,
+                        PaymentFrequency = request.PaymentFrequency,
+                        TIN = tin,
+                        BusinessName = request.BusinessName,
+                        NumberOfBuildingTypes = request.NumberOfBuldingType,
+                        MarketName = marketDetail.MarketName,
+                        BusinessType = request.BusinessType,
+                        TraderName = request.TraderName,
+                        QRCode = qrCode,
+                        TraderOccupancy = request.TraderOccupancy,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _repository.TraderRepository.AddTrader(trader);
+                    await _repository.SaveChangesAsync();
+
+                    // Get full trader details for response
+                    var createdTrader = await _repository.TraderRepository.GetTraderById(trader.Id, false);
+
+                    // Map response
+                    var response = _mapper.Map<TraderResponseDto>(createdTrader);
+                    response.DefaultPassword = defaultPassword;
+                    response.TraderName = request.TraderName;
+                    response.Email = user.Email;
+                    response.PhoneNumber = user.PhoneNumber;
+                    response.Gender = user.Gender;
+                    response.ProfileImageUrl = user.ProfileImageUrl;
+
+                    await CreateAuditLog(
+                        "Trader Created",
+                        $"CorrelationId: {correlationId} - Trader created successfully with ID: {trader.Id}",
+                        "Trader Management"
+                    );
+
+                    return ResponseFactory.Success(response,
+                        "Trader created successfully. Please note down the default password.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error creating trader");
+                    await CreateAuditLog(
+                        "Creation Failed",
+                        $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                        "Trader Management"
+                    );
+                    return ResponseFactory.Fail<TraderResponseDto>(ex, "An unexpected error occurred");
+                }
+            }
+    */
         private string GenerateTIN(string marketId)
         {
             // Get location codes
@@ -4930,16 +5431,16 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto)
+    /*    public async Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto)
         {
             try
             {
                 // Validate QR code format (OSH/LAG/23401)
-                /*if (!scanDto.QRCodeData.StartsWith("OSH/LAG/"))
+                *//*if (!scanDto.QRCodeData.StartsWith("OSH/LAG/"))
                 {
                     return ResponseFactory.Fail<TraderQRValidationResponseDto>(
                         "Invalid trader QR code");
-                }*/
+                }*//*
 
                 if (string.IsNullOrEmpty(scanDto?.TraderId))
                 {
@@ -5014,9 +5515,9 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Get the most recent payment for this trader
-                /*var latestPayment = trader.LevyPayments
+                *//*var latestPayment = trader.LevyPayments
                     .OrderByDescending(p => p.PaymentDate)
-                .FirstOrDefault();*/
+                .FirstOrDefault();*//*
 
                 // Check if scanning user is authorized (must be a GoodBoy)
                 var marketdetail = await _repository.MarketRepository.GetMarketByIdAsync(scanDto?.MarketId, false);
@@ -5038,10 +5539,10 @@ namespace SabiMarket.Infrastructure.Services
                     TraderOccupancy = trader.TraderOccupancy.ToString(),
                     TraderIdentityNumber = trader.TIN, //$"OSH/LAG/{trader.Id}",
                     PaymentFrequency = paymentFrequency,
-                    Amount = latestSetup.Amount,
+                    TotalAmount = latestSetup.Amount,
                     MarketId = trader.MarketId,
                     MarketName = marketdetail?.MarketName ?? string.Empty,
-                    PayementPeriod = latestSetup.Period,
+                    PaymentPeriod = latestSetup.Period,
                     LastPaymentDate = latestSetup?.PaymentDate,
                     UpdatePaymentUrl = $"{updatepaymenturl}api/Chairman/updatetraderpayment/{scanDto?.TraderId}"
                 };
@@ -5059,8 +5560,7 @@ namespace SabiMarket.Infrastructure.Services
                 _logger.LogError(ex, "Error validating trader QR code");
                 return ResponseFactory.Fail<TraderQRValidationResponseDto>(ex, "An unexpected error occurred");
             }
-        }
-
+        } */
         public async Task<BaseResponse<bool>> ProcessTraderLevyPayment(string traderId, ProcessAsstOfficerLevyPaymentDto paymentDto)
         {
             var userId = _currentUser.GetUserId();
@@ -5159,6 +5659,314 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while processing payment");
             }
         }
+
+        public async Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto)
+        {
+            try
+            {
+                // Validate required fields
+                if (string.IsNullOrEmpty(scanDto?.TraderId))
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                       "TraderId is required");
+                }
+
+                if (string.IsNullOrEmpty(scanDto?.ScannedByUserId))
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                       "ScannedByUserId is required");
+                }
+
+                // Get the trader by ID with related data
+                var trader = await _repository.TraderRepository.GetTraderById(
+                    scanDto.TraderId, trackChanges: false);
+
+                if (trader == null)
+                {
+                    await CreateAuditLog(
+                        "QR Code Validation Failed",
+                        $"Invalid trader ID from QR Code: {scanDto.TraderId}",
+                        "Payment Processing"
+                    );
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new NotFoundException("Trader not found"),
+                        "Invalid trader QR code");
+                }
+
+                // Validate market consistency
+                if (!string.IsNullOrEmpty(scanDto.MarketId) && scanDto.MarketId != trader.MarketId)
+                {
+                    await CreateAuditLog(
+                        "QR Code Validation Failed",
+                        $"Market ID mismatch. Expected: {trader.MarketId}, Provided: {scanDto.MarketId}",
+                        "Payment Processing"
+                    );
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new NotFoundException("Market not found for the trader"),
+                        "Invalid trader QR code");
+                }
+
+                // Check if scanning user is authorized (must be a GoodBoy/Assistant Officer)
+                var assistOfficer = await _repository.AssistCenterOfficerRepository
+                    .GetAssistantOfficerByUserIdAsync(scanDto.ScannedByUserId, false);
+
+                if (assistOfficer == null)
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new UnauthorizedException("Unauthorized scan attempt"),
+                        "Unauthorized to scan trader QR codes");
+                }
+
+                // Get market details
+                var marketDetail = await _repository.MarketRepository
+                    .GetMarketByIdAsync(trader.MarketId, false);
+
+                if (marketDetail == null)
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new UnauthorizedException("Market not found"),
+                        "Market not found");
+                }
+
+                // Get levy setup configuration using LevyPayment records marked as setup
+                var levySetup = await _repository.LevyPaymentRepository
+                    .GetActiveLevySetupByMarketAndOccupancy(trader.MarketId, trader.TraderOccupancy);
+
+                if (levySetup == null)
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new BadRequestException("Levy setup not configured"),
+                        "Levy setup not configured for this market and occupancy type");
+                }
+
+                // Get trader's actual payment history (excluding setup records)
+                var paymentHistory = await _repository.LevyPaymentRepository
+                    .GetTraderPaymentHistory(trader.Id, excludeSetupRecords: true);
+
+                // Calculate levy breakdown based on occupancy type and payment history
+                var levyBreakdown = await CalculateLevyBreakdown(trader, levySetup, paymentHistory);
+
+                // Get the most recent actual payment (using correct enum values)
+                var lastPayment = paymentHistory
+                    .Where(p => p.PaymentStatus == PaymentStatusEnum.Paid)
+                    .OrderByDescending(p => p.PaymentDate)
+                    .FirstOrDefault();
+
+                // Count unique building/occupancy types for this trader
+                var buildingTypesCount = await GetTraderBuildingTypesCountWithBusinessLogic(trader.Id);
+
+                // Format payment frequency
+                var paymentFrequency = FormatPaymentFrequency(levySetup.Period, levySetup.Amount);
+
+                // Build update payment URL
+                var updatePaymentUrl = _configuration.GetSection("ProcessPaymentUrl").Value;
+                var fullUpdateUrl = $"{updatePaymentUrl}api/Chairman/updatetraderpayment/{trader.Id}";
+
+                // Create response
+                var validationResponse = new TraderQRValidationResponseDto
+                {
+                    TraderId = trader.Id,
+                    TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
+                    TraderOccupancy = FormatOccupancyType(trader.TraderOccupancy),
+                    TraderIdentityNumber = trader.TIN,
+                    PaymentFrequency = paymentFrequency,
+                    TotalAmount = levyBreakdown.TotalAmount,
+                    MarketId = trader.MarketId,
+                    MarketName = marketDetail.MarketName,
+                    PaymentPeriod = levySetup.Period,
+                    LastPaymentDate = lastPayment?.PaymentDate,
+                    UpdatePaymentUrl = fullUpdateUrl,
+                    NumberOfBuildingTypes = buildingTypesCount,
+                    LevyBreakdown = levyBreakdown,
+                    BusinessName = trader.BusinessName,
+                    OccupancyType = trader.TraderOccupancy
+                };
+
+                await CreateAuditLog(
+                    "Trader QR Code Scanned",
+                    $"Trader QR Code scanned by Assistant Officer: {assistOfficer.Id} for Trader: {trader.Id}",
+                    "Payment Processing"
+                );
+
+                return ResponseFactory.Success(validationResponse, "Trader QR code validated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating trader QR code for TraderId: {TraderId}", scanDto?.TraderId);
+                return ResponseFactory.Fail<TraderQRValidationResponseDto>(ex, "An unexpected error occurred during QR code validation");
+            }
+        }
+
+
+        // Helper methods
+
+        private async Task<int> GetTraderBuildingTypesCount(string traderId)
+        {
+            // Get the actual count from database
+            var count = await _repository.TraderRepository.GetDistinctTraderBuildingTypesCount(traderId);
+            return count;
+        }
+
+        // Alternative: If you want to handle null/zero cases explicitly
+        private async Task<int> GetTraderBuildingTypesCountWithValidation(string traderId)
+        {
+            if (string.IsNullOrEmpty(traderId))
+                return 0;
+
+            // Get the actual count from database
+            var count = await _repository.TraderRepository.GetDistinctTraderBuildingTypesCount(traderId);
+            return count >= 0 ? count : 0;
+        }
+
+        // If you need to access the trader's occupancy type for business logic
+        private async Task<int> GetTraderBuildingTypesCountWithBusinessLogic(string traderId)
+        {
+            if (string.IsNullOrEmpty(traderId))
+                return 0;
+
+            // Get the actual count from database
+            var count = await _repository.TraderRepository.GetDistinctTraderBuildingTypesCount(traderId);
+
+            // If no building types found, you might want to check the trader's primary occupancy
+            if (count == 0)
+            {
+                var trader = await _repository.TraderRepository.GetTraderById(traderId, false);
+                if (trader != null)
+                {
+                    // If trader exists but has no specific building types, 
+                    // you could return 1 based on their primary occupancy type
+                    switch (trader.TraderOccupancy)
+                    {
+                        case MarketTypeEnum.Shop:
+                        case MarketTypeEnum.Kiosk:
+                        case MarketTypeEnum.OpenSpace:
+                        case MarketTypeEnum.WareHouse:
+                            return 1; // Default to 1 if trader exists but no building types recorded
+                        default:
+                            return 0;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+
+        private string FormatPaymentFrequency(PaymentPeriodEnum period, decimal amount)
+        {
+            var days = (int)period; // Since your enum values are the actual days
+            return $"{days} days - ₦{amount:N0}";
+        }
+
+        private string FormatOccupancyType(MarketTypeEnum occupancyType)
+        {
+            return occupancyType switch
+            {
+                MarketTypeEnum.OpenSpace => "Open Space",
+                MarketTypeEnum.Kiosk => "Kiosk",
+                MarketTypeEnum.Shop => "Shop",
+                MarketTypeEnum.WareHouse => "WareHouse",
+                _ => occupancyType.ToString()
+            };
+        }
+        private async Task<LevyBreakdownDto> CalculateLevyBreakdown(
+            Trader trader,
+            LevyPayment levySetup,
+            IEnumerable<LevyPayment> paymentHistory)
+        {
+            var breakdown = new LevyBreakdownDto();
+
+            // Calculate based on trader's occupancy type
+            switch (trader.TraderOccupancy)
+            {
+                case MarketTypeEnum.OpenSpace:
+                    breakdown.CurrentOpenSpaceLevy = levySetup.Amount;
+                    breakdown.TotalUnpaidOpenSpaceLevy = await CalculateUnpaidAmount(
+                        trader.Id, MarketTypeEnum.OpenSpace, paymentHistory);
+                    break;
+
+                case MarketTypeEnum.Kiosk:
+                    breakdown.CurrentKioskLevy = levySetup.Amount;
+                    breakdown.TotalUnpaidKioskLevy = await CalculateUnpaidAmount(
+                        trader.Id, MarketTypeEnum.Kiosk, paymentHistory);
+                    break;
+
+                case MarketTypeEnum.Shop:
+                    breakdown.CurrentShopLevy = levySetup.Amount;
+                    breakdown.TotalUnpaidShopLevy = await CalculateUnpaidAmount(
+                        trader.Id, MarketTypeEnum.Shop, paymentHistory);
+                    break;
+
+                case MarketTypeEnum.WareHouse:
+                    breakdown.CurrentWareHouseLevy = levySetup.Amount;
+                    breakdown.TotalUnpaidwareHouseLevy = await CalculateUnpaidAmount(
+                        trader.Id, MarketTypeEnum.WareHouse, paymentHistory);
+                    break;
+            }
+
+            breakdown.TotalAmount = breakdown.CurrentOpenSpaceLevy + breakdown.CurrentKioskLevy +
+                                    breakdown.CurrentShopLevy + breakdown.CurrentWareHouseLevy + 
+                                    breakdown.TotalUnpaidOpenSpaceLevy + breakdown.TotalUnpaidKioskLevy + 
+                                    breakdown.TotalUnpaidShopLevy + breakdown.TotalUnpaidwareHouseLevy;
+
+            // Calculate overdue days
+            breakdown.OverdueDays = await CalculateOverdueDays(trader.Id, paymentHistory);
+            breakdown.PaymentStatus = GetPaymentStatus(paymentHistory);
+
+            return breakdown;
+        }
+
+        private async Task<decimal> CalculateUnpaidAmount(
+            string traderId,
+            MarketTypeEnum occupancyType,
+            IEnumerable<LevyPayment> paymentHistory)
+        {
+            // Get all pending/unpaid/failed payments for this occupancy type
+            var unpaidPayments = paymentHistory
+                .Where(p => !p.IsSetupRecord && // Exclude setup records
+                           (p.PaymentStatus == PaymentStatusEnum.Pending ||
+                            p.PaymentStatus == PaymentStatusEnum.Unpaid ||
+                            p.PaymentStatus == PaymentStatusEnum.Failed))
+                .ToList();
+
+            // Calculate total unpaid amount
+            return unpaidPayments.Sum(p => p.Amount);
+        }
+
+        private async Task<int> CalculateOverdueDays(string traderId, IEnumerable<LevyPayment> paymentHistory)
+        {
+            var oldestUnpaidPayment = paymentHistory
+                .Where(p => !p.IsSetupRecord &&
+                           (p.PaymentStatus == PaymentStatusEnum.Pending ||
+                            p.PaymentStatus == PaymentStatusEnum.Unpaid))
+                .OrderBy(p => p.DueDate ?? p.PaymentDate)
+                .FirstOrDefault();
+
+            if (oldestUnpaidPayment?.DueDate != null)
+            {
+                var daysDiff = (DateTime.Now - oldestUnpaidPayment.DueDate.Value).Days;
+                return daysDiff > 0 ? daysDiff : 0;
+            }
+
+            return 0;
+        }
+
+        private string GetPaymentStatus(IEnumerable<LevyPayment> paymentHistory)
+        {
+            var hasUnpaid = paymentHistory.Any(p => !p.IsSetupRecord &&
+                                                   (p.PaymentStatus == PaymentStatusEnum.Pending ||
+                                                    p.PaymentStatus == PaymentStatusEnum.Unpaid));
+
+            var hasOverdue = paymentHistory.Any(p => !p.IsSetupRecord &&
+                                                    p.DueDate.HasValue &&
+                                                    p.DueDate < DateTime.Now &&
+                                                    p.PaymentStatus != PaymentStatusEnum.Paid);
+
+            if (hasOverdue) return "Overdue";
+            if (hasUnpaid) return "Pending";
+            return "Up to Date";
+        }
+
 
         private (bool isDue, DateTime nextPaymentDate) IsPaymentDue(LevyPayment lastPayment, PaymentPeriodEnum currentPeriod)
         {

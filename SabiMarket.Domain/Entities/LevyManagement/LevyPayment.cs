@@ -2,7 +2,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Domain.Entities.Administration;
-using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Enum;
 
@@ -21,6 +20,9 @@ namespace SabiMarket.Domain.Entities.LevyManagement
         public decimal Amount { get; set; }
 
         [Required]
+        public MarketTypeEnum OccupancyType { get; set; }
+
+        [Required]
         public PaymentPeriodEnum Period { get; set; }
 
         [Required]
@@ -36,9 +38,14 @@ namespace SabiMarket.Domain.Entities.LevyManagement
         public decimal? IncentiveAmount { get; set; }
 
         public DateTime PaymentDate { get; set; }
+        public DateTime? DueDate { get; set; }
         public DateTime CollectionDate { get; set; }
         public string Notes { get; set; }
         public string QRCodeScanned { get; set; }
+
+        public bool IsActive { get; set; } = true;
+
+        public bool IsSetupRecord { get; set; } = false;
 
         /*[ForeignKey("TraderId")]
         [DeleteBehavior(DeleteBehavior.NoAction)]*/

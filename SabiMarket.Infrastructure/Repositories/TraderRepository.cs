@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
-using SabiMarket.Application.DTOs.Responses;
-using SabiMarket.Application.Interfaces;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
@@ -19,6 +17,11 @@ namespace SabiMarket.Infrastructure.Repositories
         }
 
         public void AddTrader(Trader trader) => Create(trader);
+
+        public void AddBuildingTypeTrader(TraderBuildingType trader)
+        {
+            _context.TraderBuildingTypes.Add(trader);
+        }
 
         public void UpdateTrader(Trader trader) => Update(trader);
 
@@ -40,11 +43,43 @@ namespace SabiMarket.Infrastructure.Repositories
             return await query.FirstOrDefaultAsync();
         }
 
-        public async Task<Trader> GetTraderById(string traderId, bool trackChanges) =>
-            await FindByCondition(t => t.Id == traderId, trackChanges)
+        public async Task<Trader> GetTraderByIdWithDetailsAsync(string traderId, bool trackChanges)
+        {
+            var query = _context.Traders
                 .Include(t => t.User)
                 .Include(t => t.Market)
-                .FirstOrDefaultAsync();
+                .Include(t => t.LevyPayments)
+                .Where(t => t.Id == traderId);
+
+            return trackChanges ?
+                await query.FirstOrDefaultAsync() :
+                await query.AsNoTracking().FirstOrDefaultAsync();
+        }
+
+        // Option 4: If you want to get distinct building type IDs (in case there are duplicates)
+        public async Task<int> GetDistinctTraderBuildingTypesCount(string traderId)
+        {
+            var distinctCount = await _context.TraderBuildingTypes
+                .Where(tbt => tbt.TraderId == traderId)
+                .Select(tbt => tbt.Id) // Assuming BuildingTypeId is the property name
+                .Distinct()
+                .CountAsync();
+            return distinctCount;
+        }
+        public async Task<Trader> GetTraderByIdAsync(string traderId, bool trackChanges)
+        {
+            var query = _context.Traders.Where(t => t.Id == traderId);
+
+            return trackChanges ?
+                await query.FirstOrDefaultAsync() :
+                await query.AsNoTracking().FirstOrDefaultAsync();
+        }
+
+        public async Task<Trader> GetTraderById(string traderId, bool trackChanges) =>
+                await FindByCondition(t => t.Id == traderId, trackChanges)
+                    .Include(t => t.User)
+                    .Include(t => t.Market)
+                    .FirstOrDefaultAsync();
 
         public async Task<Trader> GetTraderDetails(string userId) =>
             await FindByCondition(t => t.UserId == userId, trackChanges: false)

@@ -6,12 +6,11 @@ using System.Threading.Tasks;
 
 namespace SabiMarket.Domain.Enum
 {
-    public enum MarketTypeEnum
+    public enum BuildingTypeEnum
     {
-        Shop = 1,
-        Kiosk,
-        OpenSpace,
-        WareHouse
-
+        OpenSpace = 1,
+        Kiosk = 2,
+        Shop = 3,
+        Warehouse = 4
     }
 }

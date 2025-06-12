@@ -459,6 +459,7 @@ namespace SabiMarket.Infrastructure.Services
                         details.Add("businessType", user.Trader.BusinessType);
                         details.Add("traderMarketId", user.Trader.MarketId);
                         details.Add("traderCaretakerId", user.Trader.CaretakerId);
+                        details.Add("traderMarketName", user.Trader.Market.MarketName);
 
                     }
                     break;

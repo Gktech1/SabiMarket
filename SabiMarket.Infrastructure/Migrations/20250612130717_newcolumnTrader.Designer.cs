@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SabiMarket.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SabiMarket.Infrastructure.Data;
 namespace SabiMarket.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250612130717_newcolumnTrader")]
+    partial class newcolumnTrader
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -982,6 +985,9 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.Property<string>("MarketName")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("NumberOfBuildingTypes")
+                        .HasColumnType("int");
+
                     b.Property<int?>("PaymentFrequency")
                         .HasColumnType("int");
 
@@ -1021,37 +1027,6 @@ namespace SabiMarket.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Traders");
-                });
-
-            modelBuilder.Entity("SabiMarket.Domain.Entities.MarketParticipants.TraderBuildingType", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("BuildingType")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("NumberOfBuildingTypes")
-                        .HasColumnType("int");
-
-                    b.Property<string>("TraderId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TraderId");
-
-                    b.ToTable("TraderBuildingTypes");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.OrdersAndFeedback.CustomerFeedback", b =>
@@ -2426,17 +2401,6 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("SabiMarket.Domain.Entities.MarketParticipants.TraderBuildingType", b =>
-                {
-                    b.HasOne("SabiMarket.Domain.Entities.MarketParticipants.Trader", "Trader")
-                        .WithMany("BuildingTypes")
-                        .HasForeignKey("TraderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Trader");
-                });
-
             modelBuilder.Entity("SabiMarket.Domain.Entities.OrdersAndFeedback.CustomerFeedback", b =>
                 {
                     b.HasOne("SabiMarket.Domain.Entities.WaiveMarketModule.Customer", "Customer")
@@ -2831,8 +2795,6 @@ namespace SabiMarket.Infrastructure.Migrations
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.MarketParticipants.Trader", b =>
                 {
-                    b.Navigation("BuildingTypes");
-
                     b.Navigation("LevyPayments");
                 });
 

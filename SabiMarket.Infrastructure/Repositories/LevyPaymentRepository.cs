@@ -64,6 +64,16 @@ namespace SabiMarket.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+
+        public async Task<LevyPayment> GetLevySetupByPaymentFrequency(PaymentPeriodEnum paymentFrequency)
+        {
+            return await _context.LevyPayments
+                .Where(lp => lp.Period ==  paymentFrequency)
+                .OrderBy(lp => lp.MarketId)
+                .ThenBy(lp => lp.Period)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetPagedPaymentWithDetails(
      PaymentPeriodEnum? period,
      string searchQuery,
@@ -415,6 +425,50 @@ namespace SabiMarket.Infrastructure.Repositories
                 .ThenByDescending(lp => lp.CreatedAt)
                 .ToListAsync();
         }
+
+        public async Task<LevyPayment> GetActiveLevySetupByMarketAndOccupancy(string marketId, MarketTypeEnum occupancyType)
+        {
+            return await _context.LevyPayments
+                .Where(lp => lp.MarketId == marketId &&
+                            lp.IsSetupRecord == true &&
+                            lp.IsActive == true &&
+                            (lp.OccupancyType == occupancyType || lp.OccupancyType == null))
+                .OrderByDescending(lp => lp.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<IEnumerable<LevyPayment>> GetActiveLevySetupsByMarket(string marketId)
+        {
+            return await _context.LevyPayments
+                .Where(lp => lp.MarketId == marketId &&
+                            lp.IsSetupRecord == true &&
+                            lp.IsActive == true)
+                .OrderByDescending(lp => lp.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<LevyPayment>> GetTraderPaymentHistory(string traderId, bool excludeSetupRecords = true)
+        {
+            var query = _context.LevyPayments
+                .Where(lp => lp.TraderId == traderId);
+
+            if (excludeSetupRecords)
+            {
+                query = query.Where(lp => lp.IsSetupRecord == false || lp.IsSetupRecord == null);
+            }
+
+            return await query
+                .OrderByDescending(lp => lp.PaymentDate)
+                .ToListAsync();
+        }
+
+        /*public async Task<IEnumerable<LevyPayment>> GetByMarketAndOccupancy(string marketId, MarketTypeEnum occupancyType)
+        {
+            return await _context.LevyPayments
+                .Where(lp => lp.MarketId == marketId &&
+                            (lp.OccupancyType == occupancyType || lp.OccupancyType == null))
+                .ToListAsync();
+        }*/
 
         public async Task<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetLevyPaymentsByDateRange(
     string goodBoyId,

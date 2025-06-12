@@ -2,6 +2,7 @@
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities.LevyManagement;
+using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Enum;
 
 public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
@@ -62,4 +63,9 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     Task<decimal> GetTotalLevyAmountByTraderIdAsync(string traderId);
     Task<LevyPayment> GetLatestActiveLevyForTrader(string traderId);
     Task<List<LevyPayment>> GetRecentPaymentsForTrader(string traderId, int count);
+
+    Task<IEnumerable<LevyPayment>> GetTraderPaymentHistory(string traderId, bool excludeSetupRecords = true);
+    Task<LevyPayment> GetActiveLevySetupByMarketAndOccupancy(string marketId, MarketTypeEnum occupancyType);
+    Task<IEnumerable<LevyPayment>> GetActiveLevySetupsByMarket(string marketId);
+    Task<LevyPayment> GetLevySetupByPaymentFrequency(PaymentPeriodEnum paymentFrequency);
 }
