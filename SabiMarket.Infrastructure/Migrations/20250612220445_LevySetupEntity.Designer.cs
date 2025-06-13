@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SabiMarket.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SabiMarket.Infrastructure.Data;
 namespace SabiMarket.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250612220445_LevySetupEntity")]
+    partial class LevySetupEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -839,7 +842,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("MarketId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("OccupancyType")
                         .HasColumnType("int");
@@ -850,16 +853,9 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ChairmanId");
-
-                    b.HasIndex("MarketId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("LevySetup");
                 });
@@ -2385,19 +2381,7 @@ namespace SabiMarket.Infrastructure.Migrations
                         .HasForeignKey("ChairmanId")
                         .OnDelete(DeleteBehavior.NoAction);
 
-                    b.HasOne("Market", "Market")
-                        .WithMany()
-                        .HasForeignKey("MarketId");
-
-                    b.HasOne("SabiMarket.Domain.Entities.UserManagement.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId");
-
                     b.Navigation("Chairman");
-
-                    b.Navigation("Market");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.MarketParticipants.AssistCenterOfficer", b =>

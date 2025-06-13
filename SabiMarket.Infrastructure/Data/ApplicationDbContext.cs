@@ -29,6 +29,7 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<GoodBoy> GoodBoys { get; set; }
         public DbSet<AssistCenterOfficer> AssistCenterOfficers { get; set; }
         public DbSet<LevyPayment> LevyPayments { get; set; }
+        public DbSet<LevySetup> LevySetups { get; set; }
         public DbSet<Vendor> Vendors { get; set; }
         public DbSet<Customer> Customers { get; set; }
         public DbSet<WaivedProduct> WaivedProducts { get; set; }

@@ -1127,8 +1127,8 @@ namespace SabiMarket.Infrastructure.Services
                     "Levy Management"
                 );
 
-                var levy = await _repository.LevyPaymentRepository.GetPaymentById(levyId, true);
-                _repository.LevyPaymentRepository.DeleteLevyPayment(levy);
+                var levy = await _repository.LevyPaymentRepository.GetLevySetupById(levyId, true);
+                _repository.LevyPaymentRepository.DeleteLevySetup(levy);
                 await _repository.SaveChangesAsync();
 
                 await CreateAuditLog(
@@ -1540,7 +1540,7 @@ namespace SabiMarket.Infrastructure.Services
                 );
 
                 // Check if levy already exists
-                var existingLevy = await _repository.LevyPaymentRepository.GetByMarketAndOccupancyAsync(request.MarketId, request.TraderOccupancy);
+                var existingLevy = await _repository.LevyPaymentRepository.GetByMarketAndOccupancies(request.MarketId, request.TraderOccupancy);
                 if (existingLevy != null && existingLevy.Any())
                 {
                     return ResponseFactory.Fail<bool>("Levy setup already exists for this market and trader occupancy.");
@@ -1554,29 +1554,52 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Create levy setup
-                var levySetup = _mapper.Map<LevyPayment>(request);
+                var levySetup = new LevySetup
+                {
+                    // Explicitly override BaseEntity defaults
+                    Id = Guid.NewGuid().ToString(),
+                    IsActive = true, // or whatever makes sense for your business logic
+
+                    // LevySetup properties
+                    ChairmanId = chairman.Id,
+                    MarketId = request.MarketId,
+                    Amount = request.Amount,
+                    IsSetupRecord = true,
+                    OccupancyType = request.TraderOccupancy,
+                    PaymentFrequency = ConvertDaysToPaymentPeriod((int)request.PaymentFrequencyDays)
+                };
+                // Explicitly set entity state to Added
+                _repository.LevyPaymentRepository.AddLevelSetup(levySetup);
+                // OR if using DbContext directly:
+                // _context.Entry(levySetup).State = EntityState.Added;
+                //var levySetup = _mapper.Map<LevySetup>(request);
+                /*var levySetup = new LevySetup();
+                levySetup.Id = Guid.NewGuid().ToString();
                 levySetup.ChairmanId = chairman.Id;
-                levySetup.TraderId = null; // Use null instead of empty string
-                levySetup.GoodBoyId = null; // Use null instead of empty string
                 levySetup.Amount = request.Amount;
                 levySetup.MarketId = request.MarketId;
+                levySetup.Amount = request.Amount;
+                levySetup.IsSetupRecord = true;
+                levySetup.OccupancyType = request.TraderOccupancy;
+                levySetup.CreatedAt = DateTime.Now;
+
 
                 // Fix: Convert PaymentFrequencyDays to PaymentPeriodEnum
-                levySetup.Period = ConvertDaysToPaymentPeriod((int)request.PaymentFrequencyDays);
-
+                levySetup.PaymentFrequency = ConvertDaysToPaymentPeriod((int)request.PaymentFrequencyDays);
+*/
                 // Set required properties that were missing
-                levySetup.PaymentMethod = PaymenPeriodEnum.Cash; // Set appropriate default or get from request
-                levySetup.PaymentStatus = PaymentStatusEnum.Pending; // Set appropriate default
-                levySetup.PaymentDate = DateTime.UtcNow;
-                levySetup.CollectionDate = DateTime.UtcNow.AddDays((int)request.PaymentFrequencyDays);
+                /*  levySetup.PaymentMethod = PaymenPeriodEnum.Cash; // Set appropriate default or get from request
+                  levySetup.PaymentStatus = PaymentStatusEnum.Pending; // Set appropriate default
+                  levySetup.PaymentDate = DateTime.UtcNow;
+                  levySetup.CollectionDate = DateTime.UtcNow.AddDays((int)request.PaymentFrequencyDays);*/
 
-                levySetup.Notes = "Initial Levy Setup by the Chairman";
-                levySetup.TransactionReference = GenerateTransactionReference(correlationId);
-                levySetup.QRCodeScanned = string.Empty; // Use empty string since column doesn't allow null
-                levySetup.HasIncentive = false; // Set default value
-                levySetup.IncentiveAmount = null; // No incentive for initial setup
+                /*    levySetup.Notes = "Initial Levy Setup by the Chairman";
+                    levySetup.TransactionReference = GenerateTransactionReference(correlationId);
+                    levySetup.QRCodeScanned = string.Empty; // Use empty string since column doesn't allow null
+                    levySetup.HasIncentive = false; // Set default value
+                    levySetup.IncentiveAmount = null; // No incentive for initial setup*/
 
-                _repository.LevyPaymentRepository.AddPayment(levySetup);
+                //_repository.LevyPaymentRepository.AddLevelSetup(levySetup);
                 await _repository.SaveChangesAsync();
 
                 await CreateAuditLog(
@@ -1612,7 +1635,7 @@ namespace SabiMarket.Infrastructure.Services
                 );
 
                 // Get the existing levy payment
-                var existingLevy = await _repository.LevyPaymentRepository.GetByIdAsync(request.LevyId);
+                var existingLevy = await _repository.LevyPaymentRepository.GetLevtSetupByIdAsync(request.LevyId);
                 if (existingLevy == null)
                 {
                     return ResponseFactory.Fail<bool>("Levy setup not found");
@@ -1628,13 +1651,13 @@ namespace SabiMarket.Infrastructure.Services
                 // Update the levy properties
                 existingLevy.MarketId = request.MarketId ?? string.Empty;
                 existingLevy.Amount = request.Amount;
-                existingLevy.Period = ConvertDaysToPaymentPeriod((int)request.PaymentFrequencyDays);
+                existingLevy.PaymentFrequency = ConvertDaysToPaymentPeriod((int)request.PaymentFrequencyDays);
                 existingLevy.UpdatedAt = DateTime.UtcNow;
 
                 // Add update notes
-                existingLevy.Notes = $"Updated by Chairman on {DateTime.UtcNow:yyyy-MM-dd HH:mm} - {existingLevy.Notes}";
+               // existingLevy.Notes = $"Updated by Chairman on {DateTime.UtcNow:yyyy-MM-dd HH:mm} - {existingLevy.Notes}";
 
-                _repository.LevyPaymentRepository.Update(existingLevy);
+                _repository.LevyPaymentRepository.UpdateLevelSetup(existingLevy);
                 await _repository.SaveChangesAsync();
 
                 await CreateAuditLog(
@@ -1931,7 +1954,7 @@ namespace SabiMarket.Infrastructure.Services
                     "Levy Management"
                 );
 
-                var levySetups = await _repository.LevyPaymentRepository.GetAllLevySetupsAsync(false);
+                var levySetups = await _repository.LevyPaymentRepository.GetAllLevySetups(false);
                 var levySetupDtos = _mapper.Map<IEnumerable<LevySetupResponseDto>>(levySetups);
                 
 
@@ -4039,7 +4062,7 @@ namespace SabiMarket.Infrastructure.Services
                     "Levy Management"
                 );
 
-                var levy = await _repository.LevyPaymentRepository.GetPaymentById(levyId, false);
+                var levy = await _repository.LevyPaymentRepository.GetLevySetupById(levyId, false);
                 if (levy == null)
                 {
                     await CreateAuditLog(
@@ -5638,7 +5661,10 @@ namespace SabiMarket.Infrastructure.Services
                     PaymentDate = currentDate,
                     CollectionDate = currentDate,
                     Notes = paymentDto.Notes ?? "",
-                    QRCodeScanned = paymentDto.QRCodeScanned
+                    QRCodeScanned = paymentDto.QRCodeScanned,
+                    IsSetupRecord = true,
+                    IsActive = true,
+                    OccupancyType = paymentDto.OccupancyType,
                 };
 
                 _repository.LevyPaymentRepository.Create(levyPayment);
@@ -5730,7 +5756,7 @@ namespace SabiMarket.Infrastructure.Services
 
                 // Get levy setup configuration using LevyPayment records marked as setup
                 var levySetup = await _repository.LevyPaymentRepository
-                    .GetActiveLevySetupByMarketAndOccupancy(trader.MarketId, trader.TraderOccupancy);
+                    .GetActiveLevySetupByMarketAndOccupancyAsync(trader.MarketId, trader.TraderOccupancy);
 
                 if (levySetup == null)
                 {

@@ -10,6 +10,7 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     void AddPayment(LevyPayment levyPayment);
     Task<LevyPayment> GetByIdAsync(string id, bool trackChanges = false);
     IQueryable<LevyPayment> GetPaymentsQuery();
+    Task<LevySetup> GetLevySetupById(string id, bool trackChanges);
     Task<IEnumerable<LevyPayment>> GetAllLevyPaymentForExport(bool trackChanges);
     Task<LevyPayment> GetPaymentById(string id, bool trackChanges);
     Task<PaginatorDto<IEnumerable<LevyPayment>>> GetPagedPayment(int? period, PaginationFilter paginationFilter);
@@ -29,6 +30,7 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     void DeleteLevyPayment(LevyPayment levy);
     Task<decimal> GetTotalRevenueAsync();
     Task<IEnumerable<LevyPayment>> GetAllLevySetupsAsync(bool trackChanges);
+    Task<IEnumerable<LevySetup>> GetAllLevySetups(bool trackChanges);
     Task<IEnumerable<LevyPayment>> GetByMarketAndOccupancyAsync(string marketId, MarketTypeEnum traderOccupancy);
     Task<LevyPayment> GetMarketLevySetup(string marketId, PaymentPeriodEnum period);
     Task<IQueryable<LevyPayment>> GetMarketLevySetups(string marketId);
@@ -65,7 +67,19 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     Task<List<LevyPayment>> GetRecentPaymentsForTrader(string traderId, int count);
 
     Task<IEnumerable<LevyPayment>> GetTraderPaymentHistory(string traderId, bool excludeSetupRecords = true);
-    Task<LevyPayment> GetActiveLevySetupByMarketAndOccupancy(string marketId, MarketTypeEnum occupancyType);
+    //Task<LevyPayment> GetActiveLevySetupByMarketAndOccupancy(string marketId, MarketTypeEnum occupancyType);
     Task<IEnumerable<LevyPayment>> GetActiveLevySetupsByMarket(string marketId);
-    Task<LevyPayment> GetLevySetupByPaymentFrequency(PaymentPeriodEnum paymentFrequency);
+    //Task<LevyPayment> GetLevySetupByPaymentFrequency(PaymentPeriodEnum paymentFrequency);
+
+    Task<LevySetup> GetLevtSetupByIdAsync(string id, bool trackChanges = false);
+
+    Task<LevySetup> GetLevySetupByPaymentFrequency(PaymentPeriodEnum paymentFrequency);
+    Task<LevySetup> GetActiveLevySetupByMarketAndOccupancy(string marketId, MarketTypeEnum occupancyType);
+    Task<LevyPayment> GetActiveLevySetupByMarketAndOccupancyAsync(string marketId, MarketTypeEnum occupancyType);
+
+    Task<IEnumerable<LevySetup>> GetByMarketAndOccupancies(string marketId, MarketTypeEnum traderOccupancy);
+    void AddLevelSetup(LevySetup levySetup);
+    void UpdateLevelSetup(LevySetup levySetup);
+
+    void DeleteLevySetup(LevySetup levy);
 }

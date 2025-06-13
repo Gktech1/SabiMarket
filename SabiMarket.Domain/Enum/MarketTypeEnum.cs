@@ -12,6 +12,5 @@ namespace SabiMarket.Domain.Enum
         Kiosk,
         OpenSpace,
         WareHouse
-
     }
 }
