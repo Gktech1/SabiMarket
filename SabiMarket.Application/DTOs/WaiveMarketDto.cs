@@ -9,6 +9,7 @@ namespace SabiMarket.Application.DTOs
     public class NextWaiveMarketDate
     {
         public DateTime nextWaiveMarketDate { get; set; }
+        public string nextWaiveMarketVenue { get; set; }
     }
     public class DeleteProductCategory
     {

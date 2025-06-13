@@ -623,9 +623,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
         [HttpPost("CreateNextWaiveMarketDate")]
-        public async Task<IActionResult> CreateNextWaiveMarketDate(NextWaiveMarketDate dto)
+        public async Task<IActionResult> CreateNextWaiveMarketDate(NextWaiveMarketDateDto dto)
         {
-            var response = await _serviceManager.IWaivedProductService.CreateNextWaiveMarketDate(dto.nextWaiveMarketDate);
+            var response = await _serviceManager.IWaivedProductService.CreateNextWaiveMarketDate(dto);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
