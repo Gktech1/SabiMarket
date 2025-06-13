@@ -8,6 +8,7 @@ using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Application.DTOs.Requests;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Application.DTOs.Responses;
+using System.Linq;
 
 namespace SabiMarket.Infrastructure.Repositories
 {
@@ -22,6 +23,15 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public void AddPayment(LevyPayment levyPayment) => Create(levyPayment);
 
+        public void AddLevelSetup(LevySetup levySetup)
+        {
+            _context.LevySetups.Add(levySetup);
+        }
+
+        public void UpdateLevelSetup(LevySetup levySetup)
+        {
+            _context.LevySetups.Update(levySetup);
+        }
         public IQueryable<LevyPayment> GetPaymentsQuery()
         {
             return FindAll(trackChanges: false)
@@ -37,19 +47,29 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Include(x => x.Market)
                 .Include(x => x.Trader)
                 .FirstOrDefaultAsync();
-
-      /*  // Modified method to get levy configurations per market
-        public async Task<IEnumerable<LevyPayment>> GetAllLevySetupsAsync(bool trackChanges)
+        public async Task<LevySetup> GetLevySetupById(string id, bool trackChanges)
         {
-            return await _context.LevyPayments
-                .AsTracking(trackChanges ? QueryTrackingBehavior.TrackAll : QueryTrackingBehavior.NoTracking)
-                .Include(lp => lp.Market)
-                .GroupBy(lp => new { lp.MarketId, lp.Period })
-                .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
-                .OrderBy(lp => lp.MarketId)
-                .ThenBy(lp => lp.Period)
-                .ToListAsync();
-        }*/
+            var query = trackChanges
+               ? _context.LevySetups.AsTracking()
+               : _context.LevySetups.AsNoTracking();
+              
+               return  await query.Where(x => x.Id == id)
+              .FirstOrDefaultAsync();
+        }
+          
+
+        /*  // Modified method to get levy configurations per market
+          public async Task<IEnumerable<LevyPayment>> GetAllLevySetupsAsync(bool trackChanges)
+          {
+              return await _context.LevyPayments
+                  .AsTracking(trackChanges ? QueryTrackingBehavior.TrackAll : QueryTrackingBehavior.NoTracking)
+                  .Include(lp => lp.Market)
+                  .GroupBy(lp => new { lp.MarketId, lp.Period })
+                  .Select(g => g.OrderByDescending(lp => lp.CreatedAt).First())
+                  .OrderBy(lp => lp.MarketId)
+                  .ThenBy(lp => lp.Period)
+                  .ToListAsync();
+          }*/
 
         public async Task<IEnumerable<LevyPayment>> GetAllLevySetupsAsync(bool trackChanges)
         {
@@ -62,6 +82,31 @@ namespace SabiMarket.Infrastructure.Repositories
                 .OrderBy(lp => lp.MarketId)
                 .ThenBy(lp => lp.Period)
                 .ToListAsync();
+        }
+
+        public async Task<IEnumerable<LevySetup>> GetAllLevySetups(bool trackChanges)
+        {
+            var query = await _context.LevySetups
+                .AsTracking(trackChanges ? QueryTrackingBehavior.TrackAll : QueryTrackingBehavior.NoTracking)
+                .Include(lp => lp.Market)
+                .Where(lp => lp.CreatedAt == _context.LevySetups
+                    .Where(inner => inner.MarketId == lp.MarketId && inner.PaymentFrequency == lp.PaymentFrequency)
+                    .Max(inner => inner.CreatedAt))
+                .OrderBy(lp => lp.MarketId)
+                .ThenBy(lp => lp.PaymentFrequency)
+                .ToListAsync();
+
+            return query;
+        }
+
+
+        public async Task<LevySetup> GetLevySetupByPaymentFrequency(PaymentPeriodEnum paymentFrequency)
+        {
+            return await _context.LevySetups
+                .Where(lp => lp.PaymentFrequency ==  paymentFrequency)
+                .OrderBy(lp => lp.MarketId)
+                .ThenBy(lp => lp.PaymentFrequency)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<PaginatorDto<IEnumerable<LevyPayment>>> GetPagedPaymentWithDetails(
@@ -292,6 +337,21 @@ namespace SabiMarket.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
         }
 
+
+        // FIXED CODE (CORRECT):
+        public async Task<LevySetup> GetLevtSetupByIdAsync(string id, bool trackChanges = false)
+        {
+            var query = trackChanges
+                ? _context.LevySetups.AsTracking()
+                : _context.LevySetups.AsNoTracking();
+
+            return await query
+                .Where(x => x.Id == id)
+                .Include(x => x.Chairman)
+                    .ThenInclude(c => c.User)
+                .FirstOrDefaultAsync();
+        }
+
         /*  public async Task<IEnumerable<LevyPayment>> GetLevyPaymentsByDateRangeAsync(string goodBoyId, DateTime fromDate, DateTime toDate)
           {
               try
@@ -415,6 +475,61 @@ namespace SabiMarket.Infrastructure.Repositories
                 .ThenByDescending(lp => lp.CreatedAt)
                 .ToListAsync();
         }
+
+        public async Task<LevySetup> GetActiveLevySetupByMarketAndOccupancy(string marketId, MarketTypeEnum occupancyType)
+        {
+            return await _context.LevySetups
+                .Where(lp => lp.MarketId == marketId &&
+                            lp.IsSetupRecord == true &&
+                            lp.IsActive == true &&
+                            (lp.OccupancyType == occupancyType || lp.OccupancyType == null))
+                .OrderByDescending(lp => lp.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<LevyPayment> GetActiveLevySetupByMarketAndOccupancyAsync(string marketId, MarketTypeEnum occupancyType)
+        {
+            return await _context.LevyPayments
+                .Where(lp => lp.MarketId == marketId &&
+                            lp.IsSetupRecord == true &&
+                            lp.IsActive == true &&
+                            (lp.OccupancyType == occupancyType || lp.OccupancyType == null))
+                .OrderByDescending(lp => lp.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<IEnumerable<LevyPayment>> GetActiveLevySetupsByMarket(string marketId)
+        {
+            return await _context.LevyPayments
+                .Where(lp => lp.MarketId == marketId &&
+                            lp.IsSetupRecord == true &&
+                            lp.IsActive == true)
+                .OrderByDescending(lp => lp.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<LevyPayment>> GetTraderPaymentHistory(string traderId, bool excludeSetupRecords = true)
+        {
+            var query = _context.LevyPayments
+                .Where(lp => lp.TraderId == traderId);
+
+           /* if (excludeSetupRecords)
+            {
+                query = query.Where(lp => lp.IsSetupRecord == false || lp.IsSetupRecord == null);
+            }*/
+
+            return await query
+                .OrderByDescending(lp => lp.PaymentDate)
+                .ToListAsync();
+        }
+
+        /*public async Task<IEnumerable<LevyPayment>> GetByMarketAndOccupancy(string marketId, MarketTypeEnum occupancyType)
+        {
+            return await _context.LevyPayments
+                .Where(lp => lp.MarketId == marketId &&
+                            (lp.OccupancyType == occupancyType || lp.OccupancyType == null))
+                .ToListAsync();
+        }*/
 
         public async Task<PaginatorDto<IEnumerable<GoodBoyLevyPaymentResponseDto>>> GetLevyPaymentsByDateRange(
     string goodBoyId,
@@ -774,6 +889,11 @@ namespace SabiMarket.Infrastructure.Repositories
         }
         public void DeleteLevyPayment(LevyPayment levy) => Delete(levy);
 
+        public void DeleteLevySetup(LevySetup levy)
+        {
+            _context.LevySetups.Remove(levy);
+        }
+
         // Added method to get market-specific levy configuration
         public async Task<LevyPayment> GetMarketLevySetup(string marketId, PaymentPeriodEnum period)
         {
@@ -796,6 +916,15 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Where(lp => lp.MarketId == marketId && lp.Trader.TraderOccupancy == traderOccupancy)
                 .Include(lp => lp.Market)
                 .Include(lp => lp.Trader)
+                .ToListAsync();
+            return result; // Always return the list (empty or populated)
+        }
+
+        public async Task<IEnumerable<LevySetup>> GetByMarketAndOccupancies(string marketId, MarketTypeEnum traderOccupancy)
+        {
+            var result = await _context.LevySetups
+                .Where(lp => lp.MarketId == marketId && lp.OccupancyType == traderOccupancy)
+                .Include(lp => lp.Market)
                 .ToListAsync();
             return result; // Always return the list (empty or populated)
         }

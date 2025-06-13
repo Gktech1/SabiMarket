@@ -2,7 +2,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Domain.Entities.LevyManagement;
-using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Enum;
 
@@ -24,11 +23,17 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
         [Required]
         public string? BusinessName { get; set; }
 
-        
         public string? TraderName { get; set; }
 
+        public string? MarketName { get; set; }
+
         public string BusinessType { get; set; }
+
         public string? QRCode { get; set; }
+
+        public decimal? Amount { get; set; }   = default(decimal?);    
+
+        public PaymentPeriodEnum? PaymentFrequency { get; set; }    
 
         public MarketTypeEnum TraderOccupancy { get; set; }
 
@@ -48,6 +53,8 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
         [ForeignKey("CaretakerId")]
         [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual Caretaker Caretaker { get; set; }
+        // New: Collection of building types
+        public virtual ICollection<TraderBuildingType> BuildingTypes { get; set; } = new List<TraderBuildingType>();
 
         public virtual ICollection<LevyPayment> LevyPayments { get; set; } = new List<LevyPayment>();
     }

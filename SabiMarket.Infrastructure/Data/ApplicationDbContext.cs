@@ -24,10 +24,12 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<Market> Markets { get; set; }
         public DbSet<MarketSection> MarketSections { get; set; }
         public DbSet<Trader> Traders { get; set; }
+        public DbSet<TraderBuildingType> TraderBuildingTypes { get; set; }
         public DbSet<Caretaker> Caretakers { get; set; }
         public DbSet<GoodBoy> GoodBoys { get; set; }
         public DbSet<AssistCenterOfficer> AssistCenterOfficers { get; set; }
         public DbSet<LevyPayment> LevyPayments { get; set; }
+        public DbSet<LevySetup> LevySetups { get; set; }
         public DbSet<Vendor> Vendors { get; set; }
         public DbSet<Customer> Customers { get; set; }
         public DbSet<WaivedProduct> WaivedProducts { get; set; }

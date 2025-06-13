@@ -698,8 +698,8 @@ namespace SabiMarket.Infrastructure.Services
                     TraderOccupancy = trader.TraderOccupancy.ToString(),
                     TraderIdentityNumber =   trader.TIN, //$"OSH/LAG/{trader.Id}",
                     PaymentFrequency = paymentFrequency,
-                    Amount = latestSetup.Amount,
-                    PayementPeriod = latestSetup.Period,
+                    TotalAmount = latestSetup.Amount,
+                    PaymentPeriod = latestSetup.Period,
                     LastPaymentDate = latestPayment?.PaymentDate,
                     UpdatePaymentUrl = $"{updatepaymenturl}api/GoodBoys/updatetraderpayment/{scanDto?.TraderId}"
                 };

@@ -14,7 +14,8 @@
         public string DefaultPassword { get; set; }
         public string ProfileImageUrl { get; set; } 
         public string TraderName { get; set; }    
-        public string BusinessType { get; set; }    
+        public string BusinessType { get; set; }  
+        public int BuildingTypes {  get; set; }
         public DateTime DateAdded { get; set; }
         public string QRCode { get; set; }
         public bool IsActive { get; set; }

@@ -60,9 +60,20 @@ public class MappingProfile : Profile
                 .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedAt))
                 .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => src.UpdatedAt));
 
+        CreateMap<LevySetup, LevySetupResponseDto>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src => src.Market != null ? src.Market.MarketName : "")) // You'll need to include Market navigation property or resolve this separately
+                .ForMember(dest => dest.TraderOccupancy, opt => opt.MapFrom(src => src.OccupancyType.ToString()))
+                .ForMember(dest => dest.PaymentFrequencyDays, opt => opt.MapFrom(src => (int)src.PaymentFrequency))
+                .ForMember(dest => dest.Amount, opt => opt.MapFrom(src => src.Amount))
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.LastUpdatedBy, opt => opt.MapFrom(src => src.UpdatedAt));
 
 
-            CreateMap<Chairman, ChairmanResponseDto>()
+
+        CreateMap<Chairman, ChairmanResponseDto>()
             .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
     src.User != null
         ? string.IsNullOrEmpty(src.FullName) ? $"{src.User.FirstName} {src.User.LastName}" : src.FullName

@@ -28,9 +28,9 @@ namespace SabiMarket.Application.Validators
                 .MinimumLength(3).WithMessage("Business name must be at least 3 characters")
                 .MaximumLength(100).WithMessage("Business name cannot exceed 100 characters");
 
-            RuleFor(x => x.BusinessType)
+           /* RuleFor(x => x.BusinessType)
                 .NotEmpty().WithMessage("Business type is required")
-                .MaximumLength(50).WithMessage("Business type cannot exceed 50 characters");
+                .MaximumLength(50).WithMessage("Business type cannot exceed 50 characters");*/
 
             // TIN is optional but must follow pattern if provided
             RuleFor(x => x.TIN)
@@ -90,9 +90,9 @@ namespace SabiMarket.Application.Validators
                 .MaximumLength(100).WithMessage("Business name cannot exceed 100 characters")
                 .When(x => !string.IsNullOrEmpty(x.BusinessName));
 
-            RuleFor(x => x.BusinessType)
+           /* RuleFor(x => x.BusinessType)
                 .MaximumLength(50).WithMessage("Business type cannot exceed 50 characters")
-                .When(x => !string.IsNullOrEmpty(x.BusinessType));
+                .When(x => !string.IsNullOrEmpty(x.BusinessType));*/
 
             // TIN is optional but must follow pattern if provided
             RuleFor(x => x.TIN)
