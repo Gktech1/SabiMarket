@@ -335,11 +335,11 @@ public class WaivedProductService : IWaivedProductService
             return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorDto>>>(new Exception("An error occurred."), "Try again later.");
         }
     }
-    public async Task<BaseResponse<string>> BlockOrUnblockVendor(string userId)
+    public async Task<BaseResponse<string>> BlockOrUnblockVendor(string vendorId)
     {
         try
         {
-            var vendor = await _applicationDbContext.Vendors.FirstOrDefaultAsync(x => x.UserId == userId);
+            var vendor = await _applicationDbContext.Vendors.FirstOrDefaultAsync(x => x.Id == vendorId);
             if (vendor == null)
                 return ResponseFactory.Fail<string>(new Exception("An error occurred."), "Try again later.");
 
@@ -350,7 +350,7 @@ public class WaivedProductService : IWaivedProductService
         }
         catch (Exception ex)
         {
-            Log.Error($"Exception occurred while blocking or unblocking vendor with UserID ==> {userId}: " + ex.Message);
+            Log.Error($"Exception occurred while blocking or unblocking vendor with UserID ==> {vendorId}: " + ex.Message);
             return ResponseFactory.Fail<string>(new Exception("An error occurred."), "Try again later.");
         }
     }
