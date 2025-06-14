@@ -56,7 +56,48 @@ namespace SabiMarket.Infrastructure.Repositories
                return  await query.Where(x => x.Id == id)
               .FirstOrDefaultAsync();
         }
-          
+
+
+        public async Task<LevyPayment> GetLevySetupByMarketAndFrequency(string marketId, PaymentPeriodEnum paymentFrequency, bool trackChanges = false)
+        {
+            var query = trackChanges
+                ? _context.LevyPayments.AsTracking()
+                : _context.LevyPayments.AsNoTracking();
+
+            return await query
+                .Where(ls => ls.MarketId == marketId && ls.Period == paymentFrequency)
+                .Include(ls => ls.Market)
+                .OrderByDescending(ls => ls.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<IEnumerable<LevyPayment>> GetActiveSetupRecordsByTraderIdAsync(string traderId, bool trackChanges = false)
+        {
+            return await FindByCondition(
+                lp => lp.TraderId == traderId &&
+                      lp.IsSetupRecord == true &&
+                      lp.IsActive == true,
+                trackChanges)
+                .Include(lp => lp.Market)
+                .Include(lp => lp.Trader)
+                    .ThenInclude(t => t.User)
+                .OrderByDescending(lp => lp.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<LevyPayment>> GetActiveLevySetupsByMarket(string marketId, bool trackChanges = false)
+        {
+            var query = trackChanges
+                ? _context.LevyPayments.AsTracking()
+                : _context.LevyPayments.AsNoTracking();
+
+            return await query
+                .Where(ls => ls.MarketId == marketId && ls.IsActive)
+                .Include(ls => ls.Market)
+                .OrderBy(ls => ls.Period)
+                .ToListAsync();
+        }
+
 
         /*  // Modified method to get levy configurations per market
           public async Task<IEnumerable<LevyPayment>> GetAllLevySetupsAsync(bool trackChanges)

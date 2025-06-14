@@ -29,10 +29,30 @@ namespace SabiMarket.Infrastructure.Repositories
              await FindAll(trackChanges).ToListAsync();*/
 
         // New method to get trader by ID with custom includes
-        public async Task<Trader> GetByIdWithInclude(string traderId,
+
+        /*public async Task<Trader> GetByIdWithInclude(string traderId,
             params Expression<Func<Trader, object>>[] includes)
         {
-            var query = FindByCondition(t => t.Id == traderId, trackChanges: false);
+            var query = FindByCondition(t => t.Id == traderId, trackChanges: false)
+                                        .Include(c => c.Chairman)
+                                        .Include(lp => lp.LevyPayments);
+
+            // Apply each include expression
+            foreach (var include in includes)
+            {
+                query = query.Include(include);
+            }
+
+            return await query.FirstOrDefaultAsync();
+        }*/
+
+        public async Task<Trader> GetByIdWithInclude(string traderId,
+    params Expression<Func<Trader, object>>[] includes)
+        {
+            // Use IQueryable<Trader> instead of the specific IIncludableQueryable type
+            IQueryable<Trader> query = FindByCondition(t => t.Id == traderId, trackChanges: false)
+                                      .Include(c => c.Chairman)
+                                      .Include(lp => lp.LevyPayments);
 
             // Apply each include expression
             foreach (var include in includes)
@@ -43,6 +63,49 @@ namespace SabiMarket.Infrastructure.Repositories
             return await query.FirstOrDefaultAsync();
         }
 
+
+        public async Task<Trader> GetByIdWithIncludes(string traderId)
+        {
+            var query = FindByCondition(t => t.Id == traderId, trackChanges: false)
+                                                      .Include(c => c.Chairman);
+
+            return await query.FirstOrDefaultAsync();
+        }
+
+        public async Task<Trader> GetTraderByTinAsync(string tin, bool trackChanges = false)
+        {
+            var query = trackChanges
+                ? _context.Traders.AsTracking()
+                : _context.Traders.AsNoTracking();
+
+            return await query
+                .Where(t => t.TIN == tin)
+                .Include(t => t.User)
+                .Include(t => t.Market)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<bool> TinExistsAsync(string tin, params string[] excludeTraderIds)
+        {
+            var query = _context.Traders.AsNoTracking()
+                .Where(t => t.TIN == tin);
+
+            if (excludeTraderIds?.Any() == true)
+            {
+                query = query.Where(t => !excludeTraderIds.Contains(t.Id));
+            }
+
+            return await query.AnyAsync();
+        }
+
+        /* public async Task<Trader> GetByIdWithInclude(string traderId)
+         {
+             var query = FindByCondition(t => t.Id == traderId, trackChanges: false)
+                                 .Include(c => c.chairma);
+
+             return await query.FirstOrDefaultAsync();
+         }
+ */
         public async Task<Trader> GetTraderByIdWithDetailsAsync(string traderId, bool trackChanges)
         {
             var query = _context.Traders

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using SabiMarket.Domain.Entities.Administration;
 using SabiMarket.Domain.Entities.LevyManagement;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Enum;
@@ -13,6 +14,7 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
         [Required]  
         public string UserId { get; set; }
         public string MarketId { get; set; }
+        public string? ChairmanId { get; set; }  
         public string? SectionId { get; set; }
         public string CaretakerId { get; set; }
 
@@ -53,6 +55,7 @@ namespace SabiMarket.Domain.Entities.MarketParticipants
         [ForeignKey("CaretakerId")]
         [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual Caretaker Caretaker { get; set; }
+        public virtual Chairman Chairman { get; set; }
         // New: Collection of building types
         public virtual ICollection<TraderBuildingType> BuildingTypes { get; set; } = new List<TraderBuildingType>();
 

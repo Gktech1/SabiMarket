@@ -15,6 +15,7 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     Task<LevyPayment> GetPaymentById(string id, bool trackChanges);
     Task<PaginatorDto<IEnumerable<LevyPayment>>> GetPagedPayment(int? period, PaginationFilter paginationFilter);
     Task<PaginatorDto<IEnumerable<LevyPayment>>> GetLevyPaymentsAsync(string chairmanId, PaginationFilter paginationFilter, bool trackChanges);
+    Task<LevyPayment> GetLevySetupByMarketAndFrequency(string marketId, PaymentPeriodEnum paymentFrequency, bool trackChanges = false);
     Task<PaginatorDto<IEnumerable<LevyPayment>>> SearchPayment(string searchString, PaginationFilter paginationFilter);
     Task<PaginatorDto<IEnumerable<LevyPayment>>> SearchLevyPaymentsInMarket(
     string marketId,
@@ -78,6 +79,9 @@ public interface ILevyPaymentRepository : IGeneralRepository<LevyPayment>
     Task<LevyPayment> GetActiveLevySetupByMarketAndOccupancyAsync(string marketId, MarketTypeEnum occupancyType);
 
     Task<IEnumerable<LevySetup>> GetByMarketAndOccupancies(string marketId, MarketTypeEnum traderOccupancy);
+    Task<IEnumerable<LevyPayment>> GetActiveLevySetupsByMarket(string marketId, bool trackChanges = false);
+
+    Task<IEnumerable<LevyPayment>> GetActiveSetupRecordsByTraderIdAsync(string traderId, bool trackChanges = false);
     void AddLevelSetup(LevySetup levySetup);
     void UpdateLevelSetup(LevySetup levySetup);
 

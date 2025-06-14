@@ -389,6 +389,16 @@ public class ChairmanController : ControllerBase
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 
+    [HttpPut("updateLevypaymentfrequency")]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateLevyPaymentFrequency(string officerId, string traderId, [FromBody] UpdateLevyFrequencyDto request)
+    {
+        var response = await _chairmanService.UpdateLevyPaymentFrequency(officerId, traderId, request);
+        return !response.IsSuccessful ? BadRequest(response) : Ok(response);
+    }
+
     /// <summary>
     /// Get all levy payments for a trader with pagination and filtering
     /// </summary>

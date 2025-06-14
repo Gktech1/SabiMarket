@@ -12,6 +12,8 @@ public interface ITraderRepository : IGeneralRepository<Trader>
     void UpdateTrader(Trader trader);
     Task<Trader> GetByIdWithInclude(string traderId,
             params Expression<Func<Trader, object>>[] includes);
+
+    Task<Trader> GetByIdWithIncludes(string traderId);
     Task<Trader> GetTraderById(string traderId, bool trackChanges);
     Task<Trader> GetTraderDetails(string userId);
     Task<int> GetTraderCountAsync(DateTime startDate, DateTime endDate);
@@ -23,4 +25,7 @@ public interface ITraderRepository : IGeneralRepository<Trader>
     void DeleteTrader(Trader trader);
     Task<Trader> GetTraderByIdAsync(string traderId, bool trackChanges);
     Task<int> GetDistinctTraderBuildingTypesCount(string traderId);
+    Task<Trader> GetTraderByIdWithDetailsAsync(string traderId, bool trackChanges);
+    Task<bool> TinExistsAsync(string tin, params string[] excludeTraderIds);
+    Task<Trader> GetTraderByTinAsync(string tin, bool trackChanges = false);
 }
