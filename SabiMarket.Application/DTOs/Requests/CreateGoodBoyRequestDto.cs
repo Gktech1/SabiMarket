@@ -48,6 +48,7 @@ namespace SabiMarket.Application.DTOs.Requests
         public bool HasIncentive { get; set; }
         public decimal? IncentiveAmount { get; set; }
         public string? TransactionReference { get; set; }
+        public MarketTypeEnum OccupancyType { get; set; }
         public string? Notes { get; set; }
         public string QRCodeScanned { get; set; }
     }

@@ -20,6 +20,7 @@ using ValidationException = FluentValidation.ValidationException;
 using SabiMarket.Services.Dtos.Levy;
 using System.Linq.Expressions;
 using Microsoft.Extensions.Configuration;
+using SabiMarket.Domain.Entities.MarketParticipants;
 
 namespace SabiMarket.Infrastructure.Services
 {
@@ -660,49 +661,111 @@ namespace SabiMarket.Infrastructure.Services
                         new UnauthorizedException("Unauthorized scan attempt"),
                         "Unauthorized to scan trader QR codes");
                 }
+                var levySetup = await _repository.LevyPaymentRepository
+                   .GetActiveLevySetupByMarketAndOccupancyAsync(trader.MarketId, trader.TraderOccupancy);
 
-                // Get payment frequency and amount from most recent levy payment for this market and trader occupancy
-                var levySetups = await _repository.LevyPaymentRepository.GetByMarketAndOccupancyAsync(
-                    trader.MarketId,
-                    trader.TraderOccupancy);
-
-                string paymentFrequency = "Not configured";
-                LevyPayment latestSetup = null;
-                if (levySetups != null && levySetups.Any())
+                if (levySetup == null)
                 {
-                    // Get the most recent levy payment setup for this trader occupancy
-                        latestSetup = levySetups
-                        .OrderByDescending(lp => lp.CreatedAt)
-                        .FirstOrDefault();
-
-                    if (latestSetup != null)
-                    {
-                        // Format payment frequency string based on period and amount
-                        paymentFrequency = $"{GetPeriodDays(latestSetup.Period)} days - N{latestSetup.Amount}";
-                    }
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new BadRequestException("Levy setup not configured"),
+                        "Levy setup not configured for this market and occupancy type");
                 }
-             
-                // Get the most recent payment for this trader
-                var latestPayment = trader.LevyPayments
+
+                // Get market details
+                var marketDetail = await _repository.MarketRepository
+                    .GetMarketByIdAsync(trader.MarketId, false);
+
+                if (marketDetail == null)
+                {
+                    return ResponseFactory.Fail<TraderQRValidationResponseDto>(
+                        new UnauthorizedException("Market not found"),
+                        "Market not found");
+                }
+                // Get trader's actual payment history (excluding setup records)
+                var paymentHistory = await _repository.LevyPaymentRepository
+                    .GetTraderPaymentHistory(trader.Id, excludeSetupRecords: true);
+
+                // Calculate levy breakdown based on occupancy type and payment history
+                var levyBreakdown = await CalculateLevyBreakdown(trader, levySetup, paymentHistory);
+
+                // Get the most recent actual payment (using correct enum values)
+                var lastPayment = paymentHistory
+                    .Where(p => p.PaymentStatus == PaymentStatusEnum.Paid)
                     .OrderByDescending(p => p.PaymentDate)
                     .FirstOrDefault();
 
-                var updatepaymenturl = _configuration.GetSection("ProcesspaymentUrl").Value;
-               //https://localhost:7111/api/GoodBoys/updatetraderpayment/8FFF4B79-DA26-4628-A3F2-4CFFBC07DAC9
+                // Count unique building/occupancy types for this trader
+                var buildingTypesCount = await GetTraderBuildingTypesCountWithBusinessLogic(trader.Id);
 
-                // Create response with dynamic data from the trader entity
+                // Format payment frequency
+                var paymentFrequency = FormatPaymentFrequency(levySetup.Period, levySetup.Amount);
+
+                // Build update payment URL
+                var updatePaymentUrl = _configuration.GetSection("ProcessPaymentUrl").Value;
+                var fullUpdateUrl = $"{updatePaymentUrl}api/GoodBoys/updatetraderpayment/{trader.Id}";
+
+                // Create response
                 var validationResponse = new TraderQRValidationResponseDto
                 {
                     TraderId = trader.Id,
                     TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
-                    TraderOccupancy = trader.TraderOccupancy.ToString(),
-                    TraderIdentityNumber =   trader.TIN, //$"OSH/LAG/{trader.Id}",
+                    TraderOccupancy = FormatOccupancyType(trader.TraderOccupancy),
+                    TraderIdentityNumber = trader.TIN,
                     PaymentFrequency = paymentFrequency,
-                    TotalAmount = latestSetup.Amount,
-                    PaymentPeriod = latestSetup.Period,
-                    LastPaymentDate = latestPayment?.PaymentDate,
-                    UpdatePaymentUrl = $"{updatepaymenturl}api/GoodBoys/updatetraderpayment/{scanDto?.TraderId}"
+                    TotalAmount = levyBreakdown.TotalAmount,
+                    MarketId = trader.MarketId,
+                    MarketName = marketDetail.MarketName,
+                    PaymentPeriod = levySetup.Period,
+                    LastPaymentDate = lastPayment?.PaymentDate,
+                    UpdatePaymentUrl = fullUpdateUrl,
+                    NumberOfBuildingTypes = buildingTypesCount,
+                    LevyBreakdown = levyBreakdown,
+                    BusinessName = trader.BusinessName,
+                    OccupancyType = trader.TraderOccupancy
                 };
+
+                // Get payment frequency and amount from most recent levy payment for this market and trader occupancy
+                /* var levySetups = await _repository.LevyPaymentRepository.GetByMarketAndOccupancyAsync(
+                     trader.MarketId,
+                     trader.TraderOccupancy);
+
+                 string paymentFrequency = "Not configured";
+                 LevyPayment latestSetup = null;
+                 if (levySetups != null && levySetups.Any())
+                 {
+                     // Get the most recent levy payment setup for this trader occupancy
+                         latestSetup = levySetups
+                         .OrderByDescending(lp => lp.CreatedAt)
+                         .FirstOrDefault();
+
+                     if (latestSetup != null)
+                     {
+                         // Format payment frequency string based on period and amount
+                         paymentFrequency = $"{GetPeriodDays(latestSetup.Period)} days - N{latestSetup.Amount}";
+                     }
+                 }
+
+                 // Get the most recent payment for this trader
+                 var latestPayment = trader.LevyPayments
+                     .OrderByDescending(p => p.PaymentDate)
+                     .FirstOrDefault();
+
+                 var updatepaymenturl = _configuration.GetSection("ProcesspaymentUrl").Value;
+                //https://localhost:7111/api/GoodBoys/updatetraderpayment/8FFF4B79-DA26-4628-A3F2-4CFFBC07DAC9
+
+                 // Create response with dynamic data from the trader entity
+                 var validationResponse = new TraderQRValidationResponseDto
+                 {
+                     TraderId = trader.Id,
+                     TraderName = $"{trader.User.FirstName} {trader.User.LastName}",
+                     TraderOccupancy = trader.TraderOccupancy.ToString(),
+                     TraderIdentityNumber =   trader.TIN, //$"OSH/LAG/{trader.Id}",
+                     PaymentFrequency = paymentFrequency,
+                     TotalAmount = latestSetup.Amount,
+                     PaymentPeriod = latestSetup.Period,
+                     LastPaymentDate = latestPayment?.PaymentDate,
+                     UpdatePaymentUrl = $"{updatepaymenturl}api/GoodBoys/updatetraderpayment/{scanDto?.TraderId}"
+                 };*/
 
                 await CreateAuditLog(
                     "Trader QR Code Scanned",
@@ -718,6 +781,155 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<TraderQRValidationResponseDto>(ex, "An unexpected error occurred");
             }
         }
+
+        private async Task<int> GetTraderBuildingTypesCountWithBusinessLogic(string traderId)
+        {
+            if (string.IsNullOrEmpty(traderId))
+                return 0;
+
+            // Get the actual count from database
+            var count = await _repository.TraderRepository.GetDistinctTraderBuildingTypesCount(traderId);
+
+            // If no building types found, you might want to check the trader's primary occupancy
+            if (count == 0)
+            {
+                var trader = await _repository.TraderRepository.GetTraderById(traderId, false);
+                if (trader != null)
+                {
+                    // If trader exists but has no specific building types, 
+                    // you could return 1 based on their primary occupancy type
+                    switch (trader.TraderOccupancy)
+                    {
+                        case MarketTypeEnum.Shop:
+                        case MarketTypeEnum.Kiosk:
+                        case MarketTypeEnum.OpenSpace:
+                        case MarketTypeEnum.WareHouse:
+                            return 1; // Default to 1 if trader exists but no building types recorded
+                        default:
+                            return 0;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+
+        private string FormatPaymentFrequency(PaymentPeriodEnum period, decimal amount)
+        {
+            var days = (int)period; // Since your enum values are the actual days
+            return $"{days} days - ₦{amount:N0}";
+        }
+
+        private string FormatOccupancyType(MarketTypeEnum occupancyType)
+        {
+            return occupancyType switch
+            {
+                MarketTypeEnum.OpenSpace => "Open Space",
+                MarketTypeEnum.Kiosk => "Kiosk",
+                MarketTypeEnum.Shop => "Shop",
+                MarketTypeEnum.WareHouse => "WareHouse",
+                _ => occupancyType.ToString()
+            };
+        }
+        private async Task<LevyBreakdownDto> CalculateLevyBreakdown(
+            Trader trader,
+            LevyPayment levySetup,
+            IEnumerable<LevyPayment> paymentHistory)
+        {
+            var breakdown = new LevyBreakdownDto();
+
+            // Calculate based on trader's occupancy type
+            switch (trader.TraderOccupancy)
+            {
+                case MarketTypeEnum.OpenSpace:
+                    breakdown.CurrentOpenSpaceLevy = levySetup.Amount;
+                    breakdown.TotalUnpaidOpenSpaceLevy = await CalculateUnpaidAmount(
+                        trader.Id, MarketTypeEnum.OpenSpace, paymentHistory);
+                    break;
+
+                case MarketTypeEnum.Kiosk:
+                    breakdown.CurrentKioskLevy = levySetup.Amount;
+                    breakdown.TotalUnpaidKioskLevy = await CalculateUnpaidAmount(
+                        trader.Id, MarketTypeEnum.Kiosk, paymentHistory);
+                    break;
+
+                case MarketTypeEnum.Shop:
+                    breakdown.CurrentShopLevy = levySetup.Amount;
+                    breakdown.TotalUnpaidShopLevy = await CalculateUnpaidAmount(
+                        trader.Id, MarketTypeEnum.Shop, paymentHistory);
+                    break;
+
+                case MarketTypeEnum.WareHouse:
+                    breakdown.CurrentWareHouseLevy = levySetup.Amount;
+                    breakdown.TotalUnpaidwareHouseLevy = await CalculateUnpaidAmount(
+                        trader.Id, MarketTypeEnum.WareHouse, paymentHistory);
+                    break;
+            }
+
+            breakdown.TotalAmount = breakdown.CurrentOpenSpaceLevy + breakdown.CurrentKioskLevy +
+                                    breakdown.CurrentShopLevy + breakdown.CurrentWareHouseLevy +
+                                    breakdown.TotalUnpaidOpenSpaceLevy + breakdown.TotalUnpaidKioskLevy +
+                                    breakdown.TotalUnpaidShopLevy + breakdown.TotalUnpaidwareHouseLevy;
+
+            // Calculate overdue days
+            breakdown.OverdueDays = await CalculateOverdueDays(trader.Id, paymentHistory);
+            breakdown.PaymentStatus = GetPaymentStatus(paymentHistory);
+
+            return breakdown;
+        }
+
+        private async Task<decimal> CalculateUnpaidAmount(
+            string traderId,
+            MarketTypeEnum occupancyType,
+            IEnumerable<LevyPayment> paymentHistory)
+        {
+            // Get all pending/unpaid/failed payments for this occupancy type
+            var unpaidPayments = paymentHistory
+                .Where(p => !p.IsSetupRecord && // Exclude setup records
+                           (p.PaymentStatus == PaymentStatusEnum.Pending ||
+                            p.PaymentStatus == PaymentStatusEnum.Unpaid ||
+                            p.PaymentStatus == PaymentStatusEnum.Failed))
+                .ToList();
+
+            // Calculate total unpaid amount
+            return unpaidPayments.Sum(p => p.Amount);
+        }
+
+        private async Task<int> CalculateOverdueDays(string traderId, IEnumerable<LevyPayment> paymentHistory)
+        {
+            var oldestUnpaidPayment = paymentHistory
+                .Where(p => !p.IsSetupRecord &&
+                           (p.PaymentStatus == PaymentStatusEnum.Pending ||
+                            p.PaymentStatus == PaymentStatusEnum.Unpaid))
+                .OrderBy(p => p.DueDate ?? p.PaymentDate)
+                .FirstOrDefault();
+
+            if (oldestUnpaidPayment?.DueDate != null)
+            {
+                var daysDiff = (DateTime.Now - oldestUnpaidPayment.DueDate.Value).Days;
+                return daysDiff > 0 ? daysDiff : 0;
+            }
+
+            return 0;
+        }
+
+        private string GetPaymentStatus(IEnumerable<LevyPayment> paymentHistory)
+        {
+            var hasUnpaid = paymentHistory.Any(p => !p.IsSetupRecord &&
+                                                   (p.PaymentStatus == PaymentStatusEnum.Pending ||
+                                                    p.PaymentStatus == PaymentStatusEnum.Unpaid));
+
+            var hasOverdue = paymentHistory.Any(p => !p.IsSetupRecord &&
+                                                    p.DueDate.HasValue &&
+                                                    p.DueDate < DateTime.Now &&
+                                                    p.PaymentStatus != PaymentStatusEnum.Paid);
+
+            if (hasOverdue) return "Overdue";
+            if (hasUnpaid) return "Pending";
+            return "Up to Date";
+        }
+
 
         // Helper method to convert PaymentPeriodEnum to number of days
         private int GetPeriodDays(PaymentPeriodEnum period)
@@ -899,7 +1111,7 @@ namespace SabiMarket.Infrastructure.Services
                     TraderId = traderId,
                     GoodBoyId = userId,
                     MarketId = trader.MarketId,
-                    ChairmanId = trader.Market?.ChairmanId, // Get from market if needed
+                    ChairmanId = trader.ChairmanId, // Get from market if needed
                     Amount = paymentDto.Amount,
                     Period = paymentDto.Period,
                     PaymentMethod = paymentDto.PaymentMethod ?? PaymenPeriodEnum.Cash,
@@ -910,7 +1122,10 @@ namespace SabiMarket.Infrastructure.Services
                     PaymentDate = currentDate,
                     CollectionDate = currentDate,
                     Notes = paymentDto.Notes ?? "",
-                    QRCodeScanned = paymentDto.QRCodeScanned
+                    QRCodeScanned = paymentDto.QRCodeScanned,
+                    IsSetupRecord = true,
+                    IsActive = true,
+                    OccupancyType = paymentDto.OccupancyType,
                 };
 
                 _repository.LevyPaymentRepository.Create(levyPayment);
