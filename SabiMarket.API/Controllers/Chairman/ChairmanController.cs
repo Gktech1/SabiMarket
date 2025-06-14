@@ -393,9 +393,9 @@ public class ChairmanController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> UpdateLevyPaymentFrequency(string officerId, string traderId, [FromBody] UpdateLevyFrequencyDto request)
+    public async Task<IActionResult> UpdateLevyPaymentFrequency(string officerId, [FromBody] UpdateLevyFrequencyDto request)
     {
-        var response = await _chairmanService.UpdateLevyPaymentFrequency(officerId, traderId, request);
+        var response = await _chairmanService.UpdateLevyPaymentFrequency(officerId, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 

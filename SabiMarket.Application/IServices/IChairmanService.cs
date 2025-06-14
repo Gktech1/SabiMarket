@@ -113,6 +113,6 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<bool>> ProcessTraderLevyPayment(string traderId, ProcessAsstOfficerLevyPaymentDto paymentDto);
         Task<BaseResponse<bool>> UpdateTraderMarket(string officerId, string traderId, UpdateTraderMarketDto traderDto);
 
-        Task<BaseResponse<bool>> UpdateLevyPaymentFrequency(string officerId, string traderId, UpdateLevyFrequencyDto levyDto);
+        Task<BaseResponse<bool>> UpdateLevyPaymentFrequency(string officerId, UpdateLevyFrequencyDto levyDto);
     }
 }

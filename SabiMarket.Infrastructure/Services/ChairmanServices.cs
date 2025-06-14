@@ -4587,7 +4587,7 @@ namespace SabiMarket.Infrastructure.Services
                     }
                     officer.MarketId = traderDto.MarketId;
                 }
-
+                trader.MarketId = traderDto.MarketId;
 
                 await _repository.SaveChangesAsync();
                 return ResponseFactory.Success(true, "Trader details updated successfully");
@@ -4599,9 +4599,10 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<bool>> UpdateLevyPaymentFrequency(string officerId, string traderId, UpdateLevyFrequencyDto levyDto)
+        public async Task<BaseResponse<bool>> UpdateLevyPaymentFrequency(string officerId, UpdateLevyFrequencyDto levyDto)
         {
             var correlationId = Guid.NewGuid().ToString();
+            Trader existingTraderWithTin = new();
             try
             {
                 // Get the assist center officer with tracking
@@ -4612,24 +4613,24 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // Get the trader
-                var trader = await _repository.TraderRepository.GetTraderById(traderId, true);
+             /*   var trader = await _repository.TraderRepository.GetTraderById(traderId, true);
                 if (trader == null)
                 {
                     return ResponseFactory.Fail<bool>("Trader not found");
-                }
-
+                }*/
+                
                 // Validate TIN if provided
                 if (!string.IsNullOrEmpty(levyDto.TraderIdentificationNumber) &&
                     levyDto.TraderIdentificationNumber != "string")
                 {
                     // Check if TIN already exists for another trader
-                    var existingTraderWithTin = await _repository.TraderRepository
+                     existingTraderWithTin = await _repository.TraderRepository
                         .GetTraderByTinAsync(levyDto.TraderIdentificationNumber);
 
-                    if (existingTraderWithTin != null && existingTraderWithTin.Id != traderId)
+                    /*if (existingTraderWithTin != null)
                     {
                         return ResponseFactory.Fail<bool>("Trader Identification Number already exists for another trader");
-                    }
+                    }*/
                 }
 
                 // Validate market if provided
@@ -4644,7 +4645,7 @@ namespace SabiMarket.Infrastructure.Services
 
                 // Get existing levy payment record or create new setup record
                 var existingLevyPayments = await _repository.LevyPaymentRepository
-                    .GetActiveSetupRecordsByTraderIdAsync(traderId);
+                    .GetActiveSetupRecordsByTraderIdAsync(existingTraderWithTin.Id);
                 // Get the first/single record
                 var existingLevyPayment = existingLevyPayments.FirstOrDefault();
 
@@ -4653,9 +4654,9 @@ namespace SabiMarket.Infrastructure.Services
                     // Create new setup record
                     var newLevyPayment = new LevyPayment
                     {
-                        TraderId = traderId,
+                        TraderId = existingTraderWithTin.Id,
                         MarketId = !string.IsNullOrEmpty(levyDto.MarketId) && levyDto.MarketId != "string"
-                            ? levyDto.MarketId : trader.MarketId,
+                            ? levyDto.MarketId : existingTraderWithTin.MarketId,
                         Amount = levyDto.Amount,
                         Period = levyDto.PaymentFrequency,
                         PaymentStatus = PaymentStatusEnum.Pending,
@@ -4689,16 +4690,16 @@ namespace SabiMarket.Infrastructure.Services
                 if (!string.IsNullOrEmpty(levyDto.TraderIdentificationNumber) &&
                     levyDto.TraderIdentificationNumber != "string")
                 {
-                    trader.TIN = levyDto.TraderIdentificationNumber;
+                    existingTraderWithTin.TIN = levyDto.TraderIdentificationNumber;
                 }
 
                 // Update trader's market assignment if provided
                 if (!string.IsNullOrEmpty(levyDto.MarketId) && levyDto.MarketId != "string")
                 {
-                    trader.MarketId = levyDto.MarketId;
+                    existingTraderWithTin.MarketId = levyDto.MarketId;
                 }
-                trader.Amount = levyDto.Amount;
-                trader.PaymentFrequency = levyDto.PaymentFrequency;
+                existingTraderWithTin.Amount = levyDto.Amount;
+                existingTraderWithTin.PaymentFrequency = levyDto.PaymentFrequency;
                 await _repository.SaveChangesAsync();
 
                 return ResponseFactory.Success(true, "Levy payment frequency updated successfully");
@@ -4706,7 +4707,7 @@ namespace SabiMarket.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating levy payment frequency: OfficerId: {OfficerId}, TraderId: {TraderId}, CorrelationId: {CorrelationId}",
-                    officerId, traderId, correlationId);
+                    officerId, existingTraderWithTin.Id, correlationId);
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while updating levy payment frequency");
             }
         }
