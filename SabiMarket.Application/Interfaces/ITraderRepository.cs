@@ -28,4 +28,5 @@ public interface ITraderRepository : IGeneralRepository<Trader>
     Task<Trader> GetTraderByIdWithDetailsAsync(string traderId, bool trackChanges);
     Task<bool> TinExistsAsync(string tin, params string[] excludeTraderIds);
     Task<Trader> GetTraderByTinAsync(string tin, bool trackChanges = false);
+    Task<TraderBuildingType> GetBuildingTypeByIdAsync(string traderId, bool trackChanges);
 }

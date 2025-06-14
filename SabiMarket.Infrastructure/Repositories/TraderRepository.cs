@@ -129,6 +129,15 @@ namespace SabiMarket.Infrastructure.Repositories
                 .CountAsync();
             return distinctCount;
         }
+
+        public async Task<TraderBuildingType> GetBuildingTypeByIdAsync(string traderId, bool trackChanges)
+        {
+            var query = _context.TraderBuildingTypes.Where(t => t.TraderId == traderId);
+
+            return trackChanges ?
+                await query.FirstOrDefaultAsync() :
+                await query.AsNoTracking().FirstOrDefaultAsync();
+        }
         public async Task<Trader> GetTraderByIdAsync(string traderId, bool trackChanges)
         {
             var query = _context.Traders.Where(t => t.Id == traderId);

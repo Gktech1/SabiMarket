@@ -4587,7 +4587,12 @@ namespace SabiMarket.Infrastructure.Services
                     }
                     officer.MarketId = traderDto.MarketId;
                 }
+                var buildingType = await _repository.TraderRepository.GetBuildingTypeByIdAsync(traderId, false); 
+               
+                if (buildingType == null) return ResponseFactory.Fail<bool>("building type not found");
+                
                 trader.MarketId = traderDto.MarketId;
+                buildingType.NumberOfBuildingTypes = traderDto.NumberOfBuildingTypes;
 
                 await _repository.SaveChangesAsync();
                 return ResponseFactory.Success(true, "Trader details updated successfully");

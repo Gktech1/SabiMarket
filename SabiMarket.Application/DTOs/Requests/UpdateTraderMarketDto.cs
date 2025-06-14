@@ -1,4 +1,6 @@
-﻿namespace SabiMarket.Application.DTOs.Requests
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace SabiMarket.Application.DTOs.Requests
 {
     public class UpdateTraderMarketDto
     {
@@ -8,8 +10,12 @@
         public string? PaymentFrequency { get; set; }
         public string? LastPaymentDate { get; set; }
         public string? UpdatePaymentUrl { get; set; }
-        public string? MarketId { get; set; }
+        [Required]
+        public string MarketId { get; set; }
         public string? PhoneNumber { get; set; }
+
+        public int NumberOfBuildingTypes { get; set; }  = 0;    
+
         public string? EmailAddress { get; set; }
         public string? Address { get; set; }
         public string? ProfileImageUrl { get; set; }
