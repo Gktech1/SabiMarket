@@ -12,6 +12,8 @@ using SabiMarket.Domain.Entities.LocalGovernmentAndMArket;
 using SabiMarket.Domain.Entities.MarketParticipants;
 using SabiMarket.Domain.Entities.UserManagement;
 using SabiMarket.Domain.Enum;
+using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using static RoleResponseDto;
 
 public class MappingProfile : Profile
@@ -142,6 +144,82 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.LocalGovernment, opt => opt.MapFrom(src => src.LocalGovernment));
 
         CreateMap<Trader, TraderResponseDto>()
+        .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+
+        // CRITICAL FIX: Properly handle User navigation property with null checks
+        .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
+            src.User != null
+                ? $"{src.User.FirstName ?? ""} {src.User.LastName ?? ""}".Trim()
+                : string.Empty))
+
+        // CRITICAL FIX: Add null checks for User properties
+        .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src =>
+            src.User != null ? src.User.PhoneNumber ?? string.Empty : string.Empty))
+
+        .ForMember(dest => dest.Email, opt => opt.MapFrom(src =>
+            src.User != null ? src.User.Email ?? string.Empty : string.Empty))
+
+        .ForMember(dest => dest.MarketId, opt => opt.MapFrom(src => src.MarketId ?? string.Empty))
+
+        // CRITICAL FIX: Market entity has MarketName property, NOT Name
+        .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src =>
+            src.Market != null ? src.Market.MarketName ?? string.Empty : src.MarketName ?? string.Empty))
+
+        // CRITICAL FIX: Add null check for Gender
+        .ForMember(dest => dest.Gender, opt => opt.MapFrom(src =>
+            src.User != null ? src.User.Gender ?? string.Empty : string.Empty))
+
+        .ForMember(dest => dest.IdentityNumber, opt => opt.MapFrom(src => src.TIN ?? string.Empty))
+        .ForMember(dest => dest.BusinessName, opt => opt.MapFrom(src => src.BusinessName ?? string.Empty))
+
+        .ForMember(dest => dest.ProfileImageUrl, opt => opt.MapFrom(src =>
+            src.User != null ? src.User.ProfileImageUrl ?? string.Empty : string.Empty))
+
+        .ForMember(dest => dest.TraderName, opt => opt.MapFrom(src => src.TraderName ?? string.Empty))
+        .ForMember(dest => dest.BusinessType, opt => opt.MapFrom(src => src.BusinessType ?? string.Empty))
+
+       // CRITICAL FIX: BuildingTypes was showing object type instead of formatted string
+       /* .ForMember(dest => dest.BuildingTypes, opt => opt.MapFrom(src =>
+            src.BuildingTypes ?? string.Empty))*/
+       .ForMember(dest => dest.BuildingTypes, opt => opt.MapFrom(src =>
+            src.BuildingTypes != null && src.BuildingTypes.Any()
+                ? string.Join(", ", src.BuildingTypes.Select(bt => GetEnumDisplayName(bt.BuildingType)))
+                : string.Empty))
+
+
+        // ALSO FIX: BusinessType enum to string conversion
+        .ForMember(dest => dest.BusinessType, opt => opt.MapFrom(src =>
+            src.BusinessType != null ? src.BusinessType.ToString() : string.Empty))
+
+        // CRITICAL FIX: DateAdded showing default date - ensure CreatedAt is properly set
+        .ForMember(dest => dest.DateAdded, opt => opt.MapFrom(src =>
+            src.CreatedAt != default(DateTime) ? src.CreatedAt : DateTime.Now))
+
+        .ForMember(dest => dest.QRCode, opt => opt.MapFrom(src => src.QRCode ?? string.Empty))
+        .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive));
+
+
+        CreateMap<Trader, TraderDetailsDto>()
+            .IncludeBase<Trader, TraderResponseDto>()
+            .ForMember(dest => dest.TraderIdentityNumber, opt => opt.MapFrom(src => src.TIN))
+            .ForMember(dest => dest.TraderPhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber))
+            .ForMember(dest => dest.DateAddedFormatted, opt => opt.MapFrom(src =>
+                src.CreatedAt.ToString("MMM dd, yyyy, hh:mm tt")))
+            .ForMember(dest => dest.HasQRCode, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.QRCode)))
+            .ForMember(dest => dest.QRCodeImageUrl, opt => opt.MapFrom(src => src.QRCode));
+
+        // ADDITIONAL RECOMMENDATIONS:
+
+        // 1. ADD CONDITIONAL MAPPING FOR BETTER NULL SAFETY:
+        CreateMap<Trader, TraderResponseDto>()
+            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
+                src.User != null
+                    ? $"{src.User.FirstName ?? ""} {src.User.LastName ?? ""}".Trim()
+                    : string.Empty))
+            .ForMember(dest => dest.MarketName, opt => opt.MapFrom(src =>
+                src.Market != null ? src.Market.MarketName : src.MarketName));
+
+       /* CreateMap<Trader, TraderResponseDto>()
           .ForMember(dest => dest.IdentityNumber, opt => opt.MapFrom(src => src.TIN));
 
         CreateMap<Trader, TraderDetailsDto>()
@@ -152,7 +230,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.DateAddedFormatted, opt => opt.MapFrom(src => src.CreatedAt.ToString("MMM dd, yyyy, hh:mm tt")))
             .ForMember(dest => dest.HasQRCode, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.QRCode)))
             .ForMember(dest => dest.QRCodeImageUrl, opt => opt.MapFrom(src => src.QRCode));
-
+*/
         // Map for UsersByLocalGovernmentResponseDto
         CreateMap<(ApplicationUser User, LocalGovernment LocalGovernment), UsersByLocalGovernmentResponseDto>()
             .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User))
@@ -982,6 +1060,17 @@ public class MappingProfile : Profile
 
         return complianceByMarket;
     }
+
+    public static string GetEnumDisplayName(Enum enumValue)
+    {
+        return enumValue
+            .GetType()
+            .GetMember(enumValue.ToString())
+            .FirstOrDefault()?
+            .GetCustomAttribute<DisplayAttribute>()?
+            .Name ?? enumValue.ToString();
+    }
+
 }
 
 

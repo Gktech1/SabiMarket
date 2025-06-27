@@ -106,7 +106,7 @@ namespace SabiMarket.Infrastructure.Repositories
              return await query.FirstOrDefaultAsync();
          }
  */
-        public async Task<Trader> GetTraderByIdWithDetailsAsync(string traderId, bool trackChanges)
+       /* public async Task<Trader> GetTraderByIdWithDetailsAsync(string traderId, bool trackChanges)
         {
             var query = _context.Traders
                 .Include(t => t.User)
@@ -117,7 +117,7 @@ namespace SabiMarket.Infrastructure.Repositories
             return trackChanges ?
                 await query.FirstOrDefaultAsync() :
                 await query.AsNoTracking().FirstOrDefaultAsync();
-        }
+        }*/
 
         // Option 4: If you want to get distinct building type IDs (in case there are duplicates)
         public async Task<int> GetDistinctTraderBuildingTypesCount(string traderId)
@@ -147,17 +147,30 @@ namespace SabiMarket.Infrastructure.Repositories
                 await query.AsNoTracking().FirstOrDefaultAsync();
         }
 
-        public async Task<Trader> GetTraderById(string traderId, bool trackChanges) =>
+        public async Task<IEnumerable<Trader>> GetAllTradersByMarketAsync(
+    string marketId,
+    bool trackChanges = false)
+        {
+            return await FindByCondition(t => t.MarketId == marketId, trackChanges)
+                .Include(t => t.User)
+                .Include(t => t.Market)
+                .Include(t => t.BuildingTypes)  // ADDED
+                .Include(t => t.LevyPayments)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
+
+        /*public async Task<Trader> GetTraderById(string traderId, bool trackChanges) =>
                 await FindByCondition(t => t.Id == traderId, trackChanges)
                     .Include(t => t.User)
                     .Include(t => t.Market)
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync();*/
 
-        public async Task<Trader> GetTraderDetails(string userId) =>
+        /*public async Task<Trader> GetTraderDetails(string userId) =>
             await FindByCondition(t => t.UserId == userId, trackChanges: false)
                 .Include(t => t.User)
                 .Include(t => t.Market)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync();*/
 
         // Get trader count by GoodBoy ID for dashboard
         public async Task<int> GetTraderCountByGoodBoyIdAsync(string goodBoyId)
@@ -196,6 +209,35 @@ namespace SabiMarket.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<Trader> GetTraderByIdWithDetailsAsync(string traderId, bool trackChanges)
+        {
+            var query = _context.Traders
+                .Include(t => t.User)
+                .Include(t => t.Market)
+                .Include(t => t.BuildingTypes)  // ADDED
+                .Include(t => t.LevyPayments)
+                .Where(t => t.Id == traderId);
+
+            return trackChanges ?
+                await query.FirstOrDefaultAsync() :
+                await query.AsNoTracking().FirstOrDefaultAsync();
+        }
+
+        // Update GetTraderById method
+        public async Task<Trader> GetTraderById(string traderId, bool trackChanges) =>
+            await FindByCondition(t => t.Id == traderId, trackChanges)
+                .Include(t => t.User)
+                .Include(t => t.Market)
+                .Include(t => t.BuildingTypes)  // ADDED
+                .FirstOrDefaultAsync();
+
+        // Update GetTraderDetails method
+        public async Task<Trader> GetTraderDetails(string userId) =>
+            await FindByCondition(t => t.UserId == userId, trackChanges: false)
+                .Include(t => t.User)
+                .Include(t => t.Market)
+                .Include(t => t.BuildingTypes)  // ADDED
+                .FirstOrDefaultAsync();
 
         public async Task<int> GetTraderCountAsync(DateTime startDate, DateTime endDate) =>
             await FindByCondition(t =>
@@ -233,7 +275,7 @@ namespace SabiMarket.Infrastructure.Repositories
             return trader;
         }*/
 
-        public async Task<IEnumerable<Trader>> GetAllTradersByMarketAsync(
+       /* public async Task<IEnumerable<Trader>> GetAllTradersByMarketAsync(
             string marketId,
             bool trackChanges = false)
         {
@@ -243,7 +285,7 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Include(t => t.LevyPayments)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
-        }
+        }*/
         public IQueryable<Trader> GetTradersByCaretakerId(string caretakerId, bool trackChanges = false)
         {
             return FindByCondition(t => t.CaretakerId == caretakerId, trackChanges)

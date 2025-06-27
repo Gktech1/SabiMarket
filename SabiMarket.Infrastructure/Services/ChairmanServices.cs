@@ -1374,8 +1374,37 @@ namespace SabiMarket.Infrastructure.Services
                     "Trader Management"
                 );
 
+                // Repository query must include related entities for proper mapping
                 var tradersPage = await _repository.TraderRepository.GetTradersByMarketAsync(marketId, filter, false);
-                var traderDtos = _mapper.Map<IEnumerable<TraderResponseDto>>(tradersPage.PageItems);
+
+                var traderDtos = tradersPage?.PageItems != null
+                                                    ? _mapper.Map<List<TraderResponseDto>>(tradersPage.PageItems)
+                                                    : new List<TraderResponseDto>();
+
+                // Manually fix ProfileImageUrl in case AutoMapper missed it
+                if (tradersPage?.PageItems != null)
+                {
+                    foreach (var dto in traderDtos)
+                    {
+                        var originalTrader = tradersPage.PageItems.FirstOrDefault(t => t.Id == dto.Id);
+                        if (originalTrader != null)
+                        {
+                            dto.ProfileImageUrl = originalTrader.User?.ProfileImageUrl ?? string.Empty;
+                            dto.FullName = $"{originalTrader.User?.FirstName} {originalTrader.User?.LastName}".Trim() ?? "Unknown";
+                            dto.IdentityNumber = originalTrader.TIN ?? string.Empty;
+                            dto.BuildingTypes = originalTrader.BuildingTypes != null && originalTrader.BuildingTypes.Any()
+                                                ? originalTrader.BuildingTypes.Select(bt => bt.BuildingType).ToList()
+                                                : new List<BuildingTypeEnum>();
+                            dto.Gender = originalTrader.User.Gender ?? string.Empty;    
+
+                        }
+                    }
+                }
+
+               /* // Fixed: Handle null or empty PageItems
+                var traderDtos = tradersPage?.PageItems != null
+                    ? _mapper.Map<IEnumerable<TraderResponseDto>>(tradersPage.PageItems)
+                    : Enumerable.Empty<TraderResponseDto>();*/
 
                 await CreateAuditLog(
                     "Traders List Retrieved",
@@ -1388,7 +1417,7 @@ namespace SabiMarket.Infrastructure.Services
                     PageItems = traderDtos,
                     CurrentPage = filter.PageNumber,
                     PageSize = filter.PageSize,
-                    NumberOfPages = tradersPage.NumberOfPages
+                    NumberOfPages = tradersPage?.NumberOfPages ?? 0
                 }, "Traders retrieved successfully");
             }
             catch (Exception ex)
@@ -1402,6 +1431,46 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
+
+        /*  public async Task<BaseResponse<PaginatorDto<IEnumerable<TraderResponseDto>>>> GetTraders(string marketId, PaginationFilter filter)
+          {
+              var correlationId = Guid.NewGuid().ToString();
+              try
+              {
+                  await CreateAuditLog(
+                      "Traders List Query",
+                      $"CorrelationId: {correlationId} - Fetching traders for market: {marketId}. Page: {filter.PageNumber}, Size: {filter.PageSize}",
+                      "Trader Management"
+                  );
+
+                  var tradersPage = await _repository.TraderRepository.GetTradersByMarketAsync(marketId, filter, false);
+                  var traderDtos = _mapper.Map<IEnumerable<TraderResponseDto>>(tradersPage.PageItems);
+
+                  await CreateAuditLog(
+                      "Traders List Retrieved",
+                      $"CorrelationId: {correlationId} - Retrieved {traderDtos.Count()} traders",
+                      "Trader Management"
+                  );
+
+                  return ResponseFactory.Success(new PaginatorDto<IEnumerable<TraderResponseDto>>
+                  {
+                      PageItems = traderDtos,
+                      CurrentPage = filter.PageNumber,
+                      PageSize = filter.PageSize,
+                      NumberOfPages = tradersPage.NumberOfPages
+                  }, "Traders retrieved successfully");
+              }
+              catch (Exception ex)
+              {
+                  await CreateAuditLog(
+                      "Traders List Query Failed",
+                      $"CorrelationId: {correlationId} - Error: {ex.Message}",
+                      "Trader Management"
+                  );
+                  return ResponseFactory.Fail<PaginatorDto<IEnumerable<TraderResponseDto>>>(ex, "An unexpected error occurred");
+              }
+          }
+  */
         public async Task<BaseResponse<MarketComplianceDto>> GetMarketComplianceRates(string marketId)
         {
             var correlationId = Guid.NewGuid().ToString();
