@@ -1,4 +1,6 @@
 ﻿using System.Data;
+using System.Security.Claims;
+using iText.StyledXmlParser.Jsoup.Helper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
@@ -13,9 +15,9 @@ using SabiMarket.Domain.Exceptions;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
 using Serilog;
+using static iText.StyledXmlParser.Jsoup.Select.Evaluator;
 
 namespace SabiMarket.Infrastructure.Services;
-
 
 public class WaivedProductService : IWaivedProductService
 {
@@ -592,6 +594,237 @@ public class WaivedProductService : IWaivedProductService
         }
 
         return ResponseFactory.Success(cusComplaint);
+    }
+
+    public async Task<BaseResponse<string>> CustomerIndicateInterestForWaivedProduct(CustomerInterstForUrgentPurchase dto)
+    {
+        var response = new BaseResponse<string>();
+
+        try
+        {
+            // 1. Get logged-in user
+            var user = Helper.GetUserDetails(_contextAccessor);
+            if (user.Id == null)
+            {
+                response.Status = false;
+                response.Message = "Unauthorized access.";
+                return response;
+            }
+
+
+            // Validate role
+            if (user.Role?.ToLower() != "customer")
+            {
+                response.Status = false;
+                response.Message = "Only customers can indicate interest.";
+                return response;
+            }
+            //var waivedProduct = await _repositoryManager.WaivedProductRepository.GetWaivedProductById(Id, false);
+
+            var product = await _applicationDbContext.WaivedProducts.FirstOrDefaultAsync(p => p.Id == dto.ProductId && p.VendorId == dto.VendorId);
+            if (product == null)
+            {
+                response.Status = false;
+                response.Message = "Product not found.";
+                return response;
+            }
+            if (!product.IsAvailbleForUrgentPurchase)
+            {
+                response.Status = false;
+                response.Message = "Product is not available for urgent purchase.";
+                return response;
+            }
+
+            //if (product.)
+            //{
+            //    response.Status = false;
+            //    response.Message = $"Only {product.AvailableQuantity} item(s) available.";
+            //    return response;
+            //}
+
+            // Notify vendor
+            var notification = new WaiveMarketNotification
+            {
+                VendorId = dto.VendorId,
+                CustomerId = user.Id,
+                Message = $"A customer is interested in {product.ProductName}.",
+                IsActive = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+
+            _applicationDbContext.WaiveMarketNotifications.Add(notification);
+            await _applicationDbContext.SaveChangesAsync();
+
+            response.Status = true;
+            response.Message = "Interest recorded and vendor notified.";
+            response.Data = "Success";
+        }
+        catch (Exception ex)
+        {
+            //_logger.LogError(ex, "Error indicating interest for waived product");
+            response.Status = false;
+            response.Message = "An error occurred while processing your request.";
+        }
+
+        return response;
+    }
+
+    public async Task<BaseResponse<List<WaiveMarketNotification>>> GetNotificationsAsync()
+    {
+        var response = new BaseResponse<List<WaiveMarketNotification>>();
+
+        try
+        {
+            var user = Helper.GetUserDetails(_contextAccessor);
+            if (user.Id == null)
+            {
+                response.Status = false;
+                response.Message = "Unauthorized access.";
+                return response;
+            }
+
+            var now = DateTime.UtcNow;
+            IQueryable<WaiveMarketNotification> query = _applicationDbContext.WaiveMarketNotifications;
+
+            if (user.Role.ToLower() == "vendor")
+            {
+                var getVendor = _applicationDbContext.Vendors.Where(x => x.UserId == user.Id).FirstOrDefault();
+                query = query.Where(n => n.VendorId == getVendor.Id);
+            }
+            else if (user.Role.ToLower() == "customer")
+            {
+                var getcustomer = _applicationDbContext.Customers.Where(x => x.UserId == user.Id).FirstOrDefault();
+
+                query = query.Where(n => n.CustomerId == getcustomer.Id);
+            }
+            else
+            {
+                response.Status = false;
+                response.Message = "Invalid user role.";
+                return response;
+            }
+
+            // Exclude notifications based on IsActive and time logic
+            query = query.Where(n => !n.IsActive || (n.IsActive && !((now - n.CreatedAt).TotalHours > 24 || (n.UpdatedAt.HasValue && (now - n.UpdatedAt.Value).TotalHours > 6))));
+
+            var notifications = await query
+                .OrderByDescending(n => n.CreatedAt)
+                .ToListAsync();
+
+            response.Status = true;
+            response.Message = "Notifications retrieved successfully.";
+            response.Data = notifications;
+        }
+        catch (Exception ex)
+        {
+            response.Status = false;
+            response.Message = "Error retrieving notifications.";
+        }
+
+        return response;
+    }
+
+
+    public async Task<BaseResponse<bool>> CanProceedToPurchaseAsync(string notificationId, string vendorResponse)
+    {
+        var response = new BaseResponse<bool>();
+
+        try
+        {
+            var user = Helper.GetUserDetails(_contextAccessor);
+            if (user.Id == null || user.Role.ToLower() != "vendor")
+            {
+                response.Status = false;
+                response.Message = "Only vendors can perform this action.";
+                return response;
+            }
+            var getVendor = _applicationDbContext.Vendors.Where(x => x.UserId == user.Id).FirstOrDefault();
+            if (getVendor == null || !getVendor.IsActive)
+            {
+                response.Status = false;
+                response.Message = "Vendor not found or deactivated.";
+                return response;
+            }
+            var notification = await _applicationDbContext.WaiveMarketNotifications
+                .FirstOrDefaultAsync(n => n.Id == notificationId && n.VendorId == getVendor.Id);
+
+            if (notification == null)
+            {
+                response.Status = false;
+                response.Message = "Notification not found.";
+                return response;
+            }
+
+            // Update read status and time
+            notification.IsActive = true;
+            notification.VendorResponse = vendorResponse;
+            notification.UpdatedAt = DateTime.UtcNow;
+
+            _applicationDbContext.WaiveMarketNotifications.Update(notification);
+            await _applicationDbContext.SaveChangesAsync();
+
+            // Interpret response
+            bool canProceed = vendorResponse.Trim().ToLower() == "yes";
+
+            response.Status = true;
+            response.Message = "Notification updated successfully.";
+            response.Data = canProceed;
+        }
+        catch (Exception ex)
+        {
+            response.Status = false;
+            response.Message = "Error updating notification.";
+        }
+
+        return response;
+    }
+    public async Task<BaseResponse<WaiveMarketNotification>> GetNotificationByIdAsync(string notificationId)
+    {
+        var response = new BaseResponse<WaiveMarketNotification>();
+
+        try
+        {
+            var user = Helper.GetUserDetails(_contextAccessor);
+            if (user.Id == null)
+            {
+                response.Status = false;
+                response.Message = "Unauthorized access.";
+                return response;
+            }
+
+            var getVendor = await _applicationDbContext.Vendors
+                .FirstOrDefaultAsync(x => x.UserId == user.Id);
+
+            var isVendor = user.Role?.ToLower() == "vendor" && getVendor != null;
+
+            var notification = await _applicationDbContext.WaiveMarketNotifications
+                .FirstOrDefaultAsync(n =>
+                    n.Id == notificationId &&
+                    (
+                        (isVendor && n.VendorId == getVendor.Id) ||
+                        (!isVendor && n.CustomerId == user.Id)
+                    )
+                );
+
+            if (notification == null)
+            {
+                response.Status = false;
+                response.Message = "Notification not found.";
+                return response;
+            }
+
+            response.Status = true;
+            response.Message = "Notification retrieved successfully.";
+            response.Data = notification;
+        }
+        catch (Exception ex)
+        {
+            response.Status = false;
+            response.Message = "An error occurred while retrieving the notification.";
+        }
+
+        return response;
     }
 
 }

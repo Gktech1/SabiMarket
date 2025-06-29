@@ -1,4 +1,5 @@
-﻿using Azure;
+﻿using System;
+using Azure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
@@ -686,6 +687,56 @@ namespace SabiMarket.API.Controllers.WaivedMarket
                 {
                     StatusCodes.Status400BadRequest => BadRequest(response),
                     StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+
+        [HttpGet("notifications")]
+        public async Task<IActionResult> GetNotifications()
+        {
+            var response = await _serviceManager.IWaivedProductService.GetNotificationsAsync();
+
+            if (!response.Status)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPost("notifications/{notificationId}/can-proceed")]
+        public async Task<IActionResult> CanProceedToPurchase(string notificationId, [FromBody] string vendorResponse)
+        {
+            var response = await _serviceManager.IWaivedProductService.CanProceedToPurchaseAsync(notificationId, vendorResponse);
+
+            if (!response.Status)
+            {
+                return response.Message switch
+                {
+                    "Notification not found." => NotFound(response),
+                    "Only vendors can perform this action." => Unauthorized(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("notifications/{notificationId}")]
+        public async Task<IActionResult> GetNotificationById(string notificationId)
+        {
+            var response = await _serviceManager.IWaivedProductService.GetNotificationByIdAsync(notificationId);
+
+            if (!response.Status)
+            {
+                return response.Message switch
+                {
+                    "Unauthorized access." => Unauthorized(response),
+                    "Notification not found." => NotFound(response),
                     _ => BadRequest(response)
                 };
             }

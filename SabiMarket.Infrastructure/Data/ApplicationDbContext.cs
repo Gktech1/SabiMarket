@@ -60,6 +60,7 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<WaiveMarketDates> WaiveMarketDates { get; set; }
         public DbSet<OfficerMarketAssignment> OfficerMarketAssignments { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<WaiveMarketNotification> WaiveMarketNotifications { get; set; }
 
         #endregion
 

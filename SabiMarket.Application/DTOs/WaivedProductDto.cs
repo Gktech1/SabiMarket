@@ -69,4 +69,11 @@ namespace SabiMarket.Application.DTOs
         public string ProductName { get; set; }
         public decimal Price { get; set; }
     }
+
+    public class CustomerInterstForUrgentPurchase
+    {
+        public string VendorId { get; set; }
+        public int NumberOfItemsInterestedIn { get; set; }
+        public string ProductId { get; set; }
+    }
 }

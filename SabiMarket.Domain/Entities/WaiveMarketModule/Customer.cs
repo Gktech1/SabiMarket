@@ -36,5 +36,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
 
         public virtual ICollection<CustomerOrder> Orders { get; set; } = new List<CustomerOrder>();
         public virtual ICollection<CustomerFeedback> Feedbacks { get; set; } = new List<CustomerFeedback>();
+        public virtual ICollection<WaiveMarketNotification> WaiveMarketNotifications { get; set; } = new List<WaiveMarketNotification>();
+
     }
 }
