@@ -30,7 +30,7 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string category, PaginationFilter paginationFilter);
         Task<BaseResponse<CustomerFeedback>> GetCustomerFeedbackById(string Id);
         Task<BaseResponse<NextWaiveMarketDateDto>> GetNextWaiveMarketDate();
-        Task<BaseResponse<List<WaiveMarketNotification>>> GetNotificationsAsync();
+        Task<BaseResponse<List<NotificationDto>>> GetNotificationsAsync();
         Task<BaseResponse<WaiveMarketNotification>> GetNotificationByIdAsync(string notificationId);
         Task<BaseResponse<List<ProductDetailsDto>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter);
         Task<BaseResponse<int>> GetUrgentPurchaseWaivedProductCount();

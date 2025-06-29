@@ -726,6 +726,24 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
+        [HttpPost("CustomerIndicateInterestForWaivedProduct")]
+        public async Task<IActionResult> CanProceedToPurchase(CustomerInterstForUrgentPurchase dto)
+        {
+            var response = await _serviceManager.IWaivedProductService.CustomerIndicateInterestForWaivedProduct(dto);
+
+            if (!response.Status)
+            {
+                return response.Message switch
+                {
+                    "Notification not found." => NotFound(response),
+                    "Only vendors can perform this action." => Unauthorized(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
         [HttpGet("notifications/{notificationId}")]
         public async Task<IActionResult> GetNotificationById(string notificationId)
         {

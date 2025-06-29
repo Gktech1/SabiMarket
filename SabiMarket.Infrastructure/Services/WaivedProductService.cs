@@ -634,7 +634,13 @@ public class WaivedProductService : IWaivedProductService
                 response.Message = "Product is not available for urgent purchase.";
                 return response;
             }
-
+            var getCustomer = _applicationDbContext.Customers.Where(x => x.UserId == user.Id).FirstOrDefault();
+            if (getCustomer == null)
+            {
+                response.Status = false;
+                response.Message = "Customer details not found.";
+                return response;
+            }
             //if (product.)
             //{
             //    response.Status = false;
@@ -646,8 +652,8 @@ public class WaivedProductService : IWaivedProductService
             var notification = new WaiveMarketNotification
             {
                 VendorId = dto.VendorId,
-                CustomerId = user.Id,
-                Message = $"A customer is interested in {product.ProductName}.",
+                CustomerId = getCustomer.Id,
+                Message = $"A customer is interested in your {product.ProductName}.",
                 IsActive = false,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -670,9 +676,9 @@ public class WaivedProductService : IWaivedProductService
         return response;
     }
 
-    public async Task<BaseResponse<List<WaiveMarketNotification>>> GetNotificationsAsync()
+    public async Task<BaseResponse<List<NotificationDto>>> GetNotificationsAsync()
     {
-        var response = new BaseResponse<List<WaiveMarketNotification>>();
+        var response = new BaseResponse<List<NotificationDto>>();
 
         try
         {
@@ -684,19 +690,39 @@ public class WaivedProductService : IWaivedProductService
                 return response;
             }
 
-            var now = DateTime.UtcNow;
-            IQueryable<WaiveMarketNotification> query = _applicationDbContext.WaiveMarketNotifications;
+            List<WaiveMarketNotification> dbNotifications;
 
-            if (user.Role.ToLower() == "vendor")
+            if (user.Role?.ToLower() == "vendor")
             {
-                var getVendor = _applicationDbContext.Vendors.Where(x => x.UserId == user.Id).FirstOrDefault();
-                query = query.Where(n => n.VendorId == getVendor.Id);
+                var vendor = await _applicationDbContext.Vendors
+                    .FirstOrDefaultAsync(x => x.UserId == user.Id);
+
+                if (vendor == null)
+                {
+                    response.Status = false;
+                    response.Message = "Vendor not found.";
+                    return response;
+                }
+
+                dbNotifications = await _applicationDbContext.WaiveMarketNotifications
+                    .Where(n => n.VendorId == vendor.Id)
+                    .ToListAsync();
             }
             else if (user.Role.ToLower() == "customer")
             {
-                var getcustomer = _applicationDbContext.Customers.Where(x => x.UserId == user.Id).FirstOrDefault();
+                var customer = await _applicationDbContext.Customers
+                    .FirstOrDefaultAsync(x => x.UserId == user.Id);
 
-                query = query.Where(n => n.CustomerId == getcustomer.Id);
+                if (customer == null)
+                {
+                    response.Status = false;
+                    response.Message = "Customer not found.";
+                    return response;
+                }
+
+                dbNotifications = await _applicationDbContext.WaiveMarketNotifications
+                    .Where(n => n.CustomerId == customer.Id)
+                    .ToListAsync();
             }
             else
             {
@@ -705,16 +731,35 @@ public class WaivedProductService : IWaivedProductService
                 return response;
             }
 
-            // Exclude notifications based on IsActive and time logic
-            query = query.Where(n => !n.IsActive || (n.IsActive && !((now - n.CreatedAt).TotalHours > 24 || (n.UpdatedAt.HasValue && (now - n.UpdatedAt.Value).TotalHours > 6))));
+            var now = DateTime.UtcNow;
 
-            var notifications = await query
+            var filteredNotifications = dbNotifications
+                .Where(n =>
+                    !n.IsActive || (
+                        n.IsActive &&
+                        !(
+                            (now - n.CreatedAt).TotalHours > 24 ||
+                            (n.UpdatedAt.HasValue && (now - n.UpdatedAt.Value).TotalHours > 6)
+                        )
+                    )
+                )
                 .OrderByDescending(n => n.CreatedAt)
-                .ToListAsync();
+                .Select(n => new NotificationDto
+                {
+                    Id = n.Id,
+                    VendorId = n.VendorId,
+                    CustomerId = n.CustomerId,
+                    Message = n.Message,
+                    VendorResponse = n.VendorResponse,
+                    IsActive = n.IsActive,
+                    CreatedAt = n.CreatedAt,
+                    UpdatedAt = n.UpdatedAt
+                })
+                .ToList();
 
             response.Status = true;
             response.Message = "Notifications retrieved successfully.";
-            response.Data = notifications;
+            response.Data = filteredNotifications;
         }
         catch (Exception ex)
         {
@@ -724,6 +769,7 @@ public class WaivedProductService : IWaivedProductService
 
         return response;
     }
+
 
 
     public async Task<BaseResponse<bool>> CanProceedToPurchaseAsync(string notificationId, string vendorResponse)
