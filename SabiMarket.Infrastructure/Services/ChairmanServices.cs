@@ -4602,7 +4602,7 @@ namespace SabiMarket.Infrastructure.Services
             }
         }
 
-        public async Task<BaseResponse<bool>> UpdateTraderMarket(string officerId, string traderId, UpdateTraderMarketDto traderDto)
+        public async Task<BaseResponse<bool>> UpdateTraderMarket(string officerId, string tin, UpdateTraderMarketDto traderDto)
         {
             var correlationId = Guid.NewGuid().ToString();
             try
@@ -4618,7 +4618,7 @@ namespace SabiMarket.Infrastructure.Services
                 // This depends on your business logic - adjust accordingly
 
                 //Get the trader(assuming you have a TraderRepository)
-                var trader = await _repository.TraderRepository.GetTraderById(traderId, true);
+                var trader = await _repository.TraderRepository.GetTraderByTin(tin, true);
                 if (trader == null)
                 {
                     return ResponseFactory.Fail<bool>("Trader not found");

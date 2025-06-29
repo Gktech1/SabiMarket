@@ -383,9 +383,9 @@ public class ChairmanController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ChangeTraderMarket(string officerId, string traderId, [FromBody] UpdateTraderMarketDto request)
+    public async Task<IActionResult> ChangeTraderMarket(string officerId, string tin, [FromBody] UpdateTraderMarketDto request)
     {
-        var response = await _chairmanService.UpdateTraderMarket(officerId, traderId, request);
+        var response = await _chairmanService.UpdateTraderMarket(officerId, tin, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 
