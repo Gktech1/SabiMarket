@@ -594,14 +594,14 @@ public class ChairmanController : ControllerBase
         return !response.IsSuccessful ? StatusCode(StatusCodes.Status500InternalServerError, response) : Ok(response);
     }
 
-    [HttpGet("assistant-officer/{id}")]
+   /* [HttpGet("assistant-officer/{id}")]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<AssistantOfficerResponseDto>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAssistantOfficerById(string id)
     {
         var response = await _chairmanService.GetAssistantOfficerById(id);
         return !response.IsSuccessful ? NotFound(response) : Ok(response);
-    }
+    }*/
     /// <summary>
     /// Create a new assistant officer
     /// </summary>

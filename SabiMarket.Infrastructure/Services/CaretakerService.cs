@@ -1498,6 +1498,7 @@ namespace SabiMarket.Infrastructure.Services
                     PhoneNumber = g.User?.PhoneNumber ?? "",
                     MarketId = g.MarketId,
                     MarketName = g.Market?.MarketName ?? "Unknown Market",
+                    ProfileImageUrl = g.User?.ProfileImageUrl,
                     LevyPayments = g.LevyPayments?.Select(lp => new GoodBoyLevyPaymentResponseDto
                     {
                         Id = lp.Id,

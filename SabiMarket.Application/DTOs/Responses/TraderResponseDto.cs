@@ -64,6 +64,7 @@ namespace SabiMarket.Application.DTOs.Responses
         // Common QR Code fields
         public bool HasQRCode { get; set; }
         public string? QRCodeImageUrl { get; set; }
+        public string? ProfileImageUrl { get; set; }
     }
 
     // Helper DTO for payment frequency calculation

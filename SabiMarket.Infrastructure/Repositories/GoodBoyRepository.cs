@@ -27,6 +27,7 @@ public class GoodBoyRepository : GeneralRepository<GoodBoy>, IGoodBoyRepository
 
     public async Task<GoodBoy> GetGoodBoyById(string id, bool trackChanges = false) =>
         await FindByCondition(g => g.Id == id, trackChanges)
+            .Include(g => g.User)
             .FirstOrDefaultAsync();
 
     public async Task<IEnumerable<GoodBoy>> GetGoodBoysByMarketId(string marketId, bool trackChanges = false) =>

@@ -603,6 +603,7 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 var traderDetails = _mapper.Map<TraderDetailsDto>(goodBoy);
+                traderDetails.ProfileImageUrl = goodBoy.User.ProfileImageUrl;
 
                 await CreateAuditLog(
                     "Trader Details Lookup",
@@ -721,7 +722,8 @@ namespace SabiMarket.Infrastructure.Services
                     NumberOfBuildingTypes = buildingTypesCount,
                     LevyBreakdown = levyBreakdown,
                     BusinessName = trader.BusinessName,
-                    OccupancyType = trader.TraderOccupancy
+                    OccupancyType = trader.TraderOccupancy,
+                    ProfileImageUrl = trader.User.ProfileImageUrl
                 };
 
                 // Get payment frequency and amount from most recent levy payment for this market and trader occupancy

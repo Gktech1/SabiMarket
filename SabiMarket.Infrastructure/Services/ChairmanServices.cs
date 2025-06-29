@@ -327,6 +327,9 @@ namespace SabiMarket.Infrastructure.Services
 
                 var result = await _repository.ChairmanRepository.GetChairmanById(chairmanId, trackChanges: false);
 
+                var chairmanResponse = _mapper.Map<ChairmanResponseDto>(result);
+                chairmanResponse.ProfileImageUrl = result.User.ProfileImageUrl;
+
                 if (result is null)
                 {
                     await CreateAuditLog(
@@ -334,7 +337,7 @@ namespace SabiMarket.Infrastructure.Services
                     $"CorrelationId: {correlationId} - Cahirman not found for ID: {chairmanId}",
                     "Chairman Management"
                 );
-                    return ResponseFactory.Success(_mapper.Map<ChairmanResponseDto>(result), "Chairman not found");
+                    return ResponseFactory.Success(chairmanResponse, "Chairman not found");
                 }
 
                 await CreateAuditLog(
@@ -343,7 +346,7 @@ namespace SabiMarket.Infrastructure.Services
                     "Chairman Management"
                 );
 
-                return ResponseFactory.Success(_mapper.Map<ChairmanResponseDto>(result), "Chairman retrieved successfully");
+                return ResponseFactory.Success(chairmanResponse, "Chairman retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -394,6 +397,7 @@ namespace SabiMarket.Infrastructure.Services
                     IsActive = c.User != null && c.User.IsActive,
                     MarketId = c.MarketId,
                     LocalGovernmentId = c.LocalGovernmentId,
+                    ProfileImageUrl = c.User?.ProfileImageUrl,
                     CreatedAt = c.CreatedAt,
                     UpdatedAt = c.UpdatedAt,
                     DefaultPassword = null  // Explicitly setting it to null if not needed
@@ -1094,11 +1098,11 @@ namespace SabiMarket.Infrastructure.Services
                     {
                         if (caretakerMap.TryGetValue(caretakerDto.Id, out var caretaker) && caretaker.User != null)
                         {
-                            caretakerDto.FirstName = caretaker.User.FirstName ?? "Default";
-                            caretakerDto.LastName = caretaker.User.LastName ?? "User";
-                            caretakerDto.Email = caretaker.User.Email;
-                            caretakerDto.PhoneNumber = caretaker.User.PhoneNumber;
-                            caretakerDto.ProfileImageUrl = caretaker.User.ProfileImageUrl ?? "";
+                            caretakerDto.FirstName = caretaker.User?.FirstName ?? "Default";
+                            caretakerDto.LastName = caretaker.User?.LastName ?? "User";
+                            caretakerDto.Email = caretaker.User?.Email;
+                            caretakerDto.PhoneNumber = caretaker.User?.PhoneNumber;
+                            caretakerDto.ProfileImageUrl = caretaker.User?.ProfileImageUrl ?? "";
                             caretakerDto.IsActive = caretaker.User.IsActive;
                         }
                     }
@@ -1210,6 +1214,7 @@ namespace SabiMarket.Infrastructure.Services
                         officerDtos[index].FullName = $"{officer.User?.FirstName} {officer.User?.LastName}".Trim();
                         officerDtos[index].Email = officer.User?.Email;
                         officerDtos[index].PhoneNumber = officer.User?.PhoneNumber;
+                        officerDtos[index].ProfileImageUrl = officer.User?.ProfileImageUrl;
 
                         // Set market name if available
                         if (officer.Market != null)
@@ -3117,6 +3122,9 @@ namespace SabiMarket.Infrastructure.Services
 
                 var caretakers = await _repository.CaretakerRepository.GetAllCaretakers(false);
                 var caretakerDtos = _mapper.Map<IEnumerable<CaretakerResponseDto>>(caretakers);
+                var caretakersDto =  caretakerDtos.FirstOrDefault();
+                caretakersDto.ProfileImageUrl = caretakers?.FirstOrDefault().User?.ProfileImageUrl;
+
 
                 await CreateAuditLog(
                     "Caretakers Retrieved",
@@ -3585,6 +3593,7 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 var response = _mapper.Map<AssistantOfficerResponseDto>(officer);
+                response.ProfileImageUrl = officer.User.ProfileImageUrl;
 
                 await CreateAuditLog(
                     "Assistant Officer Retrieved",
@@ -5792,7 +5801,8 @@ namespace SabiMarket.Infrastructure.Services
                 }
 
                 // 2. Get the goodboy
-                AssistCenterOfficer? assistCenterOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(paymentDto.AssistOfficerId, false);
+                AssistCenterOfficer? assistCenterOfficer = await _repository.AssistCenterOfficerRepository.GetAssistantOfficerByIdAsync(paymentDto.AssistOfficerId,
+                    false);
                 if (assistCenterOfficer == null)
                 {
                     return ResponseFactory.Fail<bool>(
@@ -5995,7 +6005,8 @@ namespace SabiMarket.Infrastructure.Services
                     NumberOfBuildingTypes = buildingTypesCount,
                     LevyBreakdown = levyBreakdown,
                     BusinessName = trader.BusinessName,
-                    OccupancyType = trader.TraderOccupancy
+                    OccupancyType = trader.TraderOccupancy,
+                    ProfileImageUrl = trader.User.ProfileImageUrl
                 };
 
                 await CreateAuditLog(
