@@ -41,7 +41,7 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<DashboardMetricsResponseDto>> GetDashboardMetrics();
         Task<BaseResponse<bool>> AssignCaretakerToMarket(string marketId, string caretakerId);
         Task<BaseResponse<bool>> AssignCaretakerToChairman(string chairmanId, string caretakerId);
-        Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers();
+        //Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers();
         Task<BaseResponse<IEnumerable<ReportResponseDto>>> GetChairmanReports(string chairmanId);
         Task<BaseResponse<AssistantOfficerResponseDto>> UpdateAssistantOfficer(string officerId, UpdateAssistantOfficerRequestDto request);
         Task<BaseResponse<bool>> UnblockAssistantOfficer(string officerId);
@@ -107,6 +107,8 @@ namespace SabiMarket.Application.IServices
          DateTime? toDate,
          string searchQuery,
          PaginationFilter pagination);
+
+        Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers(string userId);
 
         Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto);
 

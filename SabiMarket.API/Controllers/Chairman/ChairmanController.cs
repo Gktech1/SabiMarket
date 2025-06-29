@@ -8,6 +8,7 @@ using SabiMarket.Application.IServices;
 using SabiMarket.Domain.Exceptions;
 using SabiMarket.Domain.Enum;
 using SabiMarket.Domain.DTOs;
+using SabiMarket.Infrastructure.Helpers;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -17,13 +18,16 @@ public class ChairmanController : ControllerBase
 {
     private readonly IChairmanService _chairmanService;
     private readonly ILogger<ChairmanController> _logger;
+    private readonly ICurrentUserService _currentUser;
 
     public ChairmanController(
         IChairmanService chairmanService,
-        ILogger<ChairmanController> logger)
+        ILogger<ChairmanController> logger,
+        ICurrentUserService currentUser)
     {
         _chairmanService = chairmanService;
         _logger = logger;
+        _currentUser = currentUser;
     }
 
     /// <summary>
@@ -732,7 +736,8 @@ public class ChairmanController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<IEnumerable<CaretakerResponseDto>>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAllCaretakers()
     {
-        var response = await _chairmanService.GetAllCaretakers();
+        var userId = _currentUser.GetUserId();
+        var response = await _chairmanService.GetAllCaretakers(userId);
         return !response.IsSuccessful ? StatusCode(StatusCodes.Status500InternalServerError, response) : Ok(response);
     }
 

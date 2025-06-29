@@ -3109,7 +3109,7 @@ namespace SabiMarket.Infrastructure.Services
 
             return $"{stateCode}/{lgCode}/{sequentialNumber}";
         }
-        public async Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers()
+        public async Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers(string userId)
         {
             var correlationId = Guid.NewGuid().ToString();
             try
@@ -3120,10 +3120,17 @@ namespace SabiMarket.Infrastructure.Services
                     "Caretaker Management"
                 );
 
-                var caretakers = await _repository.CaretakerRepository.GetAllCaretakers(false);
+                var caretakers = await _repository.CaretakerRepository.GetAllCaretakersByUserId(userId, false);
                 var caretakerDtos = _mapper.Map<IEnumerable<CaretakerResponseDto>>(caretakers);
                 var caretakersDto =  caretakerDtos.FirstOrDefault();
-                caretakersDto.ProfileImageUrl = caretakers?.FirstOrDefault().User?.ProfileImageUrl;
+                if(caretakersDto != null && caretakers.Count() > 1)
+                {
+                    caretakersDto.ProfileImageUrl = caretakers?.FirstOrDefault().User?.ProfileImageUrl;
+
+                }
+
+               // caretakersDto.ProfileImageUrl = null;
+
 
 
                 await CreateAuditLog(
@@ -4605,6 +4612,7 @@ namespace SabiMarket.Infrastructure.Services
         public async Task<BaseResponse<bool>> UpdateTraderMarket(string officerId, string tin, UpdateTraderMarketDto traderDto)
         {
             var correlationId = Guid.NewGuid().ToString();
+            Trader trader = null;
             try
             {
                 // Get the assist center officer with tracking
@@ -4618,7 +4626,7 @@ namespace SabiMarket.Infrastructure.Services
                 // This depends on your business logic - adjust accordingly
 
                 //Get the trader(assuming you have a TraderRepository)
-                var trader = await _repository.TraderRepository.GetTraderByTin(tin, true);
+                 trader = await _repository.TraderRepository.GetTraderByTin(tin, true);
                 if (trader == null)
                 {
                     return ResponseFactory.Fail<bool>("Trader not found");
@@ -4665,7 +4673,7 @@ namespace SabiMarket.Infrastructure.Services
                     }
                     officer.MarketId = traderDto.MarketId;
                 }
-                var buildingType = await _repository.TraderRepository.GetBuildingTypeByIdAsync(traderId, false); 
+                var buildingType = await _repository.TraderRepository.GetBuildingTypeByIdAsync(trader.Id, false); 
                
                 if (buildingType == null) return ResponseFactory.Fail<bool>("building type not found");
                 
@@ -4677,7 +4685,7 @@ namespace SabiMarket.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating trader details: OfficerId: {OfficerId}, TraderId: {TraderId}", officerId, traderId);
+                _logger.LogError(ex, "Error updating trader details: OfficerId: {OfficerId}, TraderId: {TraderId}", officerId, trader.TIN);
                 return ResponseFactory.Fail<bool>(ex, "An unexpected error occurred while updating trader details");
             }
         }

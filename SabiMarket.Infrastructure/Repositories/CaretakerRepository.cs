@@ -1,4 +1,5 @@
 ﻿using iText.Commons.Actions.Contexts;
+using Mailjet.Client.Resources;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.Interfaces;
@@ -343,6 +344,15 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<IEnumerable<Caretaker>> GetAllCaretakers(bool trackChanges) =>
             await FindAll(trackChanges)
+                .Include(u => u.User)
+                .Include(c => c.Markets)
+                .Include(c => c.GoodBoys)
+                .Include(c => c.AssignedTraders)
+                .ToListAsync();
+
+        public async Task<IEnumerable<Caretaker>> GetAllCaretakersByUserId( string userId, bool trackChanges) =>
+        await FindAll(trackChanges)
+            .Where(u => u.UserId == userId)
                 .Include(u => u.User)
                 .Include(c => c.Markets)
                 .Include(c => c.GoodBoys)
