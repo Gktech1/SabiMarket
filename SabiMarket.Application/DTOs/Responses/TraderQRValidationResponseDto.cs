@@ -21,6 +21,7 @@ namespace SabiMarket.Application.DTOs.Responses
         public DateTime? LastPaymentDate { get; set; }
         public string? UpdatePaymentUrl { get; set; }
 
+        public string? ProfileImageUrl { get; set; }
         // Properties to match UI
         public int NumberOfBuildingTypes { get; set; }
         public LevyBreakdownDto LevyBreakdown { get; set; }

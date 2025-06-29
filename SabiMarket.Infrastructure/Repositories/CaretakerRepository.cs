@@ -343,6 +343,7 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public async Task<IEnumerable<Caretaker>> GetAllCaretakers(bool trackChanges) =>
             await FindAll(trackChanges)
+                .Include(u => u.User)
                 .Include(c => c.Markets)
                 .Include(c => c.GoodBoys)
                 .Include(c => c.AssignedTraders)

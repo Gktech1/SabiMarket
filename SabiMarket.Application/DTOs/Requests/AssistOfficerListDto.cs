@@ -13,6 +13,7 @@ namespace SabiMarket.Domain.DTOs
         public string MarketName { get; set; }
         public string LocalGovernmentId { get; set; }
         public string LocalGovernmentName { get; set; }
+        public string? ProfileImageUrl { get; set; } 
         public string UserLevel { get; set; }
         public bool IsBlocked { get; set; }
         public DateTime CreatedAt { get; set; }

@@ -10,6 +10,7 @@
         public string LocalGovernmentId { get; set; } = string.Empty;
         public string LocalGovernmentName { get; set; } = string.Empty; // Added property
         public string MarketName { get; set; } = string.Empty;
+        public string? ProfileImageUrl { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public string DefaultPassword { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }

@@ -19,6 +19,7 @@ namespace SabiMarket.Application.DTOs.Responses
         public string TraderOccupancy { get; set; }
         public string PaymentFrequency { get; set; }
         public decimal Amount { get; set; }
+        public string? ProfileImageUrl { get; set; }
         public DateTime LastPaymentDate { get; set; }
         public string DefaultPassword { get; set; } 
         public ICollection<GoodBoyLevyPaymentResponseDto> LevyPayments { get; set; }
