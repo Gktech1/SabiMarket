@@ -41,7 +41,7 @@ namespace SabiMarket.Application.IServices
         Task<BaseResponse<DashboardMetricsResponseDto>> GetDashboardMetrics();
         Task<BaseResponse<bool>> AssignCaretakerToMarket(string marketId, string caretakerId);
         Task<BaseResponse<bool>> AssignCaretakerToChairman(string chairmanId, string caretakerId);
-        Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers();
+        //Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers();
         Task<BaseResponse<IEnumerable<ReportResponseDto>>> GetChairmanReports(string chairmanId);
         Task<BaseResponse<AssistantOfficerResponseDto>> UpdateAssistantOfficer(string officerId, UpdateAssistantOfficerRequestDto request);
         Task<BaseResponse<bool>> UnblockAssistantOfficer(string officerId);
@@ -108,11 +108,16 @@ namespace SabiMarket.Application.IServices
          string searchQuery,
          PaginationFilter pagination);
 
+        Task<BaseResponse<IEnumerable<CaretakerResponseDto>>> GetAllCaretakers(string userId);
+
         Task<BaseResponse<TraderQRValidationResponseDto>> ValidateTraderQRCode(ScanTraderQRCodeDto scanDto);
 
         Task<BaseResponse<bool>> ProcessTraderLevyPayment(string traderId, ProcessAsstOfficerLevyPaymentDto paymentDto);
-        Task<BaseResponse<bool>> UpdateTraderMarket(string officerId, string traderId, UpdateTraderMarketDto traderDto);
+        //Task<BaseResponse<bool>> UpdateTraderMarket(string officerId, string traderId, UpdateTraderMarketDto traderDto);
+
+        Task<BaseResponse<bool>> UpdateTraderMarket(string officerId, string tin, UpdateTraderMarketDto traderDto);
 
         Task<BaseResponse<bool>> UpdateLevyPaymentFrequency(string officerId, UpdateLevyFrequencyDto levyDto);
+
     }
 }

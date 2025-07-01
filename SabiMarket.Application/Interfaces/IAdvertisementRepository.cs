@@ -17,5 +17,20 @@ namespace SabiMarket.Infrastructure.Repositories
         void CreateAdvertisement(Advertisement advertisement);
         void UpdateAdvertisement(Advertisement advertisement);
         void DeleteAdvertisement(Advertisement advertisement);
+
+        // Missing methods for admin features
+        Task<AdvertisementAnalyticsDto> GetAdvertisementAnalyticsAsync(AnalyticsFilterDto filter);
+        Task<RevenueAnalyticsDto> GetRevenueAnalyticsAsync(DateTime? startDate, DateTime? endDate);
+        Task<AdvertisementDashboardStatsDto> GetDashboardStatsAsync();
+        Task<List<Advertisement>> GetAdvertisementsForExportAsync(DateTime? startDate, DateTime? endDate,
+            string status, string location, string vendorId);
+        Task<PaginatorDto<IEnumerable<VendorAdvertisementSummaryDto>>> GetVendorAdvertisementSummariesAsync(
+            VendorFilterDto filter, PaginationFilter paginationFilter);
+        Task<PaginatorDto<IEnumerable<PaymentVerificationDto>>> GetPendingPaymentVerificationsAsync(
+            PaginationFilter paginationFilter);
+        Task<PaginatorDto<IEnumerable<Advertisement>>> GetFilteredAdvertisementsForAdmin(
+            AdminAdvertisementFilterDto filterDto, PaginationFilter paginationFilter);
+        Task<List<AdvertisementAlertDto>> GetAdvertisementAlertsAsync();
+        Task<AdvertisementPerformanceDto> GetAdvertisementPerformanceAsync(string advertisementId);
     }
 }

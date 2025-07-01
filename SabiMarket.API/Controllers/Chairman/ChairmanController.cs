@@ -8,6 +8,7 @@ using SabiMarket.Application.IServices;
 using SabiMarket.Domain.Exceptions;
 using SabiMarket.Domain.Enum;
 using SabiMarket.Domain.DTOs;
+using SabiMarket.Infrastructure.Helpers;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -17,13 +18,16 @@ public class ChairmanController : ControllerBase
 {
     private readonly IChairmanService _chairmanService;
     private readonly ILogger<ChairmanController> _logger;
+    private readonly ICurrentUserService _currentUser;
 
     public ChairmanController(
         IChairmanService chairmanService,
-        ILogger<ChairmanController> logger)
+        ILogger<ChairmanController> logger,
+        ICurrentUserService currentUser)
     {
         _chairmanService = chairmanService;
         _logger = logger;
+        _currentUser = currentUser;
     }
 
     /// <summary>
@@ -383,9 +387,9 @@ public class ChairmanController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<bool>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ChangeTraderMarket(string officerId, string traderId, [FromBody] UpdateTraderMarketDto request)
+    public async Task<IActionResult> ChangeTraderMarket(string officerId, string tin, [FromBody] UpdateTraderMarketDto request)
     {
-        var response = await _chairmanService.UpdateTraderMarket(officerId, traderId, request);
+        var response = await _chairmanService.UpdateTraderMarket(officerId, tin, request);
         return !response.IsSuccessful ? BadRequest(response) : Ok(response);
     }
 
@@ -732,7 +736,8 @@ public class ChairmanController : ControllerBase
     [ProducesResponseType(typeof(BaseResponse<IEnumerable<CaretakerResponseDto>>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAllCaretakers()
     {
-        var response = await _chairmanService.GetAllCaretakers();
+        var userId = _currentUser.GetUserId();
+        var response = await _chairmanService.GetAllCaretakers(userId);
         return !response.IsSuccessful ? StatusCode(StatusCodes.Status500InternalServerError, response) : Ok(response);
     }
 

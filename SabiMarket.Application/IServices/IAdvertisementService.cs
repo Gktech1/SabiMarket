@@ -23,6 +23,18 @@ namespace SabiMarket.Application.Services.Interfaces
      AdvertisementFilterRequestDto filterDto, PaginationFilter paginationFilter);
         Task<BaseResponse<PaginatorDto<IEnumerable<AdvertisementResponseDto>>>> GetSubmittedAdvertisements(
        AdvertisementFilterRequestDto filterDto, PaginationFilter paginationFilter);
+        Task<BaseResponse<PaginatorDto<IEnumerable<VendorAdvertisementSummaryDto>>>> GetVendorAdvertisementSummaries(
+            VendorFilterDto filter, PaginationFilter paginationFilter);
+        Task<BaseResponse<BulkOperationResultDto>> BulkRejectAdvertisements(List<string> advertisementIds, string reason);
+        Task<BaseResponse<BulkOperationResultDto>> BulkApproveAdvertisements(List<string> advertisementIds);
+        Task<BaseResponse<AdvertisementAnalyticsDto>> GetAdvertisementAnalytics(AnalyticsFilterDto filter);
+        Task<BaseResponse<AdvertisementPerformanceDto>> GetAdvertisementPerformance(string advertisementId);
+        Task<BaseResponse<List<AdvertisementAlertDto>>> GetAdvertisementAlerts();
+        Task<BaseResponse<PaginatorDto<IEnumerable<AdvertisementResponseDto>>>> GetAllAdvertisementsForAdmin(
+            AdminAdvertisementFilterDto filterDto, PaginationFilter paginationFilter);
+        Task<BaseResponse<AdvertisementDashboardStatsDto>> GetAdvertDashboardStats();
+        Task<BaseResponse<PaginatorDto<IEnumerable<PaymentVerificationDto>>>> GetPendingPaymentVerifications(
+            PaginationFilter paginationFilter);
 
     }
 }

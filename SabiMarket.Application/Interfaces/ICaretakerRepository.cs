@@ -15,6 +15,8 @@ namespace SabiMarket.Application.Interfaces
         Task<LevyPayment> GetLevyPaymentDetails(string levyId, bool trackChanges);
         Task<PaginatorDto<IEnumerable<Caretaker>>> GetCaretakersAsync(
            string chairmanId, PaginationFilter paginationFilter, bool trackChanges);
+
+        Task<IEnumerable<Caretaker>> GetAllCaretakersByUserId(string userId, bool trackChanges);
         Task<PaginatorDto<IEnumerable<GoodBoy>>> GetGoodBoys(string caretakerId, PaginationFilter paginationFilter, bool trackChanges);
         void CreateCaretaker(Caretaker caretaker);
         void UpdateCaretaker(Caretaker updatecaretaker);

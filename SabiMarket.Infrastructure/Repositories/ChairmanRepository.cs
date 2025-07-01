@@ -1,4 +1,5 @@
 ﻿using iText.Commons.Actions.Contexts;
+using Mailjet.Client.Resources;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Application.DTOs.Requests;
@@ -119,7 +120,41 @@ namespace SabiMarket.Infrastructure.Repositories
             return result;
         }
 
-       
+        public async Task<PaginatorDto<IEnumerable<Chairman>>> GetChairmenWithPaginationAsync(
+      PaginationFilter paginationFilter, bool trackChanges, string? searchTerm, string userId)
+        {
+            // Get the base query, assuming FindByCondition works as a base filter
+            var query = FindByCondition(
+                expression: _ => true,  // Initially return all Chairmen (no specific filter)
+                trackChanges: trackChanges
+            );
+
+            // Apply eager loading for related entities
+            query = query.Where(c => c.UserId == userId)
+                         .Include(c => c.User)  // Include User details
+                         .Include(c => c.Market) // Include Market details
+                         .Include(c => c.LocalGovernment) // Include Local Government details
+                         .OrderBy(c => c.CreatedAt);  // Apply sorting by creation date
+
+            // Apply search filter if a search term is provided
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(c =>
+                    (c.User.FirstName.Contains(searchTerm) ||
+                     c.User.LastName.Contains(searchTerm) ||
+                     c.User.Email.Contains(searchTerm) ||
+                     c.Market.MarketName.Contains(searchTerm) ||
+                     c.LocalGovernment.Name.Contains(searchTerm)));
+            }
+
+            // Apply pagination (this returns a Task, so await it)
+            var result = await query.Paginate(paginationFilter);
+
+            return result;
+        }
+
+
+
         public async Task<IEnumerable<Chairman>> SearchChairmenAsync(
             string searchTerm, PaginationFilter paginationFilter, bool trackChanges)
         {

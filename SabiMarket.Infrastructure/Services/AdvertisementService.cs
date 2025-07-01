@@ -1087,6 +1087,490 @@ namespace SabiMarket.Application.Services
                 return ResponseFactory.Fail<AdvertisementResponseDto>(ex, "An unexpected error occurred");
             }
         }
+
+        public async Task<BaseResponse<BulkOperationResultDto>> BulkApproveAdvertisements(List<string> advertisementIds)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Bulk Advertisement Approval",
+                    $"CorrelationId: {correlationId} - Bulk approving {advertisementIds.Count} advertisements",
+                    "Advertisement Management"
+                );
+
+                // Check if user is authorized (admin)
+                var isAdmin = _currentUser.IsAdmin();
+                if (!isAdmin)
+                {
+                    return ResponseFactory.Fail<BulkOperationResultDto>(
+                        new UnauthorizedException("You are not authorized to approve advertisements"),
+                        "Unauthorized access");
+                }
+
+                var results = new BulkOperationResultDto();
+                var adminId = _currentUser.GetUserId();
+
+                foreach (var id in advertisementIds)
+                {
+                    try
+                    {
+                        var advertisement = await _repository.AdvertisementRepository.GetAdvertisementById(id, trackChanges: true);
+                        if (advertisement == null)
+                        {
+                            results.Failed.Add(new BulkOperationItemResult
+                            {
+                                Id = id,
+                                Error = "Advertisement not found"
+                            });
+                            continue;
+                        }
+
+                        // Check if payment is verified
+                        if (advertisement.PaymentStatus != "Verified")
+                        {
+                            results.Failed.Add(new BulkOperationItemResult
+                            {
+                                Id = id,
+                                Error = "Payment not verified"
+                            });
+                            continue;
+                        }
+
+                        advertisement.Status = AdvertStatusEnum.Active;
+                        advertisement.AdminId = adminId;
+                        advertisement.UpdatedAt = DateTime.UtcNow;
+
+                        _repository.AdvertisementRepository.UpdateAdvertisement(advertisement);
+                        results.Successful.Add(new BulkOperationItemResult { Id = id });
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Failed.Add(new BulkOperationItemResult
+                        {
+                            Id = id,
+                            Error = ex.Message
+                        });
+                    }
+                }
+
+                await _repository.SaveChangesAsync();
+
+                await CreateAuditLog(
+                    "Bulk Approval Completed",
+                    $"CorrelationId: {correlationId} - Approved {results.Successful.Count} out of {advertisementIds.Count} advertisements",
+                    "Advertisement Management"
+                );
+
+                return ResponseFactory.Success(results, $"Bulk operation completed. {results.Successful.Count} approved, {results.Failed.Count} failed.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in bulk approval of advertisements");
+                return ResponseFactory.Fail<BulkOperationResultDto>(ex, "An unexpected error occurred during bulk approval");
+            }
+        }
+
+        public async Task<BaseResponse<BulkOperationResultDto>> BulkRejectAdvertisements(List<string> advertisementIds, string reason)
+        {
+            var correlationId = Guid.NewGuid().ToString();
+            try
+            {
+                await CreateAuditLog(
+                    "Bulk Advertisement Rejection",
+                    $"CorrelationId: {correlationId} - Bulk rejecting {advertisementIds.Count} advertisements. Reason: {reason}",
+                    "Advertisement Management"
+                );
+
+                var isAdmin = _currentUser.IsAdmin();
+                if (!isAdmin)
+                {
+                    return ResponseFactory.Fail<BulkOperationResultDto>(
+                        new UnauthorizedException("You are not authorized to reject advertisements"),
+                        "Unauthorized access");
+                }
+
+                var results = new BulkOperationResultDto();
+                var adminId = _currentUser.GetUserId();
+
+                foreach (var id in advertisementIds)
+                {
+                    try
+                    {
+                        var advertisement = await _repository.AdvertisementRepository.GetAdvertisementById(id, trackChanges: true);
+                        if (advertisement == null)
+                        {
+                            results.Failed.Add(new BulkOperationItemResult
+                            {
+                                Id = id,
+                                Error = "Advertisement not found"
+                            });
+                            continue;
+                        }
+
+                        advertisement.Status = AdvertStatusEnum.Rejected;
+                        advertisement.AdminId = adminId;
+                        advertisement.UpdatedAt = DateTime.UtcNow;
+
+                        _repository.AdvertisementRepository.UpdateAdvertisement(advertisement);
+                        results.Successful.Add(new BulkOperationItemResult { Id = id });
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Failed.Add(new BulkOperationItemResult
+                        {
+                            Id = id,
+                            Error = ex.Message
+                        });
+                    }
+                }
+
+                await _repository.SaveChangesAsync();
+
+                await CreateAuditLog(
+                    "Bulk Rejection Completed",
+                    $"CorrelationId: {correlationId} - Rejected {results.Successful.Count} out of {advertisementIds.Count} advertisements",
+                    "Advertisement Management"
+                );
+
+                return ResponseFactory.Success(results, $"Bulk operation completed. {results.Successful.Count} rejected, {results.Failed.Count} failed.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in bulk rejection of advertisements");
+                return ResponseFactory.Fail<BulkOperationResultDto>(ex, "An unexpected error occurred during bulk rejection");
+            }
+        }
+
+        // 2. ADVERTISEMENT ANALYTICS AND STATISTICS
+        public async Task<BaseResponse<AdvertisementAnalyticsDto>> GetAdvertisementAnalytics(AnalyticsFilterDto filter)
+        {
+            try
+            {
+                var isAdmin = _currentUser.IsAdmin();
+                if (!isAdmin)
+                {
+                    return ResponseFactory.Fail<AdvertisementAnalyticsDto>(
+                        new UnauthorizedException("You are not authorized to view advertisement analytics"),
+                        "Unauthorized access");
+                }
+
+                var analytics = await _repository.AdvertisementRepository.GetAdvertisementAnalyticsAsync(filter);
+
+                await CreateAuditLog(
+                    "Advertisement Analytics Retrieved",
+                    $"Retrieved advertisement analytics for period: {filter.StartDate:yyyy-MM-dd} to {filter.EndDate:yyyy-MM-dd}",
+                    "Advertisement Analytics"
+                );
+
+                return ResponseFactory.Success(analytics, "Advertisement analytics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving advertisement analytics");
+                return ResponseFactory.Fail<AdvertisementAnalyticsDto>(ex, "An unexpected error occurred while retrieving analytics");
+            }
+        }
+
+        public async Task<BaseResponse<RevenueAnalyticsDto>> GetRevenueAnalytics(DateTime? startDate = null, DateTime? endDate = null)
+        {
+            try
+            {
+                var isAdmin = _currentUser.IsAdmin();
+                if (!isAdmin)
+                {
+                    return ResponseFactory.Fail<RevenueAnalyticsDto>(
+                        new UnauthorizedException("You are not authorized to view revenue analytics"),
+                        "Unauthorized access");
+                }
+
+                var revenue = await _repository.AdvertisementRepository.GetRevenueAnalyticsAsync(startDate, endDate);
+
+                await CreateAuditLog(
+                    "Revenue Analytics Retrieved",
+                    $"Retrieved revenue analytics for period: {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}",
+                    "Revenue Analytics"
+                );
+
+                return ResponseFactory.Success(revenue, "Revenue analytics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving revenue analytics");
+                return ResponseFactory.Fail<RevenueAnalyticsDto>(ex, "An unexpected error occurred while retrieving revenue analytics");
+            }
+        }
+
+        // 3. ADMIN DASHBOARD STATISTICS
+        public async Task<BaseResponse<AdvertisementDashboardStatsDto>> GetAdvertDashboardStats()
+        {
+            try
+            {
+                var isAdmin = _currentUser.IsAdmin();
+                if (!isAdmin)
+                {
+                    return ResponseFactory.Fail<AdvertisementDashboardStatsDto>(
+                        new UnauthorizedException("You are not authorized to view dashboard statistics"),
+                        "Unauthorized access");
+                }
+
+                var stats = await _repository.AdvertisementRepository.GetDashboardStatsAsync();
+
+                await CreateAuditLog(
+                    "Dashboard Stats Retrieved",
+                    "Retrieved advertisement dashboard statistics",
+                    "Dashboard Management"
+                );
+
+                return ResponseFactory.Success(stats, "Dashboard statistics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving dashboard statistics");
+                return ResponseFactory.Fail<AdvertisementDashboardStatsDto>(ex, "An unexpected error occurred while retrieving dashboard statistics");
+            }
+        }
+
+        // 4. EXPORT FUNCTIONALITY
+     /*   public async Task<BaseResponse<byte[]>> ExportAdvertisements(AdvertisementExportRequestDto request)
+        {
+            try
+            {
+                var isAdmin = _currentUser.IsAdmin();
+                if (!isAdmin)
+                {
+                    return ResponseFactory.Fail<byte[]>(
+                        new UnauthorizedException("You are not authorized to export advertisements"),
+                        "Unauthorized access");
+                }
+
+                var advertisements = await _repository.AdvertisementRepository.GetAdvertisementsForExportAsync(
+                    request.StartDate, request.EndDate, request.Status, request.Location, request.VendorId);
+
+                byte[] exportData;
+                string formatName;
+
+                switch (request.Format)
+                {
+                    case ExportFormat.Excel:
+                        exportData = await ExportToExcel(advertisements);
+                        formatName = "Excel";
+                        break;
+                    case ExportFormat.CSV:
+                        exportData = await ExportToCsv(advertisements);
+                        formatName = "CSV";
+                        break;
+                    case ExportFormat.PDF:
+                        exportData = await ExportToPdf(advertisements);
+                        formatName = "PDF";
+                        break;
+                    default:
+                        exportData = await ExportToExcel(advertisements);
+                        formatName = "Excel";
+                        break;
+                }
+
+                await CreateAuditLog(
+                    "Advertisements Exported",
+                    $"Exported {advertisements.Count} advertisements in {formatName} format",
+                    "Advertisement Export"
+                );
+
+                return ResponseFactory.Success(exportData, $"Advertisements exported successfully in {formatName} format");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting advertisements");
+                return ResponseFactory.Fail<byte[]>(ex, "An unexpected error occurred while exporting advertisements");
+            }
+        }
+*/
+        // 5. VENDOR MANAGEMENT FOR ADVERTISEMENTS
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<VendorAdvertisementSummaryDto>>>> GetVendorAdvertisementSummaries(
+            VendorFilterDto filter, PaginationFilter paginationFilter)
+        {
+            try
+            {
+                var isAdmin = _currentUser.IsAdmin();
+                if (!isAdmin)
+                {
+                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorAdvertisementSummaryDto>>>(
+                        new UnauthorizedException("You are not authorized to view vendor summaries"),
+                        "Unauthorized access");
+                }
+
+                var vendorSummaries = await _repository.AdvertisementRepository.GetVendorAdvertisementSummariesAsync(filter, paginationFilter);
+
+                await CreateAuditLog(
+                    "Vendor Summaries Retrieved",
+                    $"Retrieved vendor advertisement summaries - Page {paginationFilter.PageNumber}, Size {paginationFilter.PageSize}",
+                    "Vendor Management"
+                );
+
+                return ResponseFactory.Success(vendorSummaries, "Vendor advertisement summaries retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving vendor advertisement summaries");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorAdvertisementSummaryDto>>>(
+                    ex, "An unexpected error occurred while retrieving vendor summaries");
+            }
+        }
+
+        // 6. PAYMENT MANAGEMENT
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<PaymentVerificationDto>>>> GetPendingPaymentVerifications(
+            PaginationFilter paginationFilter)
+        {
+            try
+            {
+                var isAdmin = _currentUser.IsAdmin();
+                if (!isAdmin)
+                {
+                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<PaymentVerificationDto>>>(
+                        new UnauthorizedException("You are not authorized to view payment verifications"),
+                        "Unauthorized access");
+                }
+
+                var pendingPayments = await _repository.AdvertisementRepository.GetPendingPaymentVerificationsAsync(paginationFilter);
+
+                await CreateAuditLog(
+                    "Pending Payments Retrieved",
+                    $"Retrieved pending payment verifications - Page {paginationFilter.PageNumber}, Size {paginationFilter.PageSize}",
+                    "Payment Management"
+                );
+
+                return ResponseFactory.Success(pendingPayments, "Pending payment verifications retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving pending payment verifications");
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<PaymentVerificationDto>>>(
+                    ex, "An unexpected error occurred while retrieving pending payments");
+            }
+        }
+
+        // 7. ADVANCED FILTERING FOR ADMIN
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<AdvertisementResponseDto>>>> GetAllAdvertisementsForAdmin(
+            AdminAdvertisementFilterDto filterDto, PaginationFilter paginationFilter)
+        {
+            try
+            {
+                var isAdmin = _currentUser.IsAdmin();
+                if (!isAdmin)
+                {
+                    return ResponseFactory.Fail<PaginatorDto<IEnumerable<AdvertisementResponseDto>>>(
+                        new UnauthorizedException("You are not authorized to view all advertisements"),
+                        "Unauthorized access");
+                }
+
+                // Admin can see all advertisements (no vendor filtering)
+                var paginatedResult = await _repository.AdvertisementRepository.GetFilteredAdvertisementsForAdmin(
+                    filterDto, paginationFilter);
+
+                var advertisementDtos = paginatedResult.PageItems.Select(a =>
+                {
+                    var dto = _mapper.Map<AdvertisementResponseDto>(a);
+                    dto.ViewCount = a.Views?.Count ?? 0;
+                    dto.VendorName = $"{a.Vendor?.User?.FirstName} {a.Vendor?.User?.LastName}".Trim();
+                    dto.VendorEmail = a.Vendor?.User?.Email;
+                    return dto;
+                });
+
+                var result = new PaginatorDto<IEnumerable<AdvertisementResponseDto>>
+                {
+                    PageItems = advertisementDtos,
+                    PageSize = paginatedResult.PageSize,
+                    CurrentPage = paginatedResult.CurrentPage,
+                    NumberOfPages = paginatedResult.NumberOfPages
+                };
+
+                await CreateAuditLog(
+                    "All Advertisements Retrieved",
+                    $"Retrieved all advertisements for admin - Page {paginationFilter.PageNumber}, " +
+                    $"Size {paginationFilter.PageSize}, Filters: {JsonSerializer.Serialize(filterDto)}",
+                    "Advertisement Management"
+                );
+
+                return ResponseFactory.Success(result, "All advertisements retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all advertisements for admin: {ErrorMessage}", ex.Message);
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<AdvertisementResponseDto>>>(
+                    ex, "An unexpected error occurred while retrieving advertisements");
+            }
+        }
+
+        // 8. NOTIFICATION AND ALERTS
+        public async Task<BaseResponse<List<AdvertisementAlertDto>>> GetAdvertisementAlerts()
+        {
+            try
+            {
+                var isAdmin = _currentUser.IsAdmin();
+                if (!isAdmin)
+                {
+                    return ResponseFactory.Fail<List<AdvertisementAlertDto>>(
+                        new UnauthorizedException("You are not authorized to view advertisement alerts"),
+                        "Unauthorized access");
+                }
+
+                var alerts = await _repository.AdvertisementRepository.GetAdvertisementAlertsAsync();
+
+                await CreateAuditLog(
+                    "Advertisement Alerts Retrieved",
+                    $"Retrieved {alerts.Count} advertisement alerts",
+                    "Alert Management"
+                );
+
+                return ResponseFactory.Success(alerts, "Advertisement alerts retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving advertisement alerts");
+                return ResponseFactory.Fail<List<AdvertisementAlertDto>>(ex, "An unexpected error occurred while retrieving alerts");
+            }
+        }
+
+        // 9. PERFORMANCE METRICS
+        public async Task<BaseResponse<AdvertisementPerformanceDto>> GetAdvertisementPerformance(string advertisementId)
+        {
+            try
+            {
+                var advertisement = await _repository.AdvertisementRepository.GetAdvertisementById(advertisementId, false);
+                if (advertisement == null)
+                {
+                    return ResponseFactory.Fail<AdvertisementPerformanceDto>(
+                        new NotFoundException($"Advertisement with ID {advertisementId} not found"),
+                        "Advertisement not found");
+                }
+
+                // Check authorization - admin or owner
+                var vendorId = _currentUser.GetVendorId();
+                var isAdmin = _currentUser.IsAdmin();
+
+                if (advertisement.VendorId != vendorId && !isAdmin)
+                {
+                    return ResponseFactory.Fail<AdvertisementPerformanceDto>(
+                        new UnauthorizedException("You are not authorized to view this advertisement's performance"),
+                        "Unauthorized access");
+                }
+
+                var performance = await _repository.AdvertisementRepository.GetAdvertisementPerformanceAsync(advertisementId);
+
+                await CreateAuditLog(
+                    "Advertisement Performance Retrieved",
+                    $"Retrieved performance metrics for advertisement ID: {advertisementId}",
+                    "Performance Analytics"
+                );
+
+                return ResponseFactory.Success(performance, "Advertisement performance retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving advertisement performance for ID {Id}", advertisementId);
+                return ResponseFactory.Fail<AdvertisementPerformanceDto>(ex, "An unexpected error occurred while retrieving performance data");
+            }
+        }
     }
 }
 

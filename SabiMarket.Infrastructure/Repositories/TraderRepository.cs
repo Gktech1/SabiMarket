@@ -231,6 +231,13 @@ namespace SabiMarket.Infrastructure.Repositories
                 .Include(t => t.BuildingTypes)  // ADDED
                 .FirstOrDefaultAsync();
 
+        public async Task<Trader> GetTraderByTin(string tin, bool trackChanges) =>
+          await FindByCondition(t => t.TIN == tin, trackChanges)
+              .Include(t => t.User)
+              .Include(t => t.Market)
+              .Include(t => t.BuildingTypes)  // ADDED
+              .FirstOrDefaultAsync();
+
         // Update GetTraderDetails method
         public async Task<Trader> GetTraderDetails(string userId) =>
             await FindByCondition(t => t.UserId == userId, trackChanges: false)
