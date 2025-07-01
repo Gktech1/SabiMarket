@@ -33,13 +33,24 @@ namespace SabiMarket.Application.DTOs.Requests
         public string? BusinessDescription { get; set; }
         public string? LocalGovernmentId { get; set; }
         public string? Currency { get; set; }
-        public VendorTypeEnum?  VendorTypeEnum { get; set; } 
+        public VendorTypeEnum? VendorTypeEnum { get; set; }
+        public CurrencyTypeEnum? VendorCurrencyTypeEnum { get; set; }
     }
 
     public class CustomerDetailsDto
     {
         public string? PreferredMarket { get; set; }
         public string? LocalGovernmentId { get; set; }
+    }
+    public class GetCustomerDetailsDto
+    {
+        public string Id { get; set; }
+        public string FullName { get; set; }
+        public string EmailAddress { get; set; }
+        public string PhoneNumber { get; set; }
+        public string LGA { get; set; }
+        public string Address { get; set; }
+        public DateTime DateAdded { get; set; }
     }
 
     public class AdvertiserDetailsDto

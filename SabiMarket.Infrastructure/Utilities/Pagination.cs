@@ -21,7 +21,8 @@ namespace SabiMarket.Infrastructure.Utilities
             var pageResult = new PaginatorDto<IEnumerable<TSource>>
             {
                 PageSize = paginationFilter.PageSize,
-                CurrentPage = paginationFilter.PageNumber
+                CurrentPage = paginationFilter.PageNumber,
+                TotalItems = count
             };
 
             pageResult.NumberOfPages = count % pageResult.PageSize != 0

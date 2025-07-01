@@ -16,7 +16,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize]
+    //[Authorize]
     public class WaivedMarketController : ControllerBase
     {
         private readonly IServiceManager _serviceManager;
@@ -575,6 +575,24 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetCustomerComplaint([FromQuery] PaginationFilter filter)
         {
             var response = await _serviceManager.IWaivedProductService.GetAllComplaint(filter);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("GetCustomers")]
+        public async Task<IActionResult> GetCustomers([FromQuery] PaginationFilter filter)
+        {
+            var response = await _serviceManager.IWaivedProductService.GetCustomers(filter);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures

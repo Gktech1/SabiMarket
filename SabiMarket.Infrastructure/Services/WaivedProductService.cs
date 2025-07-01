@@ -163,7 +163,8 @@ public class WaivedProductService : IWaivedProductService
                 PageItems = waivedProductDtos,
                 PageSize = result.PageSize,
                 CurrentPage = result.CurrentPage,
-                NumberOfPages = result.NumberOfPages
+                NumberOfPages = result.NumberOfPages,
+                TotalItems = result.TotalItems,
             };
 
 
@@ -311,6 +312,7 @@ public class WaivedProductService : IWaivedProductService
                     LGA = user?.LocalGovernment?.Name,
                     UserAddress = user?.Address,
                     BusinessAddress = v.BusinessAddress,
+                    VendorCurrencyType = v.VendorCurrencyType,
                     Products = v.Products?.Select(p => new ProductDto
                     {
                         Id = p.Id,
@@ -327,6 +329,7 @@ public class WaivedProductService : IWaivedProductService
                 NumberOfPages = vendors.NumberOfPages,
                 PageSize = vendors.PageSize,
                 CurrentPage = vendors.CurrentPage,
+                TotalItems = vendors.TotalItems,
             };
 
             return ResponseFactory.Success(response);
@@ -335,6 +338,51 @@ public class WaivedProductService : IWaivedProductService
         {
             Log.Error("Exception occurred while getting vendors: " + ex.Message);
             return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorDto>>>(new Exception("An error occurred."), "Try again later.");
+        }
+    }
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>> GetCustomers(PaginationFilter filter)
+    {
+        try
+        {
+            var customers = await _repositoryManager.CustomerRepository.GetCustomersWithPagination(filter, false);
+            if (customers == null || !customers.PageItems.Any())
+            {
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>(new NotFoundException("No Record Found."), "Record not found.");
+            }
+
+            // Map Vendor to VendorDto to prevent circular reference
+            var customersList = customers.PageItems.Select(v =>
+            {
+                var user = v.User;
+                return new GetCustomerDetailsDto
+                {
+                    Id = v.Id,
+                    FullName = user != null ? $"{user.FirstName} {user.LastName}" : null,
+                    EmailAddress = user?.Email,
+                    PhoneNumber = user?.PhoneNumber,
+                    LGA = v?.LocalGovernment?.Name,
+                    Address = user?.Address,
+                    DateAdded = v.CreatedAt
+                };
+            }).ToList();
+
+
+            var response = new PaginatorDto<IEnumerable<GetCustomerDetailsDto>>
+            {
+                PageItems = customersList,
+                NumberOfPages = customers.NumberOfPages,
+                PageSize = customers.PageSize,
+                CurrentPage = customers.CurrentPage,
+                TotalItems = customers.TotalItems,
+
+            };
+
+            return ResponseFactory.Success(response);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Exception occurred while getting vendors: " + ex.Message);
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>(new Exception("An error occurred."), "Try again later.");
         }
     }
     public async Task<BaseResponse<string>> BlockOrUnblockVendor(string vendorId)

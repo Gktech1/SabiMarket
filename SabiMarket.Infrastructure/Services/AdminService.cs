@@ -1,31 +1,31 @@
-﻿using AutoMapper;
-using FluentValidation;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
-using SabiMarket.Application.DTOs.Requests;
-using SabiMarket.Application.DTOs.Responses;
-using SabiMarket.Application.DTOs;
-using SabiMarket.Application.IRepositories;
-using SabiMarket.Application.IServices;
-using SabiMarket.Domain.Entities.Administration;
-using SabiMarket.Domain.Entities.UserManagement;
-using SabiMarket.Domain.Entities;
-using SabiMarket.Domain.Exceptions;
-using SabiMarket.Infrastructure.Helpers;
-using SabiMarket.Infrastructure.Utilities;
-using ValidationException = FluentValidation.ValidationException;
-using System.Text.Json;
-using SabiMarket.Application.Validators;
+﻿using System.Text.Json;
+using AutoMapper;
 using AutoMapper.QueryableExtensions;
-using FluentValidation.Results;
 using Azure.Core;
 using CloudinaryDotNet.Actions;
-using Microsoft.EntityFrameworkCore;
-using SabiMarket.Domain.Enum;
-using SabiMarket.Infrastructure.Repositories;
+using FluentValidation;
+using FluentValidation.Results;
 using iText.Commons.Actions.Contexts;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using SabiMarket.Application.DTOs;
+using SabiMarket.Application.DTOs.Requests;
+using SabiMarket.Application.DTOs.Responses;
+using SabiMarket.Application.IRepositories;
+using SabiMarket.Application.IServices;
+using SabiMarket.Application.Validators;
+using SabiMarket.Domain.Entities;
+using SabiMarket.Domain.Entities.Administration;
+using SabiMarket.Domain.Entities.UserManagement;
+using SabiMarket.Domain.Enum;
+using SabiMarket.Domain.Exceptions;
 using SabiMarket.Infrastructure.Data;
+using SabiMarket.Infrastructure.Helpers;
+using SabiMarket.Infrastructure.Repositories;
+using SabiMarket.Infrastructure.Utilities;
+using ValidationException = FluentValidation.ValidationException;
 
 public class AdminService : IAdminService
 {
@@ -329,7 +329,8 @@ public class AdminService : IAdminService
                 PageItems = adminDtos,
                 PageSize = paginatedAdmins.PageSize,
                 CurrentPage = paginatedAdmins.CurrentPage,
-                NumberOfPages = paginatedAdmins.NumberOfPages
+                NumberOfPages = paginatedAdmins.NumberOfPages,
+                TotalItems = paginatedAdmins.TotalItems
             };
 
             await CreateAuditLog(
@@ -802,7 +803,8 @@ public class AdminService : IAdminService
                 PageItems = logDtos,
                 PageSize = paginatedLogs.PageSize,
                 CurrentPage = paginatedLogs.CurrentPage,
-                NumberOfPages = paginatedLogs.NumberOfPages
+                NumberOfPages = paginatedLogs.NumberOfPages,
+                TotalItems = paginatedLogs.TotalItems,
             };
 
             await CreateAuditLog(
@@ -932,7 +934,8 @@ public class AdminService : IAdminService
                 PageItems = roleDtos,
                 PageSize = paginatedRoles.PageSize,
                 CurrentPage = paginatedRoles.CurrentPage,
-                NumberOfPages = paginatedRoles.NumberOfPages
+                NumberOfPages = paginatedRoles.NumberOfPages,
+                TotalItems = paginatedRoles.TotalItems,
             };
 
             // Create audit log with appropriate message based on whether search was used
@@ -1574,7 +1577,8 @@ public class AdminService : IAdminService
                 PageItems = userDtos,
                 PageSize = paginationFilter.PageSize,
                 CurrentPage = paginationFilter.PageNumber,
-                NumberOfPages = numberOfPages
+                NumberOfPages = numberOfPages,
+                TotalItems = totalCount,
             };
 
             // Create audit log
@@ -3078,7 +3082,8 @@ public class AdminService : IAdminService
                 PageItems = memberDtos,
                 PageSize = paginatedMembers.PageSize,
                 CurrentPage = paginatedMembers.CurrentPage,
-                NumberOfPages = paginatedMembers.NumberOfPages
+                NumberOfPages = paginatedMembers.NumberOfPages,
+                TotalItems = paginatedMembers.TotalItems,
             };
 
             await CreateAuditLog(

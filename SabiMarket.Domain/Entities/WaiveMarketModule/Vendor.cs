@@ -28,6 +28,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
 
         [Required]
         public string VendorCode { get; set; }
+        public CurrencyTypeEnum? VendorCurrencyType { get; set; }
 
         public string BusinessDescription { get; set; }
         public VendorTypeEnum Type { get; set; }

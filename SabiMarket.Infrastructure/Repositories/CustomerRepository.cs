@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using iText.Commons.Actions.Contexts;
+using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
 using SabiMarket.Infrastructure.Data;
@@ -41,13 +42,23 @@ public class CustomerRepository : GeneralRepository<Customer>, ICustomerReposito
     }
 
     public async Task<PaginatorDto<IEnumerable<Customer>>> GetCustomersWithPagination(
-        PaginationFilter paginationFilter, bool trackChanges)
+    PaginationFilter paginationFilter, bool trackChanges)
     {
-        var query = FindAll(trackChanges)
-            .Include(c => c.User)
-            .OrderBy(c => c.User.FirstName);
-        return await query.Paginate(paginationFilter);
+        try
+        {
+            return await _repositoryContext.Customers
+                .Include(c => c.User)
+                .Include(c => c.LocalGovernment)
+                .AsQueryable().Paginate(paginationFilter);
+
+        }
+        catch (Exception ex)
+        {
+            // Handle or log the exception as needed
+            throw new Exception("An error occurred while retrieving paged customers", ex);
+        }
     }
+
 
     public async Task<bool> CustomerExists(string userId) =>
         await FindByCondition(c => c.UserId == userId, trackChanges: false)

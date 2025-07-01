@@ -320,7 +320,8 @@ namespace SabiMarket.Infrastructure.Services
                             Type = request.VendorDetails.VendorTypeEnum ?? VendorTypeEnum.Other, // Replace with appropriate default,
                             IsVerified = false,
                             IsActive = true,
-                            CreatedAt = DateTime.UtcNow
+                            CreatedAt = DateTime.UtcNow,
+                            VendorCurrencyType = request.VendorDetails.VendorCurrencyTypeEnum.Value
                         };
 
                         _repositoryMannager.VendorRepository.Create(vendor);
