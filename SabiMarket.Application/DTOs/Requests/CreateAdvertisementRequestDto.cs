@@ -75,6 +75,7 @@ namespace SabiMarket.Application.DTOs.Advertisement
         public string Id { get; set; }
         public string VendorId { get; set; }
         public string VendorName { get; set; }
+        public string VendorEmail { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
         public string ImageUrl { get; set; }
