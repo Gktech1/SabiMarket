@@ -58,6 +58,8 @@ namespace SabiMarket.Application.DTOs
         public string LGA { get; set; }
         public string UserAddress { get; set; }
         public string BusinessAddress { get; set; }
+        public string ProfileImageUrl { get; set; }
+        public bool IsActive { get; set; }
         public CurrencyTypeEnum? VendorCurrencyType { get; set; }
 
         // Prevent circular references by not including the full User object

@@ -52,7 +52,7 @@ namespace SabiMarket.Infrastructure.Repositories
             var query = FindAll(trackChanges)
                 .Include(p => p.Products)
                 .Include(p => p.User)
-                    .ThenInclude(x => x.LocalGovernment)
+                .Include(l => l.LocalGovernment)
                     .ThenInclude(x => x.Markets)
                 .OrderBy(v => v.User.FirstName);
             return await query.Paginate(paginationFilter);

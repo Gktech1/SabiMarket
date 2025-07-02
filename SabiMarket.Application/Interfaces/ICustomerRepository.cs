@@ -10,7 +10,7 @@ namespace SabiMarket.Infrastructure.Repositories
         Task<Customer> GetCustomerByUserId(string userId, bool trackChanges);
         Task<Customer> GetCustomerDetails(string userId);
         Task<PaginatorDto<IEnumerable<Customer>>> GetCustomersWithPagination(
-            PaginationFilter paginationFilter, bool trackChanges);
+            PaginationFilter paginationFilter, bool trackChanges, string? searchString);
         Task<bool> CustomerExists(string userId);
         void CreateCustomer(Customer customer);
         void UpdateCustomer(Customer customer);

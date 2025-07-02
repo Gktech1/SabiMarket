@@ -16,7 +16,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize]
+    //[Authorize]
     public class WaivedMarketController : ControllerBase
     {
         private readonly IServiceManager _serviceManager;
@@ -409,7 +409,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
         [HttpGet("GetVendorAndProducts")]
         [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
-        public async Task<IActionResult> GetVendorAndProducts([FromQuery] PaginationFilter filter)
+        public async Task<IActionResult> GetVendorAndProducts([FromQuery] PaginationFilter filter, string? searchString)
         {
             BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>? response = await _serviceManager.IWaivedProductService.GetVendorAndProducts(filter);
             if (!response.IsSuccessful)
@@ -590,9 +590,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("GetCustomers")]
-        public async Task<IActionResult> GetCustomers([FromQuery] PaginationFilter filter)
+        public async Task<IActionResult> GetCustomers([FromQuery] PaginationFilter filter, [FromQuery] string? searchString)
         {
-            var response = await _serviceManager.IWaivedProductService.GetCustomers(filter);
+            var response = await _serviceManager.IWaivedProductService.GetCustomers(filter, searchString);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -766,6 +766,23 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetNotificationById(string notificationId)
         {
             var response = await _serviceManager.IWaivedProductService.GetNotificationByIdAsync(notificationId);
+
+            if (!response.Status)
+            {
+                return response.Message switch
+                {
+                    "Unauthorized access." => Unauthorized(response),
+                    "Notification not found." => NotFound(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+        [HttpGet("get-all-next-waive-market-records")]
+        public async Task<IActionResult> GetNotificationById([FromQuery] PaginationFilter filter)
+        {
+            var response = await _serviceManager.IWaivedProductService.GetAllNextWaiveMarketDateRecords(filter);
 
             if (!response.Status)
             {

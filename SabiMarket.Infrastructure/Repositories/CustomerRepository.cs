@@ -42,22 +42,31 @@ public class CustomerRepository : GeneralRepository<Customer>, ICustomerReposito
     }
 
     public async Task<PaginatorDto<IEnumerable<Customer>>> GetCustomersWithPagination(
-    PaginationFilter paginationFilter, bool trackChanges)
+    PaginationFilter paginationFilter, bool trackChanges, string? searchString)
     {
         try
         {
-            return await _repositoryContext.Customers
+            var query = _repositoryContext.Customers
                 .Include(c => c.User)
                 .Include(c => c.LocalGovernment)
-                .AsQueryable().Paginate(paginationFilter);
+                .AsQueryable();
 
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                query = query.Where(c =>
+                    c.User.FirstName.Contains(searchString) ||
+                    c.User.LastName.Contains(searchString) ||
+                    c.User.Email.Contains(searchString));
+            }
+
+            return await query.OrderBy(c => c.User.FirstName).Paginate(paginationFilter);
         }
         catch (Exception ex)
         {
-            // Handle or log the exception as needed
             throw new Exception("An error occurred while retrieving paged customers", ex);
         }
     }
+
 
 
     public async Task<bool> CustomerExists(string userId) =>

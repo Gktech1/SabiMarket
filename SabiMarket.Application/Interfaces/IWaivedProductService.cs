@@ -39,6 +39,7 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<string>> RegisterCustomerPurchase(CustomerPurchaseDto dto);
         Task<BaseResponse<string>> UpdateComplaint(string complaintId, string vendorId, string complaintMsg, string? imageUrl);
         Task<BaseResponse<string>> UpdateProduct(UpdateWaivedProductDto dto);
-        Task<BaseResponse<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>> GetCustomers(PaginationFilter filter);
+        Task<BaseResponse<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>> GetCustomers(PaginationFilter filter, string? searchString);
+        Task<BaseResponse<PaginatorDto<IEnumerable<WaiveMarketDates>>>> GetAllNextWaiveMarketDateRecords(PaginationFilter filter);
     }
 }

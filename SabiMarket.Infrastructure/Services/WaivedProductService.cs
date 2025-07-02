@@ -309,10 +309,12 @@ public class WaivedProductService : IWaivedProductService
                     VendorName = user != null ? $"{user.FirstName} {user.LastName}" : null,
                     Email = user?.Email,
                     PhoneNumber = user?.PhoneNumber,
-                    LGA = user?.LocalGovernment?.Name,
+                    LGA = v.LocalGovernment.Name,
                     UserAddress = user?.Address,
                     BusinessAddress = v.BusinessAddress,
                     VendorCurrencyType = v.VendorCurrencyType,
+                    IsActive = v.IsActive,
+                    ProfileImageUrl = v.User?.ProfileImageUrl,
                     Products = v.Products?.Select(p => new ProductDto
                     {
                         Id = p.Id,
@@ -340,11 +342,11 @@ public class WaivedProductService : IWaivedProductService
             return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorDto>>>(new Exception("An error occurred."), "Try again later.");
         }
     }
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>> GetCustomers(PaginationFilter filter)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>> GetCustomers(PaginationFilter filter, string? searchString)
     {
         try
         {
-            var customers = await _repositoryManager.CustomerRepository.GetCustomersWithPagination(filter, false);
+            var customers = await _repositoryManager.CustomerRepository.GetCustomersWithPagination(filter, false, searchString);
             if (customers == null || !customers.PageItems.Any())
             {
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>(new NotFoundException("No Record Found."), "Record not found.");
@@ -594,6 +596,25 @@ public class WaivedProductService : IWaivedProductService
         {
 
             return ResponseFactory.Fail<NextWaiveMarketDateDto>("An Error Occurred. Try again later");
+
+        }
+    }
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<WaiveMarketDates>>>> GetAllNextWaiveMarketDateRecords(PaginationFilter filter)
+    {
+        try
+        {
+            var records = await _applicationDbContext.WaiveMarketDates.Where(i => i.IsActive).OrderByDescending(x => x.CreatedAt).Paginate(filter);
+            if (records == null || records.TotalItems < 1)
+            {
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaiveMarketDates>>>(new NotFoundException($"Next Waive Market not Found."), "Next Waive Market not Found.");
+            };
+
+            return ResponseFactory.Success(records, "Success");
+        }
+        catch (Exception)
+        {
+
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaiveMarketDates>>>("An Error Occurred. Try again later");
 
         }
     }
