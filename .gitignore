@@ -1,0 +1,14 @@
+﻿# Firebase credentials
+**/firebase/
+**/*firebase*.json
+
+# Configuration files  
+appsettings.*.json
+appsettings.Development.json
+appsettings.Production.json
+
+# Build outputs
+bin/
+obj/
+.vs/
+*.user
