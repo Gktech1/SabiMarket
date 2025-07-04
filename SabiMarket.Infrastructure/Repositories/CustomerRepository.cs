@@ -42,7 +42,7 @@ public class CustomerRepository : GeneralRepository<Customer>, ICustomerReposito
     }
 
     public async Task<PaginatorDto<IEnumerable<Customer>>> GetCustomersWithPagination(
-    PaginationFilter paginationFilter, bool trackChanges, string? searchString)
+    PaginationFilter paginationFilter, bool trackChanges, string? searchString, string? filterString)
     {
         try
         {
@@ -57,6 +57,11 @@ public class CustomerRepository : GeneralRepository<Customer>, ICustomerReposito
                     c.User.FirstName.Contains(searchString) ||
                     c.User.LastName.Contains(searchString) ||
                     c.User.Email.Contains(searchString));
+            }
+            if (!string.IsNullOrWhiteSpace(filterString))
+            {
+                query = query.Where(c =>
+                    c.LocalGovernment.Name.Contains(filterString));
             }
 
             return await query.OrderBy(c => c.User.FirstName).Paginate(paginationFilter);

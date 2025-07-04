@@ -46,7 +46,7 @@ namespace SabiMarket.Infrastructure.Repositories
         }
 
 
-        public async Task<PaginatorDto<IEnumerable<Vendor>>> GetVendorsWithPagination(PaginationFilter paginationFilter, bool trackChanges, string searchString)
+        public async Task<PaginatorDto<IEnumerable<Vendor>>> GetVendorsWithPagination(PaginationFilter paginationFilter, bool trackChanges, string searchString, string filterString)
         {
             var query = _repositoryContext.Vendors
                 .Include(p => p.Products)
@@ -65,6 +65,13 @@ namespace SabiMarket.Infrastructure.Repositories
                     v.User.LastName.ToLower().Contains(lowerSearch) ||
                     v.User.Email.ToLower().Contains(lowerSearch) ||
                     v.User.PhoneNumber.ToLower().Contains(lowerSearch));
+            }
+            if (!string.IsNullOrWhiteSpace(filterString))
+            {
+                var lowerSearch = filterString.ToLower();
+
+                query = query.Where(v =>
+                    v.LocalGovernment.Name.ToLower().Contains(lowerSearch));
             }
 
             query = query.OrderBy(v => v.User.FirstName);

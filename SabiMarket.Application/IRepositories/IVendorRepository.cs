@@ -10,7 +10,7 @@ namespace SabiMarket.Application.IRepositories
         Task<Vendor> GetVendorByUserId(string userId, bool trackChanges);
 
         Task<Vendor> GetVendorDetails(string userId);
-        Task<PaginatorDto<IEnumerable<Vendor>>> GetVendorsWithPagination(PaginationFilter paginationFilter, bool trackChanges, string searchString);
+        Task<PaginatorDto<IEnumerable<Vendor>>> GetVendorsWithPagination(PaginationFilter paginationFilter, bool trackChanges, string searchString, string filterString);
         Task<bool> VendorExists(string userId);
         void CreateVendor(Vendor vendor);
         void UpdateVendor(Vendor vendor);

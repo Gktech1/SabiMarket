@@ -247,11 +247,11 @@ public class WaivedProductService : IWaivedProductService
 
     }
 
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>> GetVendorAndProducts(PaginationFilter filter, string? searchString)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>> GetVendorAndProducts(PaginationFilter filter, string? searchString, string? filterString)
     {
         try
         {
-            var vendors = await _repositoryManager.VendorRepository.GetVendorsWithPagination(filter, false, searchString);
+            var vendors = await _repositoryManager.VendorRepository.GetVendorsWithPagination(filter, false, searchString, filterString);
             if (vendors == null || !vendors.PageItems.Any())
             {
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorDto>>>(new NotFoundException("No Record Found."), "Record not found.");
@@ -302,11 +302,11 @@ public class WaivedProductService : IWaivedProductService
             return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorDto>>>(new Exception("An error occurred."), "Try again later.");
         }
     }
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>> GetCustomers(PaginationFilter filter, string? searchString)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>> GetCustomers(PaginationFilter filter, string? searchString, string? filterString)
     {
         try
         {
-            var customers = await _repositoryManager.CustomerRepository.GetCustomersWithPagination(filter, false, searchString);
+            var customers = await _repositoryManager.CustomerRepository.GetCustomersWithPagination(filter, false, searchString, filterString);
             if (customers == null || !customers.PageItems.Any())
             {
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>(new NotFoundException("No Record Found."), "Record not found.");

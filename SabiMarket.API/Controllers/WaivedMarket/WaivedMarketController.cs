@@ -409,9 +409,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
         [HttpGet("GetVendorAndProducts")]
         [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
-        public async Task<IActionResult> GetVendorAndProducts([FromQuery] PaginationFilter filter, string? searchString)
+        public async Task<IActionResult> GetVendorAndProducts([FromQuery] PaginationFilter filter, string? searchString, string? filterString)
         {
-            BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>? response = await _serviceManager.IWaivedProductService.GetVendorAndProducts(filter, searchString);
+            BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>? response = await _serviceManager.IWaivedProductService.GetVendorAndProducts(filter, searchString, filterString);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -628,7 +628,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("GetCustomers")]
-        public async Task<IActionResult> GetCustomers([FromQuery] PaginationFilter filter, [FromQuery] string? searchString)
+        public async Task<IActionResult> GetCustomers([FromQuery] PaginationFilter filter, [FromQuery] string? searchString, string? filterString)
         {
             var response = await _serviceManager.IWaivedProductService.GetCustomers(filter, searchString);
             if (!response.IsSuccessful)

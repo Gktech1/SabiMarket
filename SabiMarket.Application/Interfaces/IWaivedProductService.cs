@@ -35,12 +35,12 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<WaiveMarketNotification>> GetNotificationByIdAsync(string notificationId);
         Task<BaseResponse<List<ProductDetailsDto>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter);
         Task<BaseResponse<int>> GetUrgentPurchaseWaivedProductCount();
-        Task<BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>> GetVendorAndProducts(PaginationFilter filter, string? searchString);
+        Task<BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>> GetVendorAndProducts(PaginationFilter filter, string? searchString, string? filterString);
         Task<BaseResponse<WaivedProduct>> GetWaivedProductById(string Id);
         Task<BaseResponse<string>> RegisterCustomerPurchase(CustomerPurchaseDto dto);
         Task<BaseResponse<string>> UpdateComplaint(string complaintId, string vendorId, string complaintMsg, string? imageUrl);
         Task<BaseResponse<string>> UpdateProduct(UpdateWaivedProductDto dto);
-        Task<BaseResponse<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>> GetCustomers(PaginationFilter filter, string? searchString);
+        Task<BaseResponse<PaginatorDto<IEnumerable<GetCustomerDetailsDto>>>> GetCustomers(PaginationFilter filter, string? searchString, string? filterString);
         Task<BaseResponse<PaginatorDto<IEnumerable<WaiveMarketDates>>>> GetAllNextWaiveMarketDateRecords(PaginationFilter filter);
         Task<BaseResponse<string>> UpdateNextWaiveMarketDate(UpdateNextWaiveMarketDateDto nextWaiveMarketDate);
         Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedbackDto>>>> GetAllComplaint(PaginationFilter filter, string? searchString);
