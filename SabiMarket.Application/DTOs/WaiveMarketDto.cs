@@ -40,4 +40,11 @@ namespace SabiMarket.Application.DTOs
         public DateTime MarketDate { get; set; }
         public string MarketVenue { get; set; }
     }
+    public class UpdateNextWaiveMarketDateDto
+    {
+        public DateTime MarketDate { get; set; }
+        public string MarketVenue { get; set; }
+        public string Id { get; set; }
+        public bool IsActive { get; set; }
+    }
 }

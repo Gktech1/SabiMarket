@@ -97,48 +97,7 @@ public class WaivedProductService : IWaivedProductService
         return Tuple.Create(true, getVendorDetails.Id);
     }
 
-    /* public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(
-      string category,
-      PaginationFilter paginationFilter)
-     {
-         var correlationId = Guid.NewGuid().ToString();
-         try
-         {
-             var query = _applicationDbContext.WaivedProducts.AsQueryable();
-
-             if (!string.IsNullOrEmpty(category))
-             {
-                 query = query.Where(p => p.ProductCategoryId == category);
-             }
-
-             // Use the Paginate extension method
-             var paginatedResult = await query.Paginate(paginationFilter);
-            *//* // Create paginated response directly from entity
-             var paginatedResult = new PaginatorDto<IEnumerable<WaivedProduct>>
-             {
-                 PageItems = result.PageItems,
-                 PageSize = result.PageSize,
-                 CurrentPage = result.CurrentPage,
-                 NumberOfPages = result.NumberOfPages
-             };
- *//*
-
-             return ResponseFactory.Success(paginatedResult, "Waived products retrieved successfully");
-         }
-         catch (Exception ex)
-         {
-
-             //_logger.LogError(ex, "Error retrieving waived products: {ErrorMessage}", ex.Message);
-
-             return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaivedProduct>>>(
-                 ex, "An unexpected error occurred while retrieving waived products"
-             );
-         }
-     }*/
-
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(
-    string category,
-    PaginationFilter paginationFilter)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string category, PaginationFilter paginationFilter)
     {
         try
         {
@@ -288,11 +247,11 @@ public class WaivedProductService : IWaivedProductService
 
     }
 
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>> GetVendorAndProducts(PaginationFilter filter)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>> GetVendorAndProducts(PaginationFilter filter, string? searchString)
     {
         try
         {
-            var vendors = await _repositoryManager.VendorRepository.GetVendorsWithPagination(filter, false);
+            var vendors = await _repositoryManager.VendorRepository.GetVendorsWithPagination(filter, false, searchString);
             if (vendors == null || !vendors.PageItems.Any())
             {
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<VendorDto>>>(new NotFoundException("No Record Found."), "Record not found.");
@@ -315,6 +274,7 @@ public class WaivedProductService : IWaivedProductService
                     VendorCurrencyType = v.VendorCurrencyType,
                     IsActive = v.IsActive,
                     ProfileImageUrl = v.User?.ProfileImageUrl,
+                    CreatedAt = v.CreatedAt,
                     Products = v.Products?.Select(p => new ProductDto
                     {
                         Id = p.Id,
@@ -364,6 +324,7 @@ public class WaivedProductService : IWaivedProductService
                     PhoneNumber = user?.PhoneNumber,
                     LGA = v?.LocalGovernment?.Name,
                     Address = user?.Address,
+                    IsActive = v.IsActive,
                     DateAdded = v.CreatedAt
                 };
             }).ToList();
@@ -403,6 +364,49 @@ public class WaivedProductService : IWaivedProductService
         catch (Exception ex)
         {
             Log.Error($"Exception occurred while blocking or unblocking vendor with UserID ==> {vendorId}: " + ex.Message);
+            return ResponseFactory.Fail<string>(new Exception("An error occurred."), "Try again later.");
+        }
+    }
+    public async Task<BaseResponse<string>> ApproveDollarVendor(string vendorId)
+    {
+        try
+        {
+            var vendor = await _applicationDbContext.Vendors.FirstOrDefaultAsync(x => x.Id == vendorId);
+            if (vendor == null)
+                return ResponseFactory.Fail<string>(new Exception("An error occurred."), "Try again later.");
+            if (vendor.IsSubscriptionActive)
+            {
+                return ResponseFactory.Fail<string>(new Exception("Vendor already has an active subscription."), "Vendor is an active subscriber/");
+
+            }
+            vendor.IsSubscriptionActive = true;
+            vendor.UpdatedAt = DateTime.UtcNow.AddHours(1);
+            await _applicationDbContext.SaveChangesAsync();
+
+            return ResponseFactory.Success("Success");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Exception occurred while activating vendor with UserID ==> {vendorId}: " + ex.Message);
+            return ResponseFactory.Fail<string>(new Exception("An error occurred."), "Try again later.");
+        }
+    }
+    public async Task<BaseResponse<string>> BlockOrUnblockCustomer(string customerId)
+    {
+        try
+        {
+            var vendor = await _applicationDbContext.Customers.FirstOrDefaultAsync(x => x.Id == customerId);
+            if (vendor == null)
+                return ResponseFactory.Fail<string>(new Exception("An error occurred."), "Try again later.");
+
+            vendor.IsActive = !vendor.IsActive;
+            await _applicationDbContext.SaveChangesAsync();
+
+            return ResponseFactory.Success("Success");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Exception occurred while blocking or unblocking vendor with ID ==> {customerId}: " + ex.Message);
             return ResponseFactory.Fail<string>(new Exception("An error occurred."), "Try again later.");
         }
     }
@@ -576,6 +580,32 @@ public class WaivedProductService : IWaivedProductService
 
         }
     }
+    public async Task<BaseResponse<string>> UpdateNextWaiveMarketDate(UpdateNextWaiveMarketDateDto nextWaiveMarketDate)
+    {
+        try
+        {
+            var waiveMarket = _applicationDbContext.WaiveMarketDates.FirstOrDefault(x => x.Id == nextWaiveMarketDate.Id);
+            if (waiveMarket == null)
+            {
+                return ResponseFactory.Fail<string>("Record not found.");
+            }
+            var nextDate = new WaiveMarketDates
+            {
+                NextWaiveMarketDate = nextWaiveMarketDate.MarketDate,
+                WaiveMarketLocation = nextWaiveMarketDate.MarketVenue,
+                IsActive = nextWaiveMarketDate.IsActive
+            };
+            _applicationDbContext.WaiveMarketDates.Update(nextDate);
+            await _repositoryManager.SaveChangesAsync();
+            return ResponseFactory.Success("Success", "Next Waive Market Date Updated Successfully.");
+        }
+        catch (Exception)
+        {
+
+            return ResponseFactory.Fail<string>("An Error Occurred. Try again later");
+
+        }
+    }
     public async Task<BaseResponse<NextWaiveMarketDateDto>> GetNextWaiveMarketDate()
     {
         try
@@ -604,7 +634,7 @@ public class WaivedProductService : IWaivedProductService
         try
         {
             var records = await _applicationDbContext.WaiveMarketDates.Where(i => i.IsActive).OrderByDescending(x => x.CreatedAt).Paginate(filter);
-            if (records == null || records.TotalItems < 1)
+            if (records == null)
             {
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaiveMarketDates>>>(new NotFoundException($"Next Waive Market not Found."), "Next Waive Market not Found.");
             };
@@ -644,16 +674,58 @@ public class WaivedProductService : IWaivedProductService
         return ResponseFactory.Success("Success");
     }
 
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedback>>>> GetAllComplaint(PaginationFilter filter)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedbackDto>>>> GetAllComplaint(PaginationFilter filter, string? searchString)
     {
-        var cusComplaint = await _applicationDbContext.CustomerFeedbacks.Paginate(filter);
-        if (cusComplaint == null)
+        var query = _applicationDbContext.CustomerFeedbacks
+            .Include(f => f.Customer)
+                .ThenInclude(c => c.User)
+            .Include(f => f.Vendor)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(searchString))
         {
-            return ResponseFactory.Fail<PaginatorDto<IEnumerable<CustomerFeedback>>>(new NotFoundException("No Record Found."), "Record not found.");
+            var lowerSearch = searchString.ToLower();
+            query = query.Where(f =>
+                f.Comment.ToLower().Contains(lowerSearch) ||
+                f.VendorCode.ToLower().Contains(lowerSearch) ||
+                f.Vendor.BusinessName.ToLower().Contains(lowerSearch) ||
+                f.Customer.User.FirstName.ToLower().Contains(lowerSearch) ||
+                f.Customer.User.LastName.ToLower().Contains(lowerSearch)
+            );
         }
 
-        return ResponseFactory.Success(cusComplaint);
+        var cusComplaint = await query.Paginate(filter);
+
+        if (cusComplaint == null || !cusComplaint.PageItems.Any())
+        {
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<CustomerFeedbackDto>>>(
+                new NotFoundException("No Record Found."), "Record not found.");
+        }
+
+        var mappedResult = cusComplaint.PageItems.Select(f => new CustomerFeedbackDto
+        {
+            Id = f.Id,
+            VendorCode = f.VendorCode,
+            VendorName = f.Vendor.BusinessName,
+            Comment = f.Comment,
+            Rating = f.Rating,
+            CustomerName = $"{f.Customer.User.FirstName} {f.Customer.User.LastName}",
+            CreatedAt = f.CreatedAt
+        }).ToList();
+
+        var response = new PaginatorDto<IEnumerable<CustomerFeedbackDto>>
+        {
+            PageItems = mappedResult,
+            TotalItems = cusComplaint.TotalItems,
+            CurrentPage = cusComplaint.CurrentPage,
+            NumberOfPages = cusComplaint.NumberOfPages,
+            PageSize = cusComplaint.PageSize
+        };
+
+        return ResponseFactory.Success(response);
     }
+
+
     public async Task<BaseResponse<CustomerFeedback>> GetCustomerFeedbackById(string Id)
     {
         var cusComplaint = _applicationDbContext.CustomerFeedbacks.Find(Id);

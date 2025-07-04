@@ -16,7 +16,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    //[Authorize]
+    [Authorize]
     public class WaivedMarketController : ControllerBase
     {
         private readonly IServiceManager _serviceManager;
@@ -411,7 +411,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
         public async Task<IActionResult> GetVendorAndProducts([FromQuery] PaginationFilter filter, string? searchString)
         {
-            BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>? response = await _serviceManager.IWaivedProductService.GetVendorAndProducts(filter);
+            BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>? response = await _serviceManager.IWaivedProductService.GetVendorAndProducts(filter, searchString);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -431,6 +431,25 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> BlockOrUnblockVendor(IdModel dto)
         {
             var response = await _serviceManager.IWaivedProductService.BlockOrUnblockVendor(dto.id);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPost("BlockOrUnblockCustomer")]
+        [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
+        public async Task<IActionResult> BlockOrUnblockCustomer(IdModel dto)
+        {
+            var response = await _serviceManager.IWaivedProductService.BlockOrUnblockCustomer(dto.id);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -535,6 +554,25 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
+        [HttpPost("ApproveDollarVendor")]
+        [Authorize(Policy = PolicyNames.RequireAdminOnly)]
+        public async Task<IActionResult> ApproveDollarVendor(string vendorId)
+        {
+            var response = await _serviceManager.IWaivedProductService.ApproveDollarVendor(vendorId);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
         [HttpPost("UpdateCustomerComplaint")]
         public async Task<IActionResult> UpdateComplaint(UpdateCustomerComplaint dto)
         {
@@ -572,9 +610,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("GetCustomerComplaints")]
-        public async Task<IActionResult> GetCustomerComplaint([FromQuery] PaginationFilter filter)
+        public async Task<IActionResult> GetCustomerComplaint([FromQuery] PaginationFilter filter, string? searchString)
         {
-            var response = await _serviceManager.IWaivedProductService.GetAllComplaint(filter);
+            var response = await _serviceManager.IWaivedProductService.GetAllComplaint(filter, searchString);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -645,6 +683,23 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> CreateNextWaiveMarketDate(NextWaiveMarketDateDto dto)
         {
             var response = await _serviceManager.IWaivedProductService.CreateNextWaiveMarketDate(dto);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+        [HttpPost("UpdateNextWaiveMarketDate")]
+        public async Task<IActionResult> UpdateNextWaiveMarketDate(UpdateNextWaiveMarketDateDto dto)
+        {
+            var response = await _serviceManager.IWaivedProductService.UpdateNextWaiveMarketDate(dto);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -784,7 +839,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         {
             var response = await _serviceManager.IWaivedProductService.GetAllNextWaiveMarketDateRecords(filter);
 
-            if (!response.Status)
+            if (!response.IsSuccessful)
             {
                 return response.Message switch
                 {
