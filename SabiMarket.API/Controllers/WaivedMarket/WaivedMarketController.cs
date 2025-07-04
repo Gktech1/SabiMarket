@@ -630,7 +630,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         [HttpGet("GetCustomers")]
         public async Task<IActionResult> GetCustomers([FromQuery] PaginationFilter filter, [FromQuery] string? searchString, string? filterString)
         {
-            var response = await _serviceManager.IWaivedProductService.GetCustomers(filter, searchString);
+            var response = await _serviceManager.IWaivedProductService.GetCustomers(filter, searchString, filterString);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
