@@ -22,7 +22,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         public decimal Amount { get; set; }
 
         public string ProofOfPayment { get; set; }
-        public string SubscriptionPlanId { get; set; }
+        public string? SubscriptionPlanId { get; set; }
         public bool IsSubscriberConfirmPayment { get; set; }
         public bool IsAdminConfirmPayment { get; set; }
 
