@@ -16,7 +16,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize]
+    //[Authorize]
     public class WaivedMarketController : ControllerBase
     {
         private readonly IServiceManager _serviceManager;
@@ -284,9 +284,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet(" GetAllSubscription")]
-        public async Task<IActionResult> GetAllSubscription([FromQuery] PaginationFilter filter)
+        public async Task<IActionResult> GetAllSubscription([FromQuery] PaginationFilter filter, string? searchString)
         {
-            var response = await _serviceManager.ISubscriptionService.GetAllSubscription(filter);
+            var response = await _serviceManager.ISubscriptionService.GetAllSubscription(filter, searchString);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -371,10 +371,28 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
-        [HttpGet("GetAllSubscriptionPlans")]
-        public async Task<IActionResult> GetAllSubscriptionPlans([FromQuery] PaginationFilter filter)
+        [HttpPost("DeleteSubscriptionPlan")]
+        public async Task<IActionResult> DeleteSubscriptionPlan(string Id)
         {
-            var response = await _serviceManager.ISubscriptionPlanService.GetAllSubscriptionPlans(filter);
+            var response = await _serviceManager.ISubscriptionPlanService.DeleteSubscriptionPlan(Id);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("GetAllSubscriptionPlans")]
+        public async Task<IActionResult> GetAllSubscriptionPlans([FromQuery] PaginationFilter filter, [FromQuery] string? searchString)
+        {
+            BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionDto>>>? response = await _serviceManager.ISubscriptionPlanService.GetAllSubscriptionPlans(filter, searchString);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -412,6 +430,44 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> GetVendorAndProducts([FromQuery] PaginationFilter filter, string? searchString, string? filterString)
         {
             BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>? response = await _serviceManager.IWaivedProductService.GetVendorAndProducts(filter, searchString, filterString);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("GetSubscribersBySubscriptionPlan")]
+        [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
+        public async Task<IActionResult> GetSubscribersBySubscriptionPlan([FromQuery] PaginationFilter filter, [FromQuery] string subscriptionPlanId)
+        {
+            var response = await _serviceManager.ISubscriptionPlanService.GetSubscribersBySubscriptionPlan(filter, subscriptionPlanId);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("GetAllSubscriptionPlansS")]
+        [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
+        public async Task<IActionResult> GetAllSubscriptionPlansS([FromQuery] PaginationFilter filter, [FromQuery] string subscriptionPlanId)
+        {
+            var response = await _serviceManager.ISubscriptionPlanService.GetAllSubscriptionPlans(filter);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures

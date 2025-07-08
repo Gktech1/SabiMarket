@@ -102,7 +102,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("VendorId");
 
-                    b.ToTable("Advertisements");
+                    b.ToTable("Advertisements", (string)null);
                 });
 
             modelBuilder.Entity("GoodBoy", b =>
@@ -142,7 +142,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("GoodBoys");
+                    b.ToTable("GoodBoys", (string)null);
                 });
 
             modelBuilder.Entity("Market", b =>
@@ -233,7 +233,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("LocalGovernmentId");
 
-                    b.ToTable("Markets");
+                    b.ToTable("Markets", (string)null);
                 });
 
             modelBuilder.Entity("MarketSection", b =>
@@ -270,7 +270,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("MarketId");
 
-                    b.ToTable("MarketSections");
+                    b.ToTable("MarketSections", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -407,7 +407,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("MarketId");
 
-                    b.ToTable("OfficerMarketAssignments");
+                    b.ToTable("OfficerMarketAssignments", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.Administration.Admin", b =>
@@ -478,7 +478,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Admins");
+                    b.ToTable("Admins", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.Administration.Chairman", b =>
@@ -540,7 +540,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Chairmen");
+                    b.ToTable("Chairmen", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.AdvertisementModule.AdvertPayment", b =>
@@ -596,7 +596,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("AdvertisementId")
                         .IsUnique();
 
-                    b.ToTable("AdvertPayments");
+                    b.ToTable("AdvertPayments", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.AdvertisementModule.AdvertisementLanguage", b =>
@@ -633,7 +633,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("AdvertisementId");
 
-                    b.ToTable("AdvertisementLanguages");
+                    b.ToTable("AdvertisementLanguages", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.AdvertisementModule.AdvertisementView", b =>
@@ -671,7 +671,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AdvertisementViews");
+                    b.ToTable("AdvertisementViews", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.AuditLog", b =>
@@ -731,7 +731,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.LevyManagement.LevyPayment", b =>
@@ -815,7 +815,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("TraderId");
 
-                    b.ToTable("LevyPayments");
+                    b.ToTable("LevyPayments", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.LevyManagement.LevySetup", b =>
@@ -861,7 +861,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("LevySetup");
+                    b.ToTable("LevySetup", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.LocalGovernmentAndMArket.LocalGovernment", b =>
@@ -899,7 +899,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LocalGovernments");
+                    b.ToTable("LocalGovernments", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.MarketParticipants.AssistCenterOfficer", b =>
@@ -948,7 +948,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("AssistCenterOfficers");
+                    b.ToTable("AssistCenterOfficers", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.MarketParticipants.Caretaker", b =>
@@ -992,7 +992,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Caretakers");
+                    b.ToTable("Caretakers", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.MarketParticipants.Trader", b =>
@@ -1071,7 +1071,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Traders");
+                    b.ToTable("Traders", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.MarketParticipants.TraderBuildingType", b =>
@@ -1102,7 +1102,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("TraderId");
 
-                    b.ToTable("TraderBuildingTypes");
+                    b.ToTable("TraderBuildingTypes", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.OrdersAndFeedback.CustomerFeedback", b =>
@@ -1147,7 +1147,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("VendorId");
 
-                    b.ToTable("CustomerFeedbacks");
+                    b.ToTable("CustomerFeedbacks", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.OrdersAndFeedback.CustomerOrder", b =>
@@ -1195,7 +1195,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("VendorId");
 
-                    b.ToTable("CustomerOrders");
+                    b.ToTable("CustomerOrders", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.OrdersAndFeedback.CustomerOrderItem", b =>
@@ -1235,7 +1235,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("CustomerOrderItems");
+                    b.ToTable("CustomerOrderItems", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.OrdersAndFeedback.CustomerPurchase", b =>
@@ -1269,7 +1269,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("WaivedProductId");
 
-                    b.ToTable("CustomerPurchases");
+                    b.ToTable("CustomerPurchases", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.Supporting.ProductCategory", b =>
@@ -1297,7 +1297,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductCategories");
+                    b.ToTable("ProductCategories", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.UserManagement.ApplicationRole", b =>
@@ -1501,7 +1501,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("RolePermissions");
+                    b.ToTable("RolePermissions", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.Customer", b =>
@@ -1549,7 +1549,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("WaivedProductId");
 
-                    b.ToTable("Customers");
+                    b.ToTable("Customers", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.Subscription", b =>
@@ -1607,7 +1607,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("SubscriptionPlanId");
 
-                    b.ToTable("Subscriptions");
+                    b.ToTable("Subscriptions", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.SubscriptionPlan", b =>
@@ -1633,7 +1633,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SubscriptionPlans");
+                    b.ToTable("SubscriptionPlans", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.Transaction", b =>
@@ -1676,7 +1676,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("SenderId");
 
-                    b.ToTable("Transactions");
+                    b.ToTable("Transactions", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.Vendor", b =>
@@ -1741,7 +1741,7 @@ namespace SabiMarket.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Vendors");
+                    b.ToTable("Vendors", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.WaiveMarketDates", b =>
@@ -1767,7 +1767,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WaiveMarketDates");
+                    b.ToTable("WaiveMarketDates", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.WaiveMarketNotification", b =>
@@ -1805,7 +1805,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("VendorId");
 
-                    b.ToTable("WaiveMarketNotifications");
+                    b.ToTable("WaiveMarketNotifications", (string)null);
                 });
 
             modelBuilder.Entity("SabiMarket.Domain.Entities.WaiveMarketModule.WaivedProduct", b =>
@@ -1852,7 +1852,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("VendorId");
 
-                    b.ToTable("WaivedProducts");
+                    b.ToTable("WaivedProducts", (string)null);
                 });
 
             modelBuilder.Entity("SowFoodCompany", b =>
@@ -1880,7 +1880,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SowFoodCompanies");
+                    b.ToTable("SowFoodCompanies", (string)null);
                 });
 
             modelBuilder.Entity("SowFoodCompanyCustomer", b =>
@@ -1914,7 +1914,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SowFoodCompanyCustomers");
+                    b.ToTable("SowFoodCompanyCustomers", (string)null);
                 });
 
             modelBuilder.Entity("SowFoodCompanyProductionItem", b =>
@@ -1953,7 +1953,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("SowFoodCompanyId");
 
-                    b.ToTable("SowFoodCompanyProductionItems");
+                    b.ToTable("SowFoodCompanyProductionItems", (string)null);
                 });
 
             modelBuilder.Entity("SowFoodCompanySalesRecord", b =>
@@ -2004,7 +2004,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("SowFoodCompanyStaffId");
 
-                    b.ToTable("SowFoodCompanySalesRecords");
+                    b.ToTable("SowFoodCompanySalesRecords", (string)null);
                 });
 
             modelBuilder.Entity("SowFoodCompanyShelfItem", b =>
@@ -2044,7 +2044,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("SowFoodCompanyId");
 
-                    b.ToTable("SowFoodCompanyShelfItems");
+                    b.ToTable("SowFoodCompanyShelfItems", (string)null);
                 });
 
             modelBuilder.Entity("SowFoodCompanyStaff", b =>
@@ -2082,7 +2082,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SowFoodCompanyStaff");
+                    b.ToTable("SowFoodCompanyStaff", (string)null);
                 });
 
             modelBuilder.Entity("SowFoodCompanyStaffAppraiser", b =>
@@ -2116,7 +2116,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SowFoodCompanyStaffAppraisers");
+                    b.ToTable("SowFoodCompanyStaffAppraisers", (string)null);
                 });
 
             modelBuilder.Entity("SowFoodCompanyStaffAttendance", b =>
@@ -2158,7 +2158,7 @@ namespace SabiMarket.Infrastructure.Migrations
 
                     b.HasIndex("SowFoodCompanyStaffId");
 
-                    b.ToTable("SowFoodCompanyStaffAttendances");
+                    b.ToTable("SowFoodCompanyStaffAttendances", (string)null);
                 });
 
             modelBuilder.Entity("Advertisement", b =>

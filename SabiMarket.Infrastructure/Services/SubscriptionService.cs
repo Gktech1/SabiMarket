@@ -45,6 +45,7 @@ namespace SabiMarket.Infrastructure.Services
                 {
                     Amount = dto.Amount,
                     ProofOfPayment = dto.ProofOfPayment ?? "",
+                    SubscriptionPlanId = dto.SubscriberPlanId,
                     SubscriberType = dto.SubscriberType,
                     SubscriberId = dto.SubscriberId ?? loggedInUser.Id, // FIXED: Use an existing user ID
                     IsSubscriberConfirmPayment = !string.IsNullOrEmpty(dto.ProofOfPayment) ? true : false,
@@ -158,15 +159,19 @@ namespace SabiMarket.Infrastructure.Services
             return ResponseFactory.Success(getSubscriptions);
         }
 
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<Subscription>>>> GetAllSubscription(PaginationFilter filter)
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<Subscription>>>> GetAllSubscription(PaginationFilter filter, string? searString)
         {
-            var getSubscriptions = await _repositoryManager.SubscriptionRepository.GetPagedSubscription(filter);
+            var getSubscriptions = await _repositoryManager.SubscriptionRepository.GetPagedSubscription(filter, searString);
             if (getSubscriptions == null)
             {
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<Subscription>>>(new NotFoundException("Subscription not found."), "Subscription not found.");
             }
             return ResponseFactory.Success(getSubscriptions);
         }
+
+        //public async Task<BaseResponse<PaginatorDto<IEnumerable<Subscription>>>> GetSubscriptionPlanCount(string subscriptionPlanId)
+        //{
+        //}
         public async Task<BaseResponse<PaginatorDto<IEnumerable<Subscription>>>> SearchSubscription(string searchString, PaginationFilter filter)
         {
             var getSubscriptions = await _repositoryManager.SubscriptionRepository.SearchSubscription(searchString, filter);

@@ -18,6 +18,7 @@ namespace SabiMarket.Infrastructure.Repositories
 
         public void AddSubscriptionPlan(SubscriptionPlan plan) => Create(plan);
         public void UpdateSubscriptionPlan(SubscriptionPlan plan) => Update(plan);
+        public void DeleteSubscriptionPlan(SubscriptionPlan plan) => Delete(plan);
 
         public async Task<IEnumerable<SubscriptionPlan>> GetAllSubscriptionPlanForExport(bool trackChanges) => await FindAll(trackChanges).ToListAsync();
 
@@ -28,7 +29,21 @@ namespace SabiMarket.Infrastructure.Repositories
             return await FindAll(false)
                        .Paginate(paginationFilter);
         }
+        public async Task<PaginatorDto<IEnumerable<SubscriptionPlan>>> GetPagedSubscriptionPlan(PaginationFilter paginationFilter, string? searchString)
+        {
+            var query = FindAll(false).AsQueryable();
 
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                var loweredSearch = searchString.ToLower();
+                query = query.Where(p =>
+                    p.Frequency.ToLower().Contains(loweredSearch) || p.Amount.ToString().ToLower().Contains(loweredSearch) ||
+                    p.UserType.ToLower().Contains(loweredSearch)
+                );
+            }
+
+            return await query.Paginate(paginationFilter);
+        }
         public async Task<PaginatorDto<IEnumerable<SubscriptionPlan>>> SearchSubscriptionPlan(string searchString, PaginationFilter paginationFilter)
         {
             return await FindAll(false)

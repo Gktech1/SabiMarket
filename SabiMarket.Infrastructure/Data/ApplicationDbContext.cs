@@ -48,14 +48,6 @@ namespace SabiMarket.Infrastructure.Data
         public DbSet<Admin> Admins { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
-        public DbSet<SowFoodCompanyStaff> SowFoodStaffs { get; set; }
-        public DbSet<SowFoodCompanyCustomer> SowFoodCustomers { get; set; }
-        public DbSet<SowFoodCompanyProductionItem> SowFoodProductionItems { get; set; }
-        public DbSet<SowFoodCompanySalesRecord> SowFoodSalesRecords { get; set; }
-        public DbSet<SowFoodCompanyShelfItem> SowFoodShelfItems { get; set; }
-        public DbSet<SowFoodCompanyStaffAppraiser> SowFoodStaffAppraisers { get; set; }
-        public DbSet<SowFoodCompanyStaffAttendance> SowFoodStaffAttendances { get; set; }
-        public DbSet<SowFoodCompany> SowFoodCompanies { get; set; }
         public DbSet<CustomerPurchase> CustomerPurchases { get; set; }
         public DbSet<WaiveMarketDates> WaiveMarketDates { get; set; }
         public DbSet<OfficerMarketAssignment> OfficerMarketAssignments { get; set; }

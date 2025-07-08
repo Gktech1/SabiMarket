@@ -14,12 +14,14 @@ namespace SabiMarket.Application.DTOs.Requests
         //public string PaymentMethod { get; set; }
         public string ProofOfPayment { get; set; }
         public string SubscriberId { get; set; }
+        public string SubscriberPlanId { get; set; }
         public string SubscriberType { get; set; }
     }
     public class CreateSubscriptionPlanDto
     {
         public decimal Amount { get; set; }
         public string Frequency { get; set; }
+        public string UserType { get; set; }
 
     }
     public class UpdateSubscriptionPlanDto
@@ -35,4 +37,42 @@ namespace SabiMarket.Application.DTOs.Requests
         public string Product { get; set; }
         public decimal Amount { get; set; }
     }
+    public class GetSubScriptionPlanDto
+    {
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public string Frequency { get; set; }
+        public decimal Amount { get; set; }
+        public int NumberOfSubscribers { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    public class GetSubscriptionDto
+    {
+        public string Id { get; set; }
+        public string Frequency { get; set; }
+        public decimal Amount { get; set; }
+        public string UserType { get; set; }
+    }
+
+    public class SubscribedUserDto
+    {
+        public string UserId { get; set; }
+        public string FullName { get; set; }
+        public string? Email { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime? SubscriptionStartDate { get; set; }
+        public DateTime? SubscriptionEndDate { get; set; }
+    }
+
+    public class GetSubscriptionUserDto
+    {
+        public string UserId { get; set; }
+        public string FullName { get; set; }
+        public string Email { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime? SubscriptionStartDate { get; set; }
+        public DateTime? SubscriptionEndDate { get; set; }
+    }
+
 }

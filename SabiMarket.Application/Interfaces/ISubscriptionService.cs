@@ -16,7 +16,7 @@ public interface ISubscriptionService
     Task<BaseResponse<bool>> CheckActiveCustomerSubscription(string userId);
     Task<BaseResponse<bool>> CheckActiveVendorSubscription(string userId);
     Task<BaseResponse<string>> CreateSubscription(CreateSubscriptionDto dto);
-    Task<BaseResponse<PaginatorDto<IEnumerable<Subscription>>>> GetAllSubscription(PaginationFilter filter);
+    Task<BaseResponse<PaginatorDto<IEnumerable<Subscription>>>> GetAllSubscription(PaginationFilter filter, string? searString);
     Task<BaseResponse<Subscription>> GetSubscriptionById(string subscriptionId);
     Task<BaseResponse<PaginatorDto<IEnumerable<Subscription>>>> SearchSubscription(string searchString, PaginationFilter filter);
     Task<BaseResponse<SubscriptionDashboadDetailsDto>> SubscriptionDashBoardDetails();

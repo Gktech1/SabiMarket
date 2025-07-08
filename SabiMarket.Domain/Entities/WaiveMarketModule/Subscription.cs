@@ -22,6 +22,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         public decimal Amount { get; set; }
 
         public string ProofOfPayment { get; set; }
+        public string SubscriptionPlanId { get; set; }
         public bool IsSubscriberConfirmPayment { get; set; }
         public bool IsAdminConfirmPayment { get; set; }
 
@@ -32,5 +33,9 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         [ForeignKey("SubscriptionActivatorId")]
         [DeleteBehavior(DeleteBehavior.NoAction)]  // <-- Add this
         public virtual ApplicationUser SubscriptionActivator { get; set; }
+
+        [ForeignKey("SubscriptionPlanId")]
+        [DeleteBehavior(DeleteBehavior.NoAction)]  // <-- Add this
+        public virtual SubscriptionPlan SubscriptionPlan { get; set; }
     }
 }

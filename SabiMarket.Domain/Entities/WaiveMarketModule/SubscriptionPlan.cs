@@ -12,6 +12,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         public string Frequency { get; set; }
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
+        public string UserType { get; set; }
         public ICollection<Subscription> Subscriptions { get; set; }
     }
 }

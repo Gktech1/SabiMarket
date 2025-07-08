@@ -22,10 +22,23 @@ public class SubscriptionRepository : GeneralRepository<Subscription>, ISubscrip
 
     public async Task<Subscription> GetSubscriptionById(string id, bool trackChanges) => await FindByCondition(x => x.Id == id, trackChanges).FirstOrDefaultAsync();
 
-    public async Task<PaginatorDto<IEnumerable<Subscription>>> GetPagedSubscription(PaginationFilter paginationFilter)
+    public async Task<PaginatorDto<IEnumerable<Subscription>>> GetPagedSubscription(PaginationFilter paginationFilter, string? searchString)
     {
-        return await FindAll(false)
-                   .Paginate(paginationFilter);
+        var query = FindAll(false)
+            .Include(s => s.Subscriber)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(searchString))
+        {
+            var loweredSearch = searchString.ToLower();
+            query = query.Where(s =>
+                s.SubscriberId.ToLower().Contains(loweredSearch) ||
+                s.Subscriber.FirstName.ToLower().Contains(loweredSearch) ||
+                s.Subscriber.LastName.ToLower().Contains(loweredSearch)
+            );
+        }
+
+        return await query.Paginate(paginationFilter);
     }
 
     public async Task<PaginatorDto<IEnumerable<Subscription>>> SearchSubscription(string searchString, PaginationFilter paginationFilter)

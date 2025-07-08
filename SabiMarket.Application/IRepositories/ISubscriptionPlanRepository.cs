@@ -15,6 +15,8 @@ namespace SabiMarket.Application.IRepositories
         Task<PaginatorDto<IEnumerable<SubscriptionPlan>>> GetPagedSubscriptionPlan(PaginationFilter paginationFilter);
         Task<SubscriptionPlan> GetSubscriptionPlanById(string id, bool trackChanges);
         Task<PaginatorDto<IEnumerable<SubscriptionPlan>>> SearchSubscriptionPlan(string searchString, PaginationFilter paginationFilter);
+        Task<PaginatorDto<IEnumerable<SubscriptionPlan>>> GetPagedSubscriptionPlan(PaginationFilter paginationFilter, string? searchString);
         void UpdateSubscriptionPlan(SubscriptionPlan plan);
+        void DeleteSubscriptionPlan(SubscriptionPlan plan);
     }
 }

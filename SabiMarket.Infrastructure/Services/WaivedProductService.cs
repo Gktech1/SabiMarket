@@ -166,25 +166,45 @@ public class WaivedProductService : IWaivedProductService
 
         return ResponseFactory.Success(waivedProduct);
     }
-    public async Task<BaseResponse<List<ProductDetailsDto>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<ProductDetailsDto>>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter)
     {
-        var waivedProduct = await _applicationDbContext.WaivedProducts.Where(x => x.IsAvailbleForUrgentPurchase).Include(x => x.Vendor).Include(x => x.ProductCategory).OrderBy(x => x.ProductName).AsQueryable().Paginate(filter);
-        if (waivedProduct == null)
+        var waivedProduct = await _applicationDbContext.WaivedProducts
+            .Where(x => x.IsAvailbleForUrgentPurchase)
+            .Include(x => x.Vendor)
+            .Include(x => x.ProductCategory)
+            .OrderBy(x => x.ProductName)
+            .AsQueryable()
+            .Paginate(filter);
+
+        if (waivedProduct == null || !waivedProduct.PageItems.Any())
         {
-            return ResponseFactory.Fail<List<ProductDetailsDto>>(new NotFoundException("No Record Found."), "Record not found.");
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<ProductDetailsDto>>>(
+                new NotFoundException("No Record Found."), "Record not found.");
         }
+
         var vendorDtos = waivedProduct.PageItems.Select(v => new ProductDetailsDto
         {
             ProductId = v.Id,
             IsAvailbleForUrgentPurchase = v.IsAvailbleForUrgentPurchase,
-            Category = v.ProductCategory?.Name ?? "N/A", // Fallback if null
+            Category = v.ProductCategory?.Name ?? "N/A",
             CurrencyType = v.CurrencyType,
             Price = v.Price,
             ProductName = v.ProductName,
-
+            ImageUrl = v.ImageUrl,
         }).ToList();
-        return ResponseFactory.Success(vendorDtos);
+
+        var response = new PaginatorDto<IEnumerable<ProductDetailsDto>>
+        {
+            PageItems = vendorDtos,
+            CurrentPage = waivedProduct.CurrentPage,
+            PageSize = waivedProduct.PageSize,
+            TotalItems = waivedProduct.TotalItems,
+            NumberOfPages = waivedProduct.NumberOfPages
+        };
+
+        return ResponseFactory.Success(response);
     }
+
     public async Task<BaseResponse<int>> GetUrgentPurchaseWaivedProductCount()
     {
         var urgentpurchaseCount = await _applicationDbContext.WaivedProducts.Where(x => x.IsAvailbleForUrgentPurchase).CountAsync();

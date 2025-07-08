@@ -14,6 +14,10 @@ public interface ISubscriptionPlanService
 {
     Task<BaseResponse<string>> CreateSubscriptionPlan(CreateSubscriptionPlanDto dto);
     Task<BaseResponse<PaginatorDto<IEnumerable<SubscriptionPlan>>>> GetAllSubscriptionPlans(PaginationFilter filter);
-    Task<BaseResponse<SubscriptionPlan>> GetSubscriptionPlanById(string Id);
+    Task<BaseResponse<GetSubScriptionPlanDto>> GetSubscriptionPlanById(string Id);
     Task<BaseResponse<string>> UpdateSubscriptionPlan(UpdateSubscriptionPlanDto dto);
+    Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionDto>>>> GetAllSubscriptionPlans(
+    PaginationFilter filter, string? searchString);
+    Task<BaseResponse<string>> DeleteSubscriptionPlan(string Id);
+    Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionUserDto>>>> GetSubscribersBySubscriptionPlan(PaginationFilter filter, string subscriptionPlanId);
 }
