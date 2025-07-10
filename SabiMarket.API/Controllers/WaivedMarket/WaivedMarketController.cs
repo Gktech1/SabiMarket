@@ -66,9 +66,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("GetUrgentPurchaseWaivedProduct")]
-        public async Task<IActionResult> GetUrgentPurchaseWaivedProduct([FromQuery] PaginationFilter filter)
+        public async Task<IActionResult> GetUrgentPurchaseWaivedProduct([FromQuery] PaginationFilter filter, string? searchString)
         {
-            var response = await _serviceManager.IWaivedProductService.GetUrgentPurchaseWaivedProduct(filter);
+            var response = await _serviceManager.IWaivedProductService.GetUrgentPurchaseWaivedProduct(filter, searchString);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -596,6 +596,24 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         public async Task<IActionResult> CreateComplaint(CreateCustomerComplaint dto)
         {
             var response = await _serviceManager.IWaivedProductService.CreateComplaint(dto.vendorId, dto.comPlaintMsg, dto.imageUrl);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
+        [HttpPut("SetComplaintAsResolved")]
+        public async Task<IActionResult> SetComplaintAsResolved(string complaintId)
+        {
+            var response = await _serviceManager.IWaivedProductService.SetComplaintAsResolved(complaintId);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures

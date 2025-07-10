@@ -139,6 +139,7 @@ namespace SabiMarket.Infrastructure.Services
 
             plan.Frequency = dto.Frequency;
             plan.Amount = dto.Amount;
+            plan.UserType = dto.UserType;
 
             _repositoryManager.SubscriptionPlanRepository.UpdateSubscriptionPlan(plan);
             await _repositoryManager.SaveChangesAsync();

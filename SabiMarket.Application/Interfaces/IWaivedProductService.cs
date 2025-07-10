@@ -20,6 +20,7 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<bool>> CanProceedToPurchaseAsync(string notificationId, string vendorResponse);
         Task<BaseResponse<string>> ConfirmCustomerPurchase(string id);
         Task<BaseResponse<string>> CreateComplaint(string vendorId, string compalaint, string? imageUrl);
+        Task<BaseResponse<string>> SetComplaintAsResolved(string complaintId);
         Task<BaseResponse<string>> CreateNextWaiveMarketDate(NextWaiveMarketDateDto nextWaiveMarketDate);
         Task<BaseResponse<string>> CreateProductCategory(string categoryName, string description);
         Task<BaseResponse<string>> CreateWaivedProduct(CreateWaivedProductDto dto);
@@ -33,7 +34,7 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<NextWaiveMarketDateDto>> GetNextWaiveMarketDate();
         Task<BaseResponse<List<NotificationDto>>> GetNotificationsAsync();
         Task<BaseResponse<WaiveMarketNotification>> GetNotificationByIdAsync(string notificationId);
-        Task<BaseResponse<PaginatorDto<IEnumerable<ProductDetailsDto>>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter);
+        Task<BaseResponse<PaginatorDto<IEnumerable<ProductDetailsDto>>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter, string? searchString);
         Task<BaseResponse<int>> GetUrgentPurchaseWaivedProductCount();
         Task<BaseResponse<PaginatorDto<IEnumerable<VendorDto>>>> GetVendorAndProducts(PaginationFilter filter, string? searchString, string? filterString);
         Task<BaseResponse<WaivedProduct>> GetWaivedProductById(string Id);

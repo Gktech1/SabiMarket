@@ -28,6 +28,7 @@ namespace SabiMarket.Application.DTOs.Requests
     {
         public decimal Amount { get; set; }
         public string Frequency { get; set; }
+        public string UserType { get; set; }
         public string Id { get; set; }
 
     }

@@ -24,6 +24,7 @@ namespace SabiMarket.Application.DTOs
     {
         public string ProductId { get; set; }
         public string ProductName { get; set; }
+        public string VendorId { get; set; }
         public bool IsAvailbleForUrgentPurchase { get; set; }
         public string Category { get; set; }
         public string ImageUrl { get; set; }

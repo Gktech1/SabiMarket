@@ -50,6 +50,7 @@ namespace SabiMarket.Application.DTOs.Requests
         public string PhoneNumber { get; set; }
         public string LGA { get; set; }
         public string Address { get; set; }
+        public string ImageUrl { get; set; }
         public bool IsActive { get; set; }
         public DateTime DateAdded { get; set; }
     }

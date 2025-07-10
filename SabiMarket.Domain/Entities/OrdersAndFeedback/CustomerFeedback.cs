@@ -13,6 +13,7 @@ namespace SabiMarket.Domain.Entities.OrdersAndFeedback
         public string VendorCode { get; set; }
         public string Comment { get; set; }
         public string? ImageUrl { get; set; }
+        public bool IsResolved { get; set; }
         public int Rating { get; set; }
         public DateTime CreatedAt { get; set; }
 

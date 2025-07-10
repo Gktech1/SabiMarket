@@ -166,22 +166,38 @@ public class WaivedProductService : IWaivedProductService
 
         return ResponseFactory.Success(waivedProduct);
     }
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<ProductDetailsDto>>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<ProductDetailsDto>>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter, string? searchString)
     {
-        var waivedProduct = await _applicationDbContext.WaivedProducts
+        var query = _applicationDbContext.WaivedProducts
             .Where(x => x.IsAvailbleForUrgentPurchase)
             .Include(x => x.Vendor)
             .Include(x => x.ProductCategory)
+            .AsQueryable();
+
+        // Apply search filter if searchString is provided
+        if (!string.IsNullOrWhiteSpace(searchString))
+        {
+            string lowerSearch = searchString.Trim().ToLower();
+
+            query = query.Where(x =>
+                x.ProductName.ToLower().Contains(lowerSearch) ||
+                x.Vendor.BusinessName.ToLower().Contains(lowerSearch) ||
+                x.ProductCategory.Name.ToLower().Contains(lowerSearch));
+        }
+
+        // Order and Paginate
+        var waivedProduct = await query
             .OrderBy(x => x.ProductName)
-            .AsQueryable()
             .Paginate(filter);
 
+        //  Empty Check
         if (waivedProduct == null || !waivedProduct.PageItems.Any())
         {
             return ResponseFactory.Fail<PaginatorDto<IEnumerable<ProductDetailsDto>>>(
                 new NotFoundException("No Record Found."), "Record not found.");
         }
 
+        //  Mapping
         var vendorDtos = waivedProduct.PageItems.Select(v => new ProductDetailsDto
         {
             ProductId = v.Id,
@@ -191,8 +207,10 @@ public class WaivedProductService : IWaivedProductService
             Price = v.Price,
             ProductName = v.ProductName,
             ImageUrl = v.ImageUrl,
+            VendorId = v.VendorId
         }).ToList();
 
+        //  Pagination DTO
         var response = new PaginatorDto<IEnumerable<ProductDetailsDto>>
         {
             PageItems = vendorDtos,
@@ -345,7 +363,8 @@ public class WaivedProductService : IWaivedProductService
                     LGA = v?.LocalGovernment?.Name,
                     Address = user?.Address,
                     IsActive = v.IsActive,
-                    DateAdded = v.CreatedAt
+                    DateAdded = v.CreatedAt,
+                    ImageUrl = v.User?.ProfileImageUrl
                 };
             }).ToList();
 
@@ -566,6 +585,29 @@ public class WaivedProductService : IWaivedProductService
             _applicationDbContext.CustomerFeedbacks.Add(complaint);
             await _repositoryManager.SaveChangesAsync();
             return ResponseFactory.Success("Success", "Feedback Created Successfully.");
+        }
+        catch (Exception)
+        {
+
+            return ResponseFactory.Fail<string>("An Error Occurred. Try again later");
+
+        }
+    }
+    public async Task<BaseResponse<string>> SetComplaintAsResolved(string complaintId)
+    {
+        try
+        {
+            var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+            var feedback = _applicationDbContext.CustomerFeedbacks.FirstOrDefault(v => v.Id == complaintId);
+            if (feedback == null)
+            {
+                return ResponseFactory.Fail<string>(new NotFoundException($"Customer Feedback with Id: {complaintId} not Found."), "Customer feedback not found.");
+            }
+            feedback.IsResolved = true;
+            _applicationDbContext.CustomerFeedbacks.Update(feedback);
+            await _repositoryManager.SaveChangesAsync();
+            return ResponseFactory.Success("Success", "Feedback Updated Successfully.");
         }
         catch (Exception)
         {
