@@ -580,7 +580,9 @@ public class WaivedProductService : IWaivedProductService
                 ImageUrl = imageUrl,
                 VendorCode = vendor.VendorCode,
                 VendorId = vendorId,
-                IsActive = true
+                IsActive = true,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
             };
             _applicationDbContext.CustomerFeedbacks.Add(complaint);
             await _repositoryManager.SaveChangesAsync();
@@ -599,23 +601,30 @@ public class WaivedProductService : IWaivedProductService
         {
             var loggedInUser = Helper.GetUserDetails(_contextAccessor);
 
-            var feedback = _applicationDbContext.CustomerFeedbacks.FirstOrDefault(v => v.Id == complaintId);
+            var feedback = await _applicationDbContext.CustomerFeedbacks
+                                                      .FirstOrDefaultAsync(v => v.Id == complaintId);
+
             if (feedback == null)
             {
-                return ResponseFactory.Fail<string>(new NotFoundException($"Customer Feedback with Id: {complaintId} not Found."), "Customer feedback not found.");
+                return ResponseFactory.Fail<string>(
+                    new NotFoundException($"Customer Feedback with Id: {complaintId} not found."),
+                    "Customer feedback not found.");
             }
+
             feedback.IsResolved = true;
-            _applicationDbContext.CustomerFeedbacks.Update(feedback);
-            await _repositoryManager.SaveChangesAsync();
-            return ResponseFactory.Success("Success", "Feedback Updated Successfully.");
+            //feedback.UpdatedBy  = loggedInUser?.UserName;  // optional audit fields
+            feedback.UpdatedAt = DateTime.UtcNow;
+
+            await _applicationDbContext.SaveChangesAsync();   // 💾 same context
+
+            return ResponseFactory.Success("Success", "Feedback updated successfully.");
         }
         catch (Exception)
         {
-
-            return ResponseFactory.Fail<string>("An Error Occurred. Try again later");
-
+            return ResponseFactory.Fail<string>("An error occurred. Try again later.");
         }
     }
+
     public async Task<BaseResponse<string>> CreateNextWaiveMarketDate(NextWaiveMarketDateDto nextWaiveMarketDate)
     {
         try
@@ -629,7 +638,9 @@ public class WaivedProductService : IWaivedProductService
             {
                 NextWaiveMarketDate = nextWaiveMarketDate.MarketDate,
                 WaiveMarketLocation = nextWaiveMarketDate.MarketVenue,
-                IsActive = true
+                IsActive = true,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
             };
             _applicationDbContext.WaiveMarketDates.Add(nextDate);
             await _repositoryManager.SaveChangesAsync();
@@ -646,28 +657,31 @@ public class WaivedProductService : IWaivedProductService
     {
         try
         {
-            var waiveMarket = _applicationDbContext.WaiveMarketDates.FirstOrDefault(x => x.Id == nextWaiveMarketDate.Id);
+            var waiveMarket = _applicationDbContext.WaiveMarketDates
+                .FirstOrDefault(x => x.Id == nextWaiveMarketDate.Id);
+
             if (waiveMarket == null)
             {
                 return ResponseFactory.Fail<string>("Record not found.");
             }
-            var nextDate = new WaiveMarketDates
-            {
-                NextWaiveMarketDate = nextWaiveMarketDate.MarketDate,
-                WaiveMarketLocation = nextWaiveMarketDate.MarketVenue,
-                IsActive = nextWaiveMarketDate.IsActive
-            };
-            _applicationDbContext.WaiveMarketDates.Update(nextDate);
-            await _repositoryManager.SaveChangesAsync();
+
+            // Update properties directly
+            waiveMarket.NextWaiveMarketDate = nextWaiveMarketDate.MarketDate;
+            waiveMarket.WaiveMarketLocation = nextWaiveMarketDate.MarketVenue;
+            waiveMarket.IsActive = nextWaiveMarketDate.IsActive;
+            waiveMarket.UpdatedAt = DateTime.UtcNow;
+
+            // Persist changes
+            await _applicationDbContext.SaveChangesAsync();
+
             return ResponseFactory.Success("Success", "Next Waive Market Date Updated Successfully.");
         }
         catch (Exception)
         {
-
-            return ResponseFactory.Fail<string>("An Error Occurred. Try again later");
-
+            return ResponseFactory.Fail<string>("An error occurred. Try again later.");
         }
     }
+
     public async Task<BaseResponse<NextWaiveMarketDateDto>> GetNextWaiveMarketDate()
     {
         try
@@ -676,7 +690,8 @@ public class WaivedProductService : IWaivedProductService
             if (lastDate == null)
             {
                 return ResponseFactory.Fail<NextWaiveMarketDateDto>(new NotFoundException($"Next Waive Market not Found."), "Next Waive Market not Found.");
-            };
+            }
+            ;
             var response = new NextWaiveMarketDateDto
             {
                 MarketDate = lastDate.NextWaiveMarketDate,
@@ -699,7 +714,8 @@ public class WaivedProductService : IWaivedProductService
             if (records == null)
             {
                 return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaiveMarketDates>>>(new NotFoundException($"Next Waive Market not Found."), "Next Waive Market not Found.");
-            };
+            }
+            ;
 
             return ResponseFactory.Success(records, "Success");
         }
@@ -736,7 +752,7 @@ public class WaivedProductService : IWaivedProductService
         return ResponseFactory.Success("Success");
     }
 
-    public async Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedbackDto>>>> GetAllComplaint(PaginationFilter filter, string? searchString)
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedbackDto>>>> GetAllComplaint(PaginationFilter filter, string? searchString, string? filterString)
     {
         var query = _applicationDbContext.CustomerFeedbacks
             .Include(f => f.Customer)
@@ -754,6 +770,13 @@ public class WaivedProductService : IWaivedProductService
                 f.Customer.User.FirstName.ToLower().Contains(lowerSearch) ||
                 f.Customer.User.LastName.ToLower().Contains(lowerSearch)
             );
+        }
+
+        // ✅ Filter by Vendor's Local Government (LGA)
+        if (!string.IsNullOrWhiteSpace(filterString))
+        {
+            var lowerFilter = filterString.ToLower();
+            query = query.Where(f => f.Vendor.LocalGovernment.Name.ToLower().Contains(lowerFilter));
         }
 
         var cusComplaint = await query.Paginate(filter);

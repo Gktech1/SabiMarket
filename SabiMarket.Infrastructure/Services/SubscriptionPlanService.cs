@@ -10,6 +10,7 @@ using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Application.Interfaces;
 using SabiMarket.Application.IRepositories;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
+using SabiMarket.Domain.Enum;
 using SabiMarket.Domain.Exceptions;
 using SabiMarket.Infrastructure.Data;
 using SabiMarket.Infrastructure.Utilities;
@@ -40,10 +41,10 @@ namespace SabiMarket.Infrastructure.Services
             await _repositoryManager.SaveChangesAsync();
             return ResponseFactory.Success("Success", "Subscription Created Successfully.");
         }
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionDto>>>> GetAllSubscriptionPlans(PaginationFilter filter, string? searchString)
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionDto>>>> GetAllSubscriptionPlans(PaginationFilter filter, string? searchString, string? frequencyFilter, DateTime? dateCreatedFilter)
         {
             var pagedResult = await _repositoryManager.SubscriptionPlanRepository
-                .GetPagedSubscriptionPlan(filter, searchString);
+                .GetPagedSubscriptionPlan(filter, searchString, frequencyFilter, dateCreatedFilter);
 
 
             if (pagedResult == null || !pagedResult.PageItems.Any())
@@ -56,8 +57,10 @@ namespace SabiMarket.Infrastructure.Services
             {
                 Id = plan.Id,
                 Frequency = plan.Frequency,
+                Currency = (int)plan.Currency,
                 Amount = plan.Amount,
                 UserType = plan.UserType,
+                DateCreated = plan.CreatedAt
             }).ToList();
 
             var response = new PaginatorDto<IEnumerable<GetSubscriptionDto>>
@@ -72,19 +75,34 @@ namespace SabiMarket.Infrastructure.Services
             return ResponseFactory.Success(response);
         }
 
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionUserDto>>>> GetSubscribersBySubscriptionPlan(PaginationFilter filter, string subscriptionPlanId)
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionUserDto>>>> GetSubscribersBySubscriptionPlan(PaginationFilter filter, string? subscriptionPlanId, DateTime? createdAtFilter, int? currencyTypeFilter)
         {
-            var subscriptions = _context.Subscriptions.Where(x => x.Id == subscriptionPlanId)
+            var subscriptions = _context.Subscriptions
+                .Where(x => x.Id == subscriptionPlanId)
                 .Include(s => s.Subscriber)
                 .AsQueryable();
 
-            if (!subscriptions.Any())
+            // ✅ Filter by CreatedAt (date-only)
+            if (createdAtFilter.HasValue)
             {
-                return ResponseFactory.Fail<PaginatorDto<IEnumerable<GetSubscriptionUserDto>>>(
-                    new NotFoundException("No subscribers found."), "No subscribers found for the provided plan.");
+                var dateOnly = createdAtFilter.Value.Date;
+                subscriptions = subscriptions.Where(s => s.CreatedAt.Date == dateOnly);
             }
 
-            PaginatorDto<IEnumerable<GetSubscriptionUserDto>>? result = await subscriptions.Select(s => new GetSubscriptionUserDto
+            // ✅ Filter by CurrencyType enum
+            if (currencyTypeFilter.HasValue)
+            {
+                subscriptions = subscriptions.Where(s => s.SubscriptionPlan.Currency == (CurrencyTypeEnum)currencyTypeFilter.Value);
+            }
+
+            if (!await subscriptions.AnyAsync())
+            {
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<GetSubscriptionUserDto>>>(
+                    new NotFoundException("No subscribers found."),
+                    "No subscribers found for the provided plan.");
+            }
+
+            var result = await subscriptions.Select(s => new GetSubscriptionUserDto
             {
                 UserId = s.Subscriber.Id,
                 FullName = $"{s.Subscriber.FirstName} {s.Subscriber.LastName}",
@@ -96,6 +114,7 @@ namespace SabiMarket.Infrastructure.Services
 
             return ResponseFactory.Success(result);
         }
+
 
         public async Task<BaseResponse<PaginatorDto<IEnumerable<SubscriptionPlan>>>> GetAllSubscriptionPlans(PaginationFilter filter)
         {

@@ -29,21 +29,37 @@ namespace SabiMarket.Infrastructure.Repositories
             return await FindAll(false)
                        .Paginate(paginationFilter);
         }
-        public async Task<PaginatorDto<IEnumerable<SubscriptionPlan>>> GetPagedSubscriptionPlan(PaginationFilter paginationFilter, string? searchString)
+        public async Task<PaginatorDto<IEnumerable<SubscriptionPlan>>> GetPagedSubscriptionPlan(PaginationFilter paginationFilter, string? searchString, string? frequencyFilter, DateTime? dateCreatedFilter)
         {
-            var query = FindAll(false).AsQueryable();
+            IQueryable<SubscriptionPlan>? query = FindAll(false).AsQueryable();
 
+            // 🔍 Full-text search
             if (!string.IsNullOrWhiteSpace(searchString))
             {
                 var loweredSearch = searchString.ToLower();
                 query = query.Where(p =>
-                    p.Frequency.ToLower().Contains(loweredSearch) || p.Amount.ToString().ToLower().Contains(loweredSearch) ||
-                    p.UserType.ToLower().Contains(loweredSearch)
-                );
+                    p.Frequency.ToLower().Contains(loweredSearch) ||
+                    p.Amount.ToString().ToLower().Contains(loweredSearch) ||
+                    p.UserType.ToLower().Contains(loweredSearch));
+            }
+
+            // ✅ Filter by Frequency (exact match)
+            if (!string.IsNullOrWhiteSpace(frequencyFilter))
+            {
+                var loweredFreq = frequencyFilter.ToLower();
+                query = query.Where(p => p.Frequency.ToLower() == loweredFreq);
+            }
+
+            // ✅ Filter by DateCreated (date-only comparison)
+            if (dateCreatedFilter.HasValue)
+            {
+                var dateOnly = dateCreatedFilter.Value.Date;
+                query = query.Where(p => p.CreatedAt.Date == dateOnly);
             }
 
             return await query.Paginate(paginationFilter);
         }
+
         public async Task<PaginatorDto<IEnumerable<SubscriptionPlan>>> SearchSubscriptionPlan(string searchString, PaginationFilter paginationFilter)
         {
             return await FindAll(false)

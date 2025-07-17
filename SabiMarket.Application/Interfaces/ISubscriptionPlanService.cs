@@ -16,8 +16,7 @@ public interface ISubscriptionPlanService
     Task<BaseResponse<PaginatorDto<IEnumerable<SubscriptionPlan>>>> GetAllSubscriptionPlans(PaginationFilter filter);
     Task<BaseResponse<GetSubScriptionPlanDto>> GetSubscriptionPlanById(string Id);
     Task<BaseResponse<string>> UpdateSubscriptionPlan(UpdateSubscriptionPlanDto dto);
-    Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionDto>>>> GetAllSubscriptionPlans(
-    PaginationFilter filter, string? searchString);
+    Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionDto>>>> GetAllSubscriptionPlans(PaginationFilter filter, string? searchString, string? frequencyFilter, DateTime? dateCreatedFilter);
     Task<BaseResponse<string>> DeleteSubscriptionPlan(string Id);
-    Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionUserDto>>>> GetSubscribersBySubscriptionPlan(PaginationFilter filter, string subscriptionPlanId);
+    Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionUserDto>>>> GetSubscribersBySubscriptionPlan(PaginationFilter filter, string? subscriptionPlanId, DateTime? createdAtFilter, int? currencyTypeFilter);
 }

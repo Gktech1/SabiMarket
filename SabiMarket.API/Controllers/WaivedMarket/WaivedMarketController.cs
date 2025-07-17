@@ -390,9 +390,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("GetAllSubscriptionPlans")]
-        public async Task<IActionResult> GetAllSubscriptionPlans([FromQuery] PaginationFilter filter, [FromQuery] string? searchString)
+        public async Task<IActionResult> GetAllSubscriptionPlans([FromQuery] PaginationFilter filter, [FromQuery] string? searchString, string? filterString, string? frequencyFilter, DateTime? dateCreatedFilter)
         {
-            BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionDto>>>? response = await _serviceManager.ISubscriptionPlanService.GetAllSubscriptionPlans(filter, searchString);
+            BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionDto>>>? response = await _serviceManager.ISubscriptionPlanService.GetAllSubscriptionPlans(filter, searchString, frequencyFilter, dateCreatedFilter);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -446,9 +446,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
         [HttpGet("GetSubscribersBySubscriptionPlan")]
         [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
-        public async Task<IActionResult> GetSubscribersBySubscriptionPlan([FromQuery] PaginationFilter filter, [FromQuery] string subscriptionPlanId)
+        public async Task<IActionResult> GetSubscribersBySubscriptionPlan([FromQuery] PaginationFilter filter, [FromQuery] string subscriptionPlanId, [FromQuery] DateTime? createdAtFilter, int? currencyTypeFilter)
         {
-            var response = await _serviceManager.ISubscriptionPlanService.GetSubscribersBySubscriptionPlan(filter, subscriptionPlanId);
+            var response = await _serviceManager.ISubscriptionPlanService.GetSubscribersBySubscriptionPlan(filter, subscriptionPlanId, createdAtFilter, currencyTypeFilter);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -684,9 +684,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("GetCustomerComplaints")]
-        public async Task<IActionResult> GetCustomerComplaint([FromQuery] PaginationFilter filter, string? searchString)
+        public async Task<IActionResult> GetCustomerComplaint([FromQuery] PaginationFilter filter, string? searchString, string? filterSting)
         {
-            var response = await _serviceManager.IWaivedProductService.GetAllComplaint(filter, searchString);
+            var response = await _serviceManager.IWaivedProductService.GetAllComplaint(filter, searchString, filterSting);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures

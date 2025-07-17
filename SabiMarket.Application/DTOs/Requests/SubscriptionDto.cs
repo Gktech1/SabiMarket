@@ -52,8 +52,10 @@ namespace SabiMarket.Application.DTOs.Requests
     {
         public string Id { get; set; }
         public string Frequency { get; set; }
+        public int Currency { get; set; }
         public decimal Amount { get; set; }
         public string UserType { get; set; }
+        public DateTime DateCreated { get; set; }
     }
 
     public class SubscribedUserDto
