@@ -772,6 +772,12 @@ public class WaivedProductService : IWaivedProductService
             );
         }
 
+        // ✅ Filter by IsResolved status
+        if (!string.IsNullOrWhiteSpace(filterString) && filterString.ToLower() == "resolved")
+        {
+            query = query.Where(f => f.IsResolved);
+        }
+
         // ✅ Filter by Vendor's Local Government (LGA)
         if (!string.IsNullOrWhiteSpace(filterString))
         {
