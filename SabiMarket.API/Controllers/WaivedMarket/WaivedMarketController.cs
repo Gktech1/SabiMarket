@@ -66,7 +66,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("GetUrgentPurchaseWaivedProduct")]
-        public async Task<IActionResult> GetUrgentPurchaseWaivedProduct([FromQuery] PaginationFilter filter, string? searchString)
+        public async Task<IActionResult> GetUrgentPurchaseWaivedProduct([FromQuery] PaginationFilter filter, [FromQuery] string? searchString)
         {
             var response = await _serviceManager.IWaivedProductService.GetUrgentPurchaseWaivedProduct(filter, searchString);
             if (!response.IsSuccessful)
@@ -284,7 +284,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet(" GetAllSubscription")]
-        public async Task<IActionResult> GetAllSubscription([FromQuery] PaginationFilter filter, string? searchString)
+        public async Task<IActionResult> GetAllSubscription([FromQuery] PaginationFilter filter, [FromQuery] string? searchString)
         {
             var response = await _serviceManager.ISubscriptionService.GetAllSubscription(filter, searchString);
             if (!response.IsSuccessful)
@@ -390,7 +390,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("GetAllSubscriptionPlans")]
-        public async Task<IActionResult> GetAllSubscriptionPlans([FromQuery] PaginationFilter filter, [FromQuery] string? searchString, string? filterString, string? frequencyFilter, DateTime? dateCreatedFilter)
+        public async Task<IActionResult> GetAllSubscriptionPlans([FromQuery] PaginationFilter filter, [FromQuery] string? searchString, [FromQuery] string? filterString, [FromQuery] string? frequencyFilter, [FromQuery] DateTime? dateCreatedFilter)
         {
             BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionDto>>>? response = await _serviceManager.ISubscriptionPlanService.GetAllSubscriptionPlans(filter, searchString, frequencyFilter, dateCreatedFilter);
             if (!response.IsSuccessful)
@@ -684,7 +684,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("GetCustomerComplaints")]
-        public async Task<IActionResult> GetCustomerComplaint([FromQuery] PaginationFilter filter, string? searchString, string? filterSting)
+        public async Task<IActionResult> GetCustomerComplaint([FromQuery] PaginationFilter filter, [FromQuery] string? searchString, [FromQuery] string? filterSting)
         {
             var response = await _serviceManager.IWaivedProductService.GetAllComplaint(filter, searchString, filterSting);
             if (!response.IsSuccessful)
@@ -702,7 +702,7 @@ namespace SabiMarket.API.Controllers.WaivedMarket
         }
 
         [HttpGet("GetCustomers")]
-        public async Task<IActionResult> GetCustomers([FromQuery] PaginationFilter filter, [FromQuery] string? searchString, string? filterString)
+        public async Task<IActionResult> GetCustomers([FromQuery] PaginationFilter filter, [FromQuery] string? searchString, [FromQuery] string? filterString)
         {
             var response = await _serviceManager.IWaivedProductService.GetCustomers(filter, searchString, filterString);
             if (!response.IsSuccessful)
