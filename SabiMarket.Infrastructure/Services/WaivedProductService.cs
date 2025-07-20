@@ -801,7 +801,8 @@ public class WaivedProductService : IWaivedProductService
             Comment = f.Comment,
             Rating = f.Rating,
             CustomerName = $"{f.Customer.User.FirstName} {f.Customer.User.LastName}",
-            CreatedAt = f.CreatedAt
+            CreatedAt = f.CreatedAt,
+            IsResolved = f.IsResolved
         }).ToList();
 
         var response = new PaginatorDto<IEnumerable<CustomerFeedbackDto>>
@@ -816,10 +817,52 @@ public class WaivedProductService : IWaivedProductService
         return ResponseFactory.Success(response);
     }
 
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedbackDto>>>> GetResolvedComplaint(PaginationFilter filter)
+    {
+        var query = _applicationDbContext.CustomerFeedbacks
+            .Where(x => x.IsResolved)
+            .Include(f => f.Customer)
+                .ThenInclude(c => c.User)
+            .Include(f => f.Vendor)
+            .AsQueryable();
+
+        var pagedResult = await query.Paginate(filter);
+
+        if (pagedResult == null || !pagedResult.PageItems.Any())
+        {
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<CustomerFeedbackDto>>>(
+                new NotFoundException("No record found."), "Record not found.");
+        }
+
+        var mappedResult = pagedResult.PageItems.Select(f => new CustomerFeedbackDto
+        {
+            Id = f.Id,
+            VendorCode = f.VendorCode,
+            VendorName = f.Vendor?.BusinessName,
+            Comment = f.Comment,
+            Rating = f.Rating,
+            CustomerName = $"{f.Customer?.User?.FirstName} {f.Customer?.User?.LastName}",
+            CreatedAt = f.CreatedAt,
+            IsResolved = f.IsResolved
+        }).ToList();
+
+        var response = new PaginatorDto<IEnumerable<CustomerFeedbackDto>>
+        {
+            PageItems = mappedResult,
+            TotalItems = pagedResult.TotalItems,
+            CurrentPage = pagedResult.CurrentPage,
+            NumberOfPages = pagedResult.NumberOfPages,
+            PageSize = pagedResult.PageSize
+        };
+
+        return ResponseFactory.Success(response);
+    }
+
+
 
     public async Task<BaseResponse<CustomerFeedback>> GetCustomerFeedbackById(string Id)
     {
-        var cusComplaint = _applicationDbContext.CustomerFeedbacks.Find(Id);
+        var cusComplaint = await _applicationDbContext.CustomerFeedbacks.FindAsync(Id);
         if (cusComplaint == null)
         {
             return ResponseFactory.Fail<CustomerFeedback>(new NotFoundException("No Record Found."), "Record not found.");

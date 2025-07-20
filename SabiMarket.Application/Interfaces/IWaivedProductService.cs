@@ -45,6 +45,7 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<PaginatorDto<IEnumerable<WaiveMarketDates>>>> GetAllNextWaiveMarketDateRecords(PaginationFilter filter);
         Task<BaseResponse<string>> UpdateNextWaiveMarketDate(UpdateNextWaiveMarketDateDto nextWaiveMarketDate);
         Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedbackDto>>>> GetAllComplaint(PaginationFilter filter, string? searchString, string? filterString);
+        Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedbackDto>>>> GetResolvedComplaint(PaginationFilter filter);
         Task<BaseResponse<string>> ApproveDollarVendor(string vendorId);
     }
 }
