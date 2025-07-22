@@ -223,7 +223,8 @@ public class WaivedProductService : IWaivedProductService
         return ResponseFactory.Success(response);
     }
 
-    public async Task<BaseResponse<int>> GetUrgentPurchaseWaivedProductCount()
+    public async Task<BaseResponse<int>> GetUrgentPurchaseWaivedProduct
+        ()
     {
         var urgentpurchaseCount = await _applicationDbContext.WaivedProducts.Where(x => x.IsAvailbleForUrgentPurchase).CountAsync();
         if (urgentpurchaseCount == null)
@@ -1148,4 +1149,14 @@ public class WaivedProductService : IWaivedProductService
         return response;
     }
 
+    public BaseResponse<int> GetUrgentPurchaseWaivedProductCount()
+    {
+        var cusComplaint = _applicationDbContext.WaivedProducts.Where(x => x.IsAvailbleForUrgentPurchase).Count();
+        if (cusComplaint < 1)
+        {
+            return ResponseFactory.Fail<int>(new NotFoundException("No Record Found."), "Record not found.");
+        }
+
+        return ResponseFactory.Success(cusComplaint);
+    }
 }

@@ -135,6 +135,8 @@ namespace SabiMarket.Infrastructure.Services
                 return ResponseFactory.Fail<GetSubScriptionPlanDto>(new NotFoundException("No Record Found."), "Record not found.");
             }
             var count = await _context.Subscriptions.CountAsync(s => s.SubscriptionPlanId == Id);
+            var activeCount = await _context.Subscriptions.CountAsync(s => s.SubscriptionPlanId == Id && s.IsActive);
+            var InactiveCount = await _context.Subscriptions.CountAsync(s => s.SubscriptionPlanId == Id && !s.IsActive);
             var result = new GetSubScriptionPlanDto
             {
                 Amount = subscriptionPlan.Amount,
@@ -142,7 +144,9 @@ namespace SabiMarket.Infrastructure.Services
                 IsActive = subscriptionPlan.IsActive,
                 UpdatedAt = subscriptionPlan?.UpdatedAt,
                 Frequency = subscriptionPlan.Frequency,
-                NumberOfSubscribers = count
+                NumberOfSubscribers = count,
+                NumberOfActiveSubscribers = activeCount,
+                NumberOfInActiveSubscribers = InactiveCount
             };
 
             return ResponseFactory.Success(result);

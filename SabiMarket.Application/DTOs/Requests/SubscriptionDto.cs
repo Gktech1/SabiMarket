@@ -45,6 +45,8 @@ namespace SabiMarket.Application.DTOs.Requests
         public string Frequency { get; set; }
         public decimal Amount { get; set; }
         public int NumberOfSubscribers { get; set; }
+        public int NumberOfActiveSubscribers { get; set; }
+        public int NumberOfInActiveSubscribers { get; set; }
         public bool IsActive { get; set; }
     }
 

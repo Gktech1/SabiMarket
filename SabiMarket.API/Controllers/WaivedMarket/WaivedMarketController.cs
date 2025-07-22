@@ -82,10 +82,11 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
             return Ok(response);
         }
+
         [HttpGet("GetUrgentPurchaseWaivedProductCount")]
-        public async Task<IActionResult> GetUrgentPurchaseWaivedProductCount()
+        public IActionResult GetUrgentPurchaseWaivedProductCount()
         {
-            var response = await _serviceManager.IWaivedProductService.GetUrgentPurchaseWaivedProductCount();
+            var response = _serviceManager.IWaivedProductService.GetUrgentPurchaseWaivedProductCount();
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
