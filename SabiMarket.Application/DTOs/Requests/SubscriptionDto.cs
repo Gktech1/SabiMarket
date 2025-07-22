@@ -75,9 +75,12 @@ namespace SabiMarket.Application.DTOs.Requests
         public string UserId { get; set; }
         public string FullName { get; set; }
         public string Email { get; set; }
+        public string ProofOfPayment { get; set; }
         public bool IsActive { get; set; }
         public DateTime? SubscriptionStartDate { get; set; }
         public DateTime? SubscriptionEndDate { get; set; }
+        public DateTime DateCreated { get; set; }
+        public decimal Amount { get; set; }
     }
 
 }

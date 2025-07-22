@@ -36,7 +36,7 @@ public class CustomerRepository : GeneralRepository<Customer>, ICustomerReposito
             .Include(c => c.LocalGovernment)
             .Include(c => c.Orders)
             .Include(c => c.Feedbacks)
-            .Include(c => c.WaivedProduct)
+            .Include(c => c.WaivedProduct.ToList())
             .FirstOrDefaultAsync();
         return customer;
     }

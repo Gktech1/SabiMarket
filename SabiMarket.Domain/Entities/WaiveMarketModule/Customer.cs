@@ -28,12 +28,12 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         public virtual ApplicationUser User { get; set; }
 
         [DeleteBehavior(DeleteBehavior.NoAction)]
-        public virtual WaivedProduct WaivedProduct { get; set; }
+        public virtual ICollection<WaivedProduct> WaivedProduct { get; set; }
 
         [ForeignKey("LocalGovernmentId")]
         [DeleteBehavior(DeleteBehavior.NoAction)]
         public virtual LocalGovernment LocalGovernment { get; set; }
-
+        public virtual ICollection<CustomerWaiveProductPurchase> CustomerWaiveProductPurchases { get; set; } = new List<CustomerWaiveProductPurchase>();
         public virtual ICollection<CustomerOrder> Orders { get; set; } = new List<CustomerOrder>();
         public virtual ICollection<CustomerFeedback> Feedbacks { get; set; } = new List<CustomerFeedback>();
         public virtual ICollection<WaiveMarketNotification> WaiveMarketNotifications { get; set; } = new List<WaiveMarketNotification>();

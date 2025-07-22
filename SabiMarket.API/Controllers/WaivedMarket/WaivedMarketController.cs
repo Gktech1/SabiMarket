@@ -944,5 +944,23 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
             return Ok(response);
         }
+
+        [HttpPost("RecordUrgentWaiveProductPurchase")]
+        public async Task<IActionResult> RecordUrgentWaiveProductPurchase(string waiveProductId, string customerId, string deliveryAddress)
+        {
+            var response = await _serviceManager.IWaivedProductService.RecordUrgentWaiveProductPurchase(waiveProductId, customerId, deliveryAddress);
+
+            if (!response.IsSuccessful)
+            {
+                return response.Message switch
+                {
+                    "Unauthorized access." => Unauthorized(response),
+                    "Notification not found." => NotFound(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
     }
 }

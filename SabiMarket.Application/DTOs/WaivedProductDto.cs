@@ -30,10 +30,8 @@ namespace SabiMarket.Application.DTOs
         public string ImageUrl { get; set; }
         public CurrencyTypeEnum CurrencyType { get; set; }
         public decimal Price { get; set; }
+        public bool IsVerifiedVendor { get; set; }
 
-        //public string Description { get; set; }
-        //public decimal OriginalPrice { get; set; }
-        //public decimal WaivedPrice { get; set; }
     }
     public class UpdateWaivedProductDto
     {
@@ -80,4 +78,23 @@ namespace SabiMarket.Application.DTOs
         public string VendorId { get; set; }
         public string ProductId { get; set; }
     }
+
+    public class CustomerWaivedProductPurchaseDto
+    {
+        public string CustomerId { get; set; }
+        public string CustomerName { get; set; }
+        public string? DeliveryAddress { get; set; }
+    }
+
+    public class WaivedProductDto
+    {
+        public string Id { get; set; }
+        public string ProductName { get; set; }
+        public decimal Price { get; set; }
+        public string Category { get; set; }
+        public string VendorName { get; set; }
+        public bool IsAvailbleForUrgentPurchase { get; set; }
+        public List<CustomerWaivedProductPurchaseDto> Purchases { get; set; }
+    }
+
 }

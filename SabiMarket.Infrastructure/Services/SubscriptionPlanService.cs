@@ -109,7 +109,10 @@ namespace SabiMarket.Infrastructure.Services
                 Email = s.Subscriber.Email,
                 IsActive = s.IsActive,
                 SubscriptionStartDate = s.SubscriptionStartDate,
-                SubscriptionEndDate = s.SubscriptionEndDate
+                SubscriptionEndDate = s.SubscriptionEndDate,
+                ProofOfPayment = s.ProofOfPayment,
+                Amount = s.Amount,
+                DateCreated = s.CreatedAt
             }).Paginate(filter);
 
             return ResponseFactory.Success(result);

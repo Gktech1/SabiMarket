@@ -23,6 +23,7 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         public CurrencyTypeEnum CurrencyType { get; set; }
         public string VendorId { get; set; }
         public virtual Vendor Vendor { get; set; }
+        public virtual ICollection<CustomerWaiveProductPurchase> CustomerWaiveProductPurchases { get; set; }
 
         //[Column(TypeName = "decimal(18,2)")]
         //public decimal OriginalPrice { get; set; }

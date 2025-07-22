@@ -156,15 +156,38 @@ public class WaivedProductService : IWaivedProductService
         return await query.Paginate(paginationFilter);
     }
 
-    public async Task<BaseResponse<WaivedProduct>> GetWaivedProductById(string Id)
+    public async Task<BaseResponse<WaivedProductDto>> GetWaivedProductById(string Id)
     {
-        var waivedProduct = await _repositoryManager.WaivedProductRepository.GetWaivedProductById(Id, false);
+        var waivedProduct = await _applicationDbContext.WaivedProducts
+            .Include(x => x.CustomerWaiveProductPurchases)
+                .ThenInclude(p => p.Customer)
+                    .ThenInclude(u => u.User)
+            .Include(x => x.ProductCategory)
+            .Include(x => x.Vendor)
+            .FirstOrDefaultAsync(x => x.Id == Id);
+
         if (waivedProduct == null)
         {
-            return ResponseFactory.Fail<WaivedProduct>(new NotFoundException("No Record Found."), "Record not found.");
+            return ResponseFactory.Fail<WaivedProductDto>(new NotFoundException("No Record Found."), "Record not found.");
         }
 
-        return ResponseFactory.Success(waivedProduct);
+        var dto = new WaivedProductDto
+        {
+            Id = waivedProduct.Id,
+            ProductName = waivedProduct.ProductName,
+            Price = waivedProduct.Price,
+            Category = waivedProduct.ProductCategory?.Name ?? "N/A",
+            VendorName = waivedProduct.Vendor?.BusinessName ?? "N/A",
+            IsAvailbleForUrgentPurchase = waivedProduct.IsAvailbleForUrgentPurchase,
+            Purchases = waivedProduct.CustomerWaiveProductPurchases.Select(p => new CustomerWaivedProductPurchaseDto
+            {
+                CustomerId = p.CustomerId,
+                CustomerName = p.Customer?.User?.FirstName + " " + p.Customer?.User?.FirstName ?? "N/A",
+                DeliveryAddress = p.DeliveryAddress
+            }).ToList()
+        };
+
+        return ResponseFactory.Success(dto);
     }
     public async Task<BaseResponse<PaginatorDto<IEnumerable<ProductDetailsDto>>>> GetUrgentPurchaseWaivedProduct(PaginationFilter filter, string? searchString)
     {
@@ -207,7 +230,8 @@ public class WaivedProductService : IWaivedProductService
             Price = v.Price,
             ProductName = v.ProductName,
             ImageUrl = v.ImageUrl,
-            VendorId = v.VendorId
+            VendorId = v.VendorId,
+            IsVerifiedVendor = v.Vendor.IsVerified
         }).ToList();
 
         //  Pagination DTO
@@ -1159,4 +1183,48 @@ public class WaivedProductService : IWaivedProductService
 
         return ResponseFactory.Success(cusComplaint);
     }
+
+    public async Task<BaseResponse<string>> RecordUrgentWaiveProductPurchase(string waivedProductId, string customerId, string deliveryAddress)
+    {
+        // Fetch the waived product
+        var waivedProduct = await _applicationDbContext.WaivedProducts
+            .FirstOrDefaultAsync(x => x.Id == waivedProductId && x.IsAvailbleForUrgentPurchase);
+
+        if (waivedProduct == null)
+        {
+            return ResponseFactory.Fail<string>(
+                new NotFoundException("Waived product not found or not available for urgent purchase"),
+                "Product not found.");
+        }
+
+        // Fetch the customer
+        var customer = await _applicationDbContext.Customers
+            .Include(c => c.User)
+            .FirstOrDefaultAsync(x => x.Id == customerId);
+
+        if (customer == null)
+        {
+            return ResponseFactory.Fail<string>(
+                new NotFoundException("Customer not found"),
+                "Customer not found.");
+        }
+
+        // Create purchase record
+        var purchase = new CustomerWaiveProductPurchase
+        {
+            Id = Ulid.NewUlid().ToString(),
+            CustomerId = customerId,
+            WaivedProductId = waivedProductId,
+            DeliveryAddress = deliveryAddress,
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await _applicationDbContext.CustomerWaiveProductPurchases.AddAsync(purchase);
+        await _applicationDbContext.SaveChangesAsync();
+
+        return ResponseFactory.Success("Success", "Urgent waived product purchase recorded successfully.");
+    }
+
 }

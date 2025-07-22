@@ -54,13 +54,12 @@ namespace SabiMarket.Infrastructure.Services.Payment
         {
             var isSuccessful = await _paymentService.Verify(reference);
 
-            if (!isSuccessful) return ResponseFactory.Fail<bool>(new Exception("Failure to initialize payment."));
+            if (!isSuccessful) return ResponseFactory.Fail<bool>(new Exception("Failure to verify payment."));
 
-            var transaction = await _applicationDbContext.Transactions
-                .FirstAsync(t => t.Reference == reference);
+            var transaction = await _applicationDbContext.Transactions.FirstAsync(t => t.Reference == reference);
 
             transaction.Status = true;
-            _applicationDbContext.Transactions.Update(transaction);
+            await _applicationDbContext.SaveChangesAsync();
 
             return ResponseFactory.Success<bool>(true); ;
         }
