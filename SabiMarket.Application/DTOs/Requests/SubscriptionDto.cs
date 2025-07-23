@@ -72,7 +72,8 @@ namespace SabiMarket.Application.DTOs.Requests
 
     public class GetSubscriptionUserDto
     {
-        public string UserId { get; set; }
+        public string SubscriberId { get; set; }
+        public string SubscriptionId { get; set; }
         public string FullName { get; set; }
         public string Email { get; set; }
         public string ProofOfPayment { get; set; }

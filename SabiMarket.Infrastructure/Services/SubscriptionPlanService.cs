@@ -82,14 +82,14 @@ namespace SabiMarket.Infrastructure.Services
                 .Include(s => s.Subscriber)
                 .AsQueryable();
 
-            // ✅ Filter by CreatedAt (date-only)
+            // Filter by CreatedAt (date-only)
             if (createdAtFilter.HasValue)
             {
                 var dateOnly = createdAtFilter.Value.Date;
                 subscriptions = subscriptions.Where(s => s.CreatedAt.Date == dateOnly);
             }
 
-            // ✅ Filter by CurrencyType enum
+            // Filter by CurrencyType enum
             if (currencyTypeFilter.HasValue)
             {
                 subscriptions = subscriptions.Where(s => s.SubscriptionPlan.Currency == (CurrencyTypeEnum)currencyTypeFilter.Value);
@@ -104,7 +104,8 @@ namespace SabiMarket.Infrastructure.Services
 
             var result = await subscriptions.Select(s => new GetSubscriptionUserDto
             {
-                UserId = s.Subscriber.Id,
+                SubscriberId = s.Subscriber.Id,
+                SubscriptionId = s.Id,
                 FullName = $"{s.Subscriber.FirstName} {s.Subscriber.LastName}",
                 Email = s.Subscriber.Email,
                 IsActive = s.IsActive,
