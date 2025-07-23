@@ -75,7 +75,7 @@ namespace SabiMarket.Infrastructure.Services
             return ResponseFactory.Success(response);
         }
 
-        public async Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionUserDto>>>> GetSubscribersBySubscriptionPlan(PaginationFilter filter, string? subscriptionPlanId, DateTime? createdAtFilter, int? currencyTypeFilter)
+        public async Task<BaseResponse<PaginatorDto<IEnumerable<GetSubscriptionUserDto>>>> GetSubscribersBySubscriptionPlan(PaginationFilter filter, string? subscriptionPlanId, DateTime? createdAtFilter, int? currencyTypeFilter, string? statusFilter)
         {
             var subscriptions = _context.Subscriptions
                 .Where(x => x.Id == subscriptionPlanId)
@@ -89,6 +89,18 @@ namespace SabiMarket.Infrastructure.Services
                 subscriptions = subscriptions.Where(s => s.CreatedAt.Date == dateOnly);
             }
 
+            // Filter by Status
+            if (!string.IsNullOrEmpty(statusFilter))
+            {
+                if (statusFilter.ToLower() == "confirmed")
+                {
+                    subscriptions = subscriptions.Where(s => s.IsActive);
+                }
+                else
+                {
+                    subscriptions = subscriptions.Where(s => !s.IsActive);
+                }
+            }
             // Filter by CurrencyType enum
             if (currencyTypeFilter.HasValue)
             {
