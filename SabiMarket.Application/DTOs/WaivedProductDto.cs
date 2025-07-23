@@ -31,6 +31,7 @@ namespace SabiMarket.Application.DTOs
         public CurrencyTypeEnum CurrencyType { get; set; }
         public decimal Price { get; set; }
         public bool IsVerifiedVendor { get; set; }
+        public List<CustomerWaivedProductPurchaseDto> Customers { get; set; }
 
     }
     public class UpdateWaivedProductDto

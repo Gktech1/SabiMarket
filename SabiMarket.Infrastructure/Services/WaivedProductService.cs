@@ -182,7 +182,7 @@ public class WaivedProductService : IWaivedProductService
             Purchases = waivedProduct.CustomerWaiveProductPurchases.Select(p => new CustomerWaivedProductPurchaseDto
             {
                 CustomerId = p.CustomerId,
-                CustomerName = p.Customer?.User?.FirstName + " " + p.Customer?.User?.FirstName ?? "N/A",
+                CustomerName = p.Customer?.User?.FirstName + " " + p.Customer?.User?.LastName ?? "N/A",
                 DeliveryAddress = p.DeliveryAddress
             }).ToList()
         };
@@ -195,46 +195,50 @@ public class WaivedProductService : IWaivedProductService
             .Where(x => x.IsAvailbleForUrgentPurchase)
             .Include(x => x.Vendor)
             .Include(x => x.ProductCategory)
+            .Include(x => x.CustomerWaiveProductPurchases)
+                .ThenInclude(p => p.Customer)
+                    .ThenInclude(c => c.User)
             .AsQueryable();
 
-        // Apply search filter if searchString is provided
         if (!string.IsNullOrWhiteSpace(searchString))
         {
             string lowerSearch = searchString.Trim().ToLower();
-
             query = query.Where(x =>
                 x.ProductName.ToLower().Contains(lowerSearch) ||
                 x.Vendor.BusinessName.ToLower().Contains(lowerSearch) ||
                 x.ProductCategory.Name.ToLower().Contains(lowerSearch));
         }
 
-        // Order and Paginate
         var waivedProduct = await query
             .OrderBy(x => x.ProductName)
             .Paginate(filter);
 
-        //  Empty Check
         if (waivedProduct == null || !waivedProduct.PageItems.Any())
         {
             return ResponseFactory.Fail<PaginatorDto<IEnumerable<ProductDetailsDto>>>(
-                new NotFoundException("No Record Found."), "Record not found.");
+                new NotFoundException("No Record Found."),
+                "Record not found.");
         }
 
-        //  Mapping
         var vendorDtos = waivedProduct.PageItems.Select(v => new ProductDetailsDto
         {
             ProductId = v.Id,
+            ProductName = v.ProductName,
+            VendorId = v.VendorId,
             IsAvailbleForUrgentPurchase = v.IsAvailbleForUrgentPurchase,
             Category = v.ProductCategory?.Name ?? "N/A",
+            ImageUrl = v.ImageUrl,
             CurrencyType = v.CurrencyType,
             Price = v.Price,
-            ProductName = v.ProductName,
-            ImageUrl = v.ImageUrl,
-            VendorId = v.VendorId,
-            IsVerifiedVendor = v.Vendor.IsVerified
+            IsVerifiedVendor = v.Vendor.IsVerified,
+            Customers = v.CustomerWaiveProductPurchases.Select(p => new CustomerWaivedProductPurchaseDto
+            {
+                CustomerId = p.CustomerId,
+                CustomerName = p.Customer?.User?.FirstName + " " + p.Customer?.User?.FirstName ?? "N/A",
+                DeliveryAddress = p.DeliveryAddress
+            }).ToList()
         }).ToList();
 
-        //  Pagination DTO
         var response = new PaginatorDto<IEnumerable<ProductDetailsDto>>
         {
             PageItems = vendorDtos,
@@ -246,6 +250,7 @@ public class WaivedProductService : IWaivedProductService
 
         return ResponseFactory.Success(response);
     }
+
 
     public async Task<BaseResponse<int>> GetUrgentPurchaseWaivedProduct
         ()
@@ -1200,13 +1205,13 @@ public class WaivedProductService : IWaivedProductService
         // Fetch the customer
         var customer = await _applicationDbContext.Customers
             .Include(c => c.User)
-            .FirstOrDefaultAsync(x => x.Id == customerId);
+            .FirstOrDefaultAsync(x => x.Id == customerId && x.IsSubscriptionActive);
 
         if (customer == null)
         {
             return ResponseFactory.Fail<string>(
-                new NotFoundException("Customer not found"),
-                "Customer not found.");
+                new NotFoundException("Customer not found or not subscribed"),
+                "Customer not found or not an active subscriber.");
         }
 
         // Create purchase record

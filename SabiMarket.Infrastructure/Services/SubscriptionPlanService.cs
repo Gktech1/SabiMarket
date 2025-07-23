@@ -139,7 +139,7 @@ namespace SabiMarket.Infrastructure.Services
             }
             var count = await _context.Subscriptions.CountAsync(s => s.SubscriptionPlanId == Id);
             var activeCount = await _context.Subscriptions.CountAsync(s => s.SubscriptionPlanId == Id && s.IsActive);
-            var InactiveCount = await _context.Subscriptions.CountAsync(s => s.SubscriptionPlanId == Id && !s.IsActive);
+            //var InactiveCount = await _context.Subscriptions.CountAsync(s => s.SubscriptionPlanId == Id && !s.IsActive);
             var result = new GetSubScriptionPlanDto
             {
                 Amount = subscriptionPlan.Amount,
@@ -149,7 +149,7 @@ namespace SabiMarket.Infrastructure.Services
                 Frequency = subscriptionPlan.Frequency,
                 NumberOfSubscribers = count,
                 NumberOfActiveSubscribers = activeCount,
-                NumberOfInActiveSubscribers = InactiveCount
+                NumberOfInActiveSubscribers = count - activeCount
             };
 
             return ResponseFactory.Success(result);
