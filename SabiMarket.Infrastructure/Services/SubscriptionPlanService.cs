@@ -96,7 +96,7 @@ namespace SabiMarket.Infrastructure.Services
                 {
                     subscriptions = subscriptions.Where(s => s.IsActive);
                 }
-                else
+                else if (statusFilter.ToLower() == "pending")
                 {
                     subscriptions = subscriptions.Where(s => !s.IsActive);
                 }
