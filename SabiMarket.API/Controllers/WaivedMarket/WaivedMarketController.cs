@@ -447,9 +447,9 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
         [HttpGet("GetSubscribersBySubscriptionPlan")]
         [Authorize(Policy = PolicyNames.RequiredVendorCustomerAndAdmin)]
-        public async Task<IActionResult> GetSubscribersBySubscriptionPlan([FromQuery] PaginationFilter filter, [FromQuery] string subscriptionPlanId, [FromQuery] DateTime? createdAtFilter, int? currencyTypeFilter)
+        public async Task<IActionResult> GetSubscribersBySubscriptionPlan([FromQuery] PaginationFilter filter, [FromQuery] string subscriptionPlanId, [FromQuery] DateTime? createdAtFilter, int? currencyTypeFilter, string? statusFilter)
         {
-            var response = await _serviceManager.ISubscriptionPlanService.GetSubscribersBySubscriptionPlan(filter, subscriptionPlanId, createdAtFilter, currencyTypeFilter);
+            var response = await _serviceManager.ISubscriptionPlanService.GetSubscribersBySubscriptionPlan(filter, subscriptionPlanId, createdAtFilter, currencyTypeFilter, statusFilter);
             if (!response.IsSuccessful)
             {
                 // Handle different types of registration failures
@@ -719,7 +719,6 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
             return Ok(response);
         }
-
         [HttpGet("GetCustomers")]
         public async Task<IActionResult> GetCustomers([FromQuery] PaginationFilter filter, [FromQuery] string? searchString, [FromQuery] string? filterString)
         {
@@ -962,5 +961,24 @@ namespace SabiMarket.API.Controllers.WaivedMarket
 
             return Ok(response);
         }
+
+        [HttpGet("GetAllUrgentPurchaseAsync")]
+        public async Task<IActionResult> GetAllUrgentPurchaseAsync([FromQuery] UrgentPurchaseFilter filter)
+        {
+            var response = await _serviceManager.IWaivedProductService.GetAllUrgentPurchaseAsync(filter);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
     }
 }

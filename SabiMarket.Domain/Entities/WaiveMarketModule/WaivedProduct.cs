@@ -24,16 +24,5 @@ namespace SabiMarket.Domain.Entities.WaiveMarketModule
         public string VendorId { get; set; }
         public virtual Vendor Vendor { get; set; }
         public virtual ICollection<CustomerWaiveProductPurchase> CustomerWaiveProductPurchases { get; set; }
-
-        //[Column(TypeName = "decimal(18,2)")]
-        //public decimal OriginalPrice { get; set; }
-
-        //[Column(TypeName = "decimal(18,2)")]
-        //public decimal WaivedPrice { get; set; }
-        //public string ProductCode { get; set; }
-
-        //public string Description { get; set; }
-        //public int StockQuantity { get; set; }
-        //public virtual ICollection<CustomerOrderItem> OrderItems { get; set; }
     }
 }

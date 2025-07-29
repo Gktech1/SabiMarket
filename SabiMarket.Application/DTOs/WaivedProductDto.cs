@@ -60,6 +60,7 @@ namespace SabiMarket.Application.DTOs
         public string BusinessAddress { get; set; }
         public string ProfileImageUrl { get; set; }
         public bool IsActive { get; set; }
+        public bool IsVerified { get; set; }
         public DateTime CreatedAt { get; set; }
         public CurrencyTypeEnum? VendorCurrencyType { get; set; }
 
@@ -96,6 +97,26 @@ namespace SabiMarket.Application.DTOs
         public string VendorName { get; set; }
         public bool IsAvailbleForUrgentPurchase { get; set; }
         public List<CustomerWaivedProductPurchaseDto> Purchases { get; set; }
+    }
+
+    public class UrgentPurchaseDto
+    {
+        public string Id { get; set; }
+        public string CustomerId { get; set; }
+        public string CustomerName { get; set; }
+        public string DeliveryAddress { get; set; }
+        public DateTime DateCreated { get; set; }
+        public string ProductName { get; set; }
+        public string VendorId { get; set; }
+        public string ProductImage { get; set; }
+        public decimal ProductPrice { get; set; }
+    }
+    public class UrgentPurchaseFilter : PaginationFilter
+    {
+        public string? SearchTerm { get; set; } // Search by customer name or product name
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public string? VendorId { get; set; }
     }
 
 }

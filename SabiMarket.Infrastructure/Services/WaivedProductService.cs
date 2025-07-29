@@ -250,6 +250,68 @@ public class WaivedProductService : IWaivedProductService
 
         return ResponseFactory.Success(response);
     }
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<ProductDetailsDto>>>> GetVendorsUrgentPurchaseWaivedProduct(PaginationFilter filter, string vendorId, string? searchString)
+    {
+        var query = _applicationDbContext.WaivedProducts
+            .Where(x => x.IsAvailbleForUrgentPurchase && x.VendorId == vendorId)
+            .Include(x => x.Vendor)
+            .Include(x => x.ProductCategory)
+            .Include(x => x.CustomerWaiveProductPurchases)
+                .ThenInclude(p => p.Customer)
+                    .ThenInclude(c => c.User)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(searchString))
+        {
+            string lowerSearch = searchString.Trim().ToLower();
+            query = query.Where(x =>
+                x.ProductName.ToLower().Contains(lowerSearch) ||
+                x.Vendor.BusinessName.ToLower().Contains(lowerSearch) ||
+                x.ProductCategory.Name.ToLower().Contains(lowerSearch));
+        }
+
+        var waivedProduct = await query
+            .OrderBy(x => x.ProductName)
+            .Paginate(filter);
+
+        if (waivedProduct == null || !waivedProduct.PageItems.Any())
+        {
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<ProductDetailsDto>>>(
+                new NotFoundException("No Record Found."),
+                "Record not found.");
+        }
+
+        var vendorDtos = waivedProduct.PageItems.Select(v => new ProductDetailsDto
+        {
+            ProductId = v.Id,
+            ProductName = v.ProductName,
+            VendorId = v.VendorId,
+            IsAvailbleForUrgentPurchase = v.IsAvailbleForUrgentPurchase,
+            Category = v.ProductCategory?.Name ?? "N/A",
+            ImageUrl = v.ImageUrl,
+            CurrencyType = v.CurrencyType,
+            Price = v.Price,
+            IsVerifiedVendor = v.Vendor.IsVerified,
+            Customers = v.CustomerWaiveProductPurchases.Select(p => new CustomerWaivedProductPurchaseDto
+            {
+                CustomerId = p.CustomerId,
+                CustomerName = p.Customer?.User?.FirstName + " " + p.Customer?.User?.FirstName ?? "N/A",
+                DeliveryAddress = p.DeliveryAddress
+            }).ToList()
+        }).ToList();
+
+        var response = new PaginatorDto<IEnumerable<ProductDetailsDto>>
+        {
+            PageItems = vendorDtos,
+            CurrentPage = waivedProduct.CurrentPage,
+            PageSize = waivedProduct.PageSize,
+            TotalItems = waivedProduct.TotalItems,
+            NumberOfPages = waivedProduct.NumberOfPages
+        };
+
+        return ResponseFactory.Success(response);
+    }
+
 
 
     public async Task<BaseResponse<int>> GetUrgentPurchaseWaivedProduct
@@ -343,6 +405,7 @@ public class WaivedProductService : IWaivedProductService
                     IsActive = v.IsActive,
                     ProfileImageUrl = v.User?.ProfileImageUrl,
                     CreatedAt = v.CreatedAt,
+                    IsVerified = v.IsVerified,
                     Products = v.Products?.Select(p => new ProductDto
                     {
                         Id = p.Id,
@@ -802,12 +865,6 @@ public class WaivedProductService : IWaivedProductService
             );
         }
 
-        // ✅ Filter by IsResolved status
-        if (!string.IsNullOrWhiteSpace(filterString) && filterString.ToLower() == "resolved")
-        {
-            query = query.Where(f => f.IsResolved);
-        }
-
         // ✅ Filter by Vendor's Local Government (LGA)
         if (!string.IsNullOrWhiteSpace(filterString))
         {
@@ -1231,5 +1288,59 @@ public class WaivedProductService : IWaivedProductService
 
         return ResponseFactory.Success("Success", "Urgent waived product purchase recorded successfully.");
     }
+
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<UrgentPurchaseDto>>>> GetAllUrgentPurchaseAsync(UrgentPurchaseFilter filter)
+    {
+        var query = _applicationDbContext.CustomerWaiveProductPurchases
+            .Where(p => p.IsActive)
+            .Include(p => p.Customer)
+                .ThenInclude(c => c.User)
+            .Include(p => p.WaivedProduct)
+                .ThenInclude(w => w.Vendor)
+            .AsQueryable();
+
+        // Apply search and filters
+        if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+        {
+            var searchTerm = filter.SearchTerm.Trim().ToLower();
+            query = query.Where(p =>
+                p.Customer.FullName.ToLower().Contains(searchTerm) ||
+                p.WaivedProduct.ProductName.ToLower().Contains(searchTerm));
+        }
+
+        if (filter.FromDate.HasValue)
+        {
+            query = query.Where(p => p.CreatedAt >= filter.FromDate.Value);
+        }
+
+        if (filter.ToDate.HasValue)
+        {
+            query = query.Where(p => p.CreatedAt <= filter.ToDate.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.VendorId))
+        {
+            query = query.Where(p => p.WaivedProduct.VendorId == filter.VendorId);
+        }
+
+        var pagedResult = await query
+            .Select(p => new UrgentPurchaseDto
+            {
+                Id = p.Id,
+                CustomerId = p.Customer.Id,
+                CustomerName = p.Customer.FullName,
+                DeliveryAddress = p.DeliveryAddress,
+                DateCreated = p.CreatedAt,
+                ProductName = p.WaivedProduct.ProductName,
+                VendorId = p.WaivedProduct.VendorId,
+                ProductImage = p.WaivedProduct.ImageUrl,
+                ProductPrice = p.WaivedProduct.Price
+            })
+            .Paginate(filter);
+
+        return ResponseFactory.Success(pagedResult, "Success");
+    }
+
+
 
 }

@@ -48,5 +48,6 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<PaginatorDto<IEnumerable<CustomerFeedbackDto>>>> GetResolvedComplaint(PaginationFilter filter);
         Task<BaseResponse<string>> ApproveDollarVendor(string vendorId);
         Task<BaseResponse<string>> RecordUrgentWaiveProductPurchase(string waivedProductId, string customerId, string deliveryAddress);
+        Task<BaseResponse<PaginatorDto<IEnumerable<UrgentPurchaseDto>>>> GetAllUrgentPurchaseAsync(UrgentPurchaseFilter filter);
     }
 }
