@@ -15,6 +15,7 @@ namespace SabiMarket.Application.DTOs.Requests
         public string ProofOfPayment { get; set; }
         public string SubscriberId { get; set; }
         public string SubscriberPlanId { get; set; }
+        public string? PaymentRef { get; set; }
         public string SubscriberType { get; set; }
     }
     public class CreateSubscriptionPlanDto

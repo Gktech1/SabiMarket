@@ -36,11 +36,13 @@ namespace SabiMarket.Infrastructure.Services
                     return ResponseFactory.Fail<string>(new ForbidException("User already an active subscription."), "User already an active subscription.");
 
                 }
-                if (checkActiveSubscription is not null && !checkActiveSubscription.IsActive && !checkActiveSubscription.IsAdminConfirmPayment)
-                {
-                    return ResponseFactory.Fail<string>(new ForbidException("User already an active subscription."), "User already an active subscription.");
+                //if (checkActiveSubscription is not null && !checkActiveSubscription.IsActive && !checkActiveSubscription.IsAdminConfirmPayment)
+                //{
+                //    return ResponseFactory.Fail<string>(new ForbidException("User already an active subscription."), "User already an active subscription.");
 
-                }
+                //}
+                var transaction = await _applicationDbContext.Transactions.FirstAsync(t => t.Reference == dto.PaymentRef);
+
                 var subscription = new Subscription
                 {
                     Amount = dto.Amount,
@@ -49,6 +51,8 @@ namespace SabiMarket.Infrastructure.Services
                     SubscriberType = dto.SubscriberType,
                     SubscriberId = dto.SubscriberId ?? loggedInUser.Id, // FIXED: Use an existing user ID
                     IsSubscriberConfirmPayment = !string.IsNullOrEmpty(dto.ProofOfPayment) ? true : false,
+                    IsActive = (transaction is not null && transaction.IsActive && transaction.Status) ? true : false,
+                    IsAdminConfirmPayment = (transaction is not null && transaction.IsActive && transaction.Status) ? true : false,
                 };
 
                 _repositoryManager.SubscriptionRepository.AddSubscription(subscription);
@@ -147,7 +151,7 @@ namespace SabiMarket.Infrastructure.Services
             _applicationDbContext.SaveChanges();
             return ResponseFactory.Success<bool>(true, "Subscription confirmed successfully.");
         }
-        public async Task<BaseResponse<Subscription>> GetSubscriptionById(string subscriptionId)
+        public async Task<BaseResponse<Subscription>> SubscriberConfirmPayment(string subscriptionId)
         {
             var getSubscriptions = await _repositoryManager.SubscriptionRepository.GetSubscriptionById(subscriptionId, false);
             if (getSubscriptions == null)

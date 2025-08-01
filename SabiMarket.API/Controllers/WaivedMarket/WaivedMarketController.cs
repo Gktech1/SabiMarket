@@ -266,25 +266,25 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
-        [HttpGet("GetSubscriptionById")]
-        public async Task<IActionResult> GetSubscriptionById([FromQuery] string subscriptionId)
-        {
-            var response = await _serviceManager.ISubscriptionService.GetSubscriptionById(subscriptionId);
-            if (!response.IsSuccessful)
-            {
-                // Handle different types of registration failures
-                return response.Error?.StatusCode switch
-                {
-                    StatusCodes.Status400BadRequest => BadRequest(response),
-                    StatusCodes.Status409Conflict => Conflict(response),
-                    _ => BadRequest(response)
-                };
-            }
+        //[HttpGet("GetSubscriptionById")]
+        //public async Task<IActionResult> GetSubscriptionById([FromQuery] string subscriptionId)
+        //{
+        //    var response = await _serviceManager.ISubscriptionService.GetSubscriptionById(subscriptionId);
+        //    if (!response.IsSuccessful)
+        //    {
+        //        // Handle different types of registration failures
+        //        return response.Error?.StatusCode switch
+        //        {
+        //            StatusCodes.Status400BadRequest => BadRequest(response),
+        //            StatusCodes.Status409Conflict => Conflict(response),
+        //            _ => BadRequest(response)
+        //        };
+        //    }
 
-            return Ok(response);
-        }
+        //    return Ok(response);
+        //}
 
-        [HttpGet(" GetAllSubscription")]
+        [HttpGet("GetAllSubscription")]
         public async Task<IActionResult> GetAllSubscription([FromQuery] PaginationFilter filter, [FromQuery] string? searchString)
         {
             var response = await _serviceManager.ISubscriptionService.GetAllSubscription(filter, searchString);

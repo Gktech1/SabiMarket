@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using PayStack.Net;
 using SabiMarket.Application.DTOs.PaymentsDto;
@@ -12,14 +13,17 @@ public class PayStackService : IPaymentService
     private readonly string _secretKey;
     private readonly PayStackApi _payStack;
     ApplicationDbContext _context;
+    IHttpContextAccessor _httpContextAccessor; // inject this
+
     public string Url { get; set; }
 
-    public PayStackService(IConfiguration configuration, ApplicationDbContext context)
+    public PayStackService(IConfiguration configuration, ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
     {
         _configuration = configuration;
         _secretKey = _configuration["Payment:PayStackSecretKey"];
         _payStack = new PayStackApi(_secretKey);
         _context = context;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<Tuple<bool, string, string>> InitializePayment(FundWalletVM model)
@@ -29,13 +33,17 @@ public class PayStackService : IPaymentService
             .FirstOrDefaultAsync();
 
         var transactionRef = $"SabiMart_" + Guid.NewGuid();
-
+        // Read callback URL from request header
+        var headers = _httpContextAccessor.HttpContext?.Request?.Headers;
+        var callbackUrl = headers != null && headers.ContainsKey("PaystackCallBackUrl")
+            ? headers["PaystackCallBackUrl"].ToString()
+            : _configuration["Payment:PayStackCallbackUrl"]; // fallback if not in header
         var request = new TransactionInitializeRequest
         {
             AmountInKobo = (int)model.Amount * 100,
             Email = senderEmail ?? "",
             Currency = "NGN",
-            CallbackUrl = _configuration["Payment:PayStackCallbackUrl"],
+            CallbackUrl = callbackUrl,
             Reference = transactionRef,
         };
 
