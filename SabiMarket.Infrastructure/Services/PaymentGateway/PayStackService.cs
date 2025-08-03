@@ -35,9 +35,10 @@ public class PayStackService : IPaymentService
         var transactionRef = $"SabiMart_" + Guid.NewGuid();
         // Read callback URL from request header
         var headers = _httpContextAccessor.HttpContext?.Request?.Headers;
-        var callbackUrl = headers != null && headers.ContainsKey("PaystackCallBackUrl")
-            ? headers["PaystackCallBackUrl"].ToString()
-            : _configuration["Payment:PayStackCallbackUrl"]; // fallback if not in header
+        var callbackBaseUrl = headers != null && headers.ContainsKey("PaystackCallBackUrl")
+         ? headers["PaystackCallBackUrl"].ToString()
+        : _configuration["Payment:PayStackCallbackUrl"]; // fallback if not in header
+        var callbackUrl = callbackBaseUrl;// + _configuration["Payment:PayStackCallbackEndpoint"] ?? "";
         var request = new TransactionInitializeRequest
         {
             AmountInKobo = (int)model.Amount * 100,
