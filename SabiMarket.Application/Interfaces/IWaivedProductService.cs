@@ -49,5 +49,6 @@ namespace SabiMarket.Application.Interfaces
         Task<BaseResponse<string>> ApproveDollarVendor(string vendorId);
         Task<BaseResponse<string>> RecordUrgentWaiveProductPurchase(string waivedProductId, string customerId, string deliveryAddress);
         Task<BaseResponse<PaginatorDto<IEnumerable<UrgentPurchaseDto>>>> GetAllUrgentPurchaseAsync(UrgentPurchaseFilter filter);
+        Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetVendorWaivedProducts(PaginationFilter paginationFilter, string? category);
     }
 }

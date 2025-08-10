@@ -980,5 +980,23 @@ namespace SabiMarket.API.Controllers.WaivedMarket
             return Ok(response);
         }
 
+        [HttpGet("GetVendorWaivedProducts")]
+        public async Task<IActionResult> GetAllUrgentPurchaseAsync([FromQuery] PaginationFilter filter, string? category)
+        {
+            var response = await _serviceManager.IWaivedProductService.GetVendorWaivedProducts(filter, category);
+            if (!response.IsSuccessful)
+            {
+                // Handle different types of registration failures
+                return response.Error?.StatusCode switch
+                {
+                    StatusCodes.Status400BadRequest => BadRequest(response),
+                    StatusCodes.Status409Conflict => Conflict(response),
+                    _ => BadRequest(response)
+                };
+            }
+
+            return Ok(response);
+        }
+
     }
 }

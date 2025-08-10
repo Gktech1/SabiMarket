@@ -1,21 +1,25 @@
 ﻿using System.Net;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs.PaymentsDto;
 using SabiMarket.Application.DTOs.Responses;
 using SabiMarket.Domain.Entities.WaiveMarketModule;
 using SabiMarket.Domain.Enum;
 using SabiMarket.Infrastructure.Data;
+using SabiMarket.Infrastructure.Utilities;
 
 namespace SabiMarket.Infrastructure.Services.Payment
 {
     public class Payments : IPayments
     {
         private readonly IPaymentService _paymentService;
+        private readonly IHttpContextAccessor _contextAccessor;
         private readonly ApplicationDbContext _applicationDbContext;
-        public Payments(IPaymentService paymentService, ApplicationDbContext applicationDbContext)
+        public Payments(IPaymentService paymentService, ApplicationDbContext applicationDbContext, IHttpContextAccessor contextAccessor = null)
         {
             _paymentService = paymentService;
             _applicationDbContext = applicationDbContext;
+            _contextAccessor = contextAccessor;
         }
         public async Task<BaseResponse<string>> Initialize(FundWalletVM model)
         {
@@ -52,6 +56,14 @@ namespace SabiMarket.Infrastructure.Services.Payment
 
         public async Task<BaseResponse<bool>> Verify(string reference)
         {
+            var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+            var getVendor = await _applicationDbContext.Vendors.Where(x => x.UserId == loggedInUser.Id).FirstOrDefaultAsync();
+            if (getVendor is null)
+            {
+                return ResponseFactory.Fail<bool>("Vendor does not exist");
+
+            }
             var isSuccessful = await _paymentService.Verify(reference);
 
             if (!isSuccessful) return ResponseFactory.Fail<bool>(new Exception("Failure to verify payment."));
@@ -59,9 +71,11 @@ namespace SabiMarket.Infrastructure.Services.Payment
             var transaction = await _applicationDbContext.Transactions.FirstAsync(t => t.Reference == reference);
 
             transaction.Status = true;
+
+            getVendor.IsSubscriptionActive = true;
             await _applicationDbContext.SaveChangesAsync();
 
-            return ResponseFactory.Success<bool>(true); ;
+            return ResponseFactory.Success<bool>(true, "Success"); ;
         }
 
         public async Task<IEnumerable<Bank>> GetBanks()

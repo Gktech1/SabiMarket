@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Security.Claims;
 using iText.StyledXmlParser.Jsoup.Helper;
+using Mailjet.Client.Resources;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SabiMarket.Application.DTOs;
@@ -49,6 +50,8 @@ public class WaivedProductService : IWaivedProductService
                 return ResponseFactory.Fail<string>("Product category is not valid.");
 
             }
+            var getVendorDetails = _applicationDbContext.Vendors.FirstOrDefault(x => x.UserId == loggedInUser.Id);
+
             var waivedProd = new WaivedProduct
             {
                 IsAvailbleForUrgentPurchase = dto.IsAvailbleForUrgentPurchase,
@@ -57,7 +60,7 @@ public class WaivedProductService : IWaivedProductService
                 Price = dto.Price,
                 ProductCategoryId = dto.CategoryId,
                 CurrencyType = dto.CurrencyType,
-                VendorId = verifyVendor.Item2,
+                VendorId = getVendorDetails.Id,
                 IsActive = true,
             };
             _repositoryManager.WaivedProductRepository.AddWaivedProduct(waivedProd);
@@ -71,7 +74,7 @@ public class WaivedProductService : IWaivedProductService
 
         }
     }
-    private Tuple<bool, string> ValiateVendor(string userId)
+    public Tuple<bool, string> ValiateVendor(string userId)
     {
         var getVendorDetails = _applicationDbContext.Vendors.FirstOrDefault(x => x.UserId == userId);
         if (getVendorDetails is null || getVendorDetails.Id is null)
@@ -97,6 +100,52 @@ public class WaivedProductService : IWaivedProductService
         return Tuple.Create(true, getVendorDetails.Id);
     }
 
+    public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetVendorWaivedProducts(PaginationFilter paginationFilter, string? category)
+    {
+        try
+        {
+            var loggedInUser = Helper.GetUserDetails(_contextAccessor);
+
+            var getVendor = await _applicationDbContext.Vendors.Where(x => x.UserId == loggedInUser.Id).FirstOrDefaultAsync();
+            if (getVendor is null)
+            {
+                return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaivedProduct>>>("Vendor does not exist");
+
+            }
+            // Fetch the waived products using pagination
+            var result = await GetVendorWaivedProductsAsync(getVendor.Id, paginationFilter, category);
+
+            // Map WaivedProduct to WaivedProductDto
+            var waivedProductDtos = result.PageItems.Select(p => new WaivedProduct
+            {
+                Id = p.Id,
+                ProductName = p.ProductName,
+                ImageUrl = p.ImageUrl,
+                Price = p.Price,
+                IsAvailbleForUrgentPurchase = p.IsAvailbleForUrgentPurchase,
+                CurrencyType = p.CurrencyType,
+                VendorId = p.VendorId,
+                ProductCategoryId = p.ProductCategoryId
+            });
+
+            var paginatedResult = new PaginatorDto<IEnumerable<WaivedProduct>>
+            {
+                PageItems = waivedProductDtos,
+                PageSize = result.PageSize,
+                CurrentPage = result.CurrentPage,
+                NumberOfPages = result.NumberOfPages,
+                TotalItems = result.TotalItems,
+            };
+
+
+            return ResponseFactory.Success(paginatedResult, "Waived products retrieved successfully");
+        }
+        catch (Exception ex)
+        {
+            return ResponseFactory.Fail<PaginatorDto<IEnumerable<WaivedProduct>>>(ex,
+                "An unexpected error occurred while retrieving waived products");
+        }
+    }
     public async Task<BaseResponse<PaginatorDto<IEnumerable<WaivedProduct>>>> GetAllWaivedProducts(string category, PaginationFilter paginationFilter)
     {
         try
@@ -151,6 +200,29 @@ public class WaivedProductService : IWaivedProductService
 
         // Order by product name
         query = query.OrderBy(p => p.ProductName);
+
+        // Apply pagination
+        return await query.Paginate(paginationFilter);
+    }
+    private async Task<PaginatorDto<IEnumerable<WaivedProduct>>> GetVendorWaivedProductsAsync(
+    string vendorId,
+    PaginationFilter paginationFilter,
+    string? category)
+    {
+        // Base query with filtering by VendorId
+        var query = _applicationDbContext.WaivedProducts
+            .Where(c => c.VendorId == vendorId)
+            .Include(c => c.ProductCategory) // Include navigation if needed
+            .AsNoTracking();
+
+        // Apply category filter if provided
+        if (!string.IsNullOrEmpty(category))
+        {
+            query = query.Where(p => p.ProductCategory.Name.Contains(category));
+        }
+
+        // Order by creation date
+        query = query.OrderBy(p => p.CreatedAt);
 
         // Apply pagination
         return await query.Paginate(paginationFilter);
